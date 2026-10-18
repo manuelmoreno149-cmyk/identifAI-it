@@ -252,7 +252,7 @@ Resultado (`#pantalla-resultado`):
   </li>
   ```
   - `data-estado` = `estadoDeCodigo(resultados[i])`.
-  - `src` = `rutaPrueba(id)`; `alt` = `"Prueba N"` con N de 1 a 5 (nunca la verdad).
+  - `src` = `rutaPrueba(id)`; `alt` = `rellenar(TEXTOS.final.alt_prueba, {n: N})`, es decir "Prueba N" con N de 1 a 5 (nunca la verdad) [D-49].
   - `span.solo-lectores` = `rellenar(TEXTOS.final.estado_prueba, {i: N, estado: TEXTOS.final.estados[estado]})`, por ejemplo "Prueba 3: tiempo agotado".
   - `span.revision-era` = `rellenar(TEXTOS.final.era, {sello})`, con `sello` = `partida.sello_autentica` o `sello_generada` según `desofuscar(clave, n, i)`, por ejemplo "Era: IA".
   - El icono de acierto, fallo o tiempo lo pone CSS con `li::after` según `data-estado` (`oculta` usa el de tiempo). main.js no inserta iconos.
@@ -260,7 +260,7 @@ Resultado (`#pantalla-resultado`):
 - `button[data-accion="compartir"]`.
 
 Ya jugado (`#pantalla-ya-jugado`):
-- `h2 data-texto="ya_jugado.titulo"` (con `tabindex="-1"`), `#ya-jugado-aciertos`, `#ya-jugado-modo`, `#ya-jugado-cuadros` (con `role="img"` y el mismo `aria-label` que `#resultado-cuadros` [D-43]), `#ya-jugado-racha` y `#ya-jugado-cuenta-atras` (HH:MM:SS, se actualiza cada segundo, `aria-live="off"`).
+- `h2 data-texto="ya_jugado.titulo"` (con `tabindex="-1"`), `p#ya-jugado-texto` (`data-texto="ya_jugado.texto"`, justo después del `h2`) [D-48], `#ya-jugado-aciertos`, `#ya-jugado-modo`, `#ya-jugado-cuadros` (con `role="img"` y el mismo `aria-label` que `#resultado-cuadros` [D-43]), `#ya-jugado-racha` y `#ya-jugado-cuenta-atras` (HH:MM:SS, se actualiza cada segundo, `aria-live="off"`).
 - `button[data-accion="compartir"]`.
 
 Elementos comunes, dentro de `#app` pero fuera de las secciones (los usan resultado y ya jugado):
@@ -416,7 +416,7 @@ Claves exactas (las que llevan `{x}` son plantillas):
 | `cuenta_atras` | `aviso` |
 | `partida` | `etiqueta_prueba` ("Prueba {i}/5"), `marcador` ("Aciertos: {aciertos}"), `alt_prueba` ("Prueba {i} de 5"), `boton_autentica` ("REAL"), `boton_generada` ("IA"), `sello_autentica` ("REAL"), `sello_generada` ("IA"), `quedan` ("Quedan {s} s"), `boton_siguiente`, `boton_ver_resultado` |
 | `veredictos` | `acierto` (≥ 4), `fallo` (≥ 4), `tiempo` (≥ 3), `oculta` (≥ 2): arrays de cadenas |
-| `final` | `mensajes` (array de exactamente 6, con índice = aciertos de 0 a 5), `aciertos` ("{aciertos}/5"), `racha` ("Racha: {racha}"), `mejor_racha` ("Mejor racha: {racha}"), `era` ("Era: {sello}"), `cuadros_etiqueta` ("{aciertos} aciertos de 5") [D-43], `estado_prueba` ("Prueba {i}: {estado}"), `estados` (objeto con exactamente `acierto: 'acierto'`, `fallo: 'fallo'`, `tiempo: 'tiempo agotado'`, `oculta: 'pestaña oculta'`) [D-41] |
+| `final` | `alt_prueba` ("Prueba {n}") [D-49], `mensajes` (array de exactamente 6, con índice = aciertos de 0 a 5), `aciertos` ("{aciertos}/5"), `racha` ("Racha: {racha}"), `mejor_racha` ("Mejor racha: {racha}"), `era` ("Era: {sello}"), `cuadros_etiqueta` ("{aciertos} aciertos de 5") [D-43], `estado_prueba` ("Prueba {i}: {estado}"), `estados` (objeto con exactamente `acierto: 'acierto'`, `fallo: 'fallo'`, `tiempo: 'tiempo agotado'`, `oculta: 'pestaña oculta'`) [D-41] |
 | `ya_jugado` | `titulo`, `texto`, `proximo` ("Próximo caso en {tiempo}"), `modo` ("Modo: {modo}") |
 | `sin_casos` | `texto` |
 | `errores` | `calendario`, `imagenes`, `boton_reintentar` |
@@ -748,7 +748,7 @@ Ejemplo literal completo: caso 12, modo difícil, resultados `AAFAT`, racha 3 y 
 
 ```
 identifAI-it · Caso nº 12 · Difícil
-4/5 🟩🟩🟥🟩⬛
+3/5 🟩🟩🟥🟩⬛
 Racha: 3
 https://usuario.github.io/identifAI-it/
 ```

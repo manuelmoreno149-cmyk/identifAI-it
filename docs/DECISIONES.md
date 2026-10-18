@@ -68,6 +68,16 @@ Para cambiar una decisión:
 - D-43 · (2026-10-19, ajuste menor, sin subir versión) Clave nueva `final.cuadros_etiqueta` ("{aciertos} aciertos de 5") para el `aria-label` de los cuadros, y `role="img"` en `#ya-jugado-cuadros` igual que en `#resultado-cuadros`. Se reflejan en 2.3 y 3.1.
 - D-44 · Norma de versionado: los ajustes pequeños (una clave de texto, un atributo, un ajuste de marcado) se apuntan solo en este archivo y se reflejan en la especificación sin cambiar su número de versión. La versión sube únicamente cuando cambia el comportamiento del juego. Los cambios de una línea los puede hacer y anotar directamente quien los detecta, sin pasar por el inspector-jefe.
 
+### 2026-10-19 · Preparación de la implementación de la lógica
+
+- D-45 · (recordatorio, sin cambio de comportamiento) `docs/muestras.html` es una página de trabajo del diseño y **debe borrarse antes del lanzamiento**. `validar` y la revisión final deben comprobar que ya no existe.
+- D-46 · (**TEMPORAL**) Para probar la lógica antes del primer lote real se crean datos de prueba: 5 imágenes WebP de color plano numeradas (1080 x 1350, sin metadatos, generadas por código) en `casos/` y un `data/calendario.json` provisional con los casos de hoy (2026-10-19) y mañana (2026-10-20). Ese calendario tiene `lanzamiento` 2026-10-19 (hoy es el caso 1 y mañana el 2) solo para pruebas y **no cumple D-20**; los dos días reutilizan las mismas 5 imágenes con distinto orden y clave. Ambos conjuntos de archivos se sustituyen por el primer lote real (tarea 18) y no deben publicarse.
+
+- D-47 · (corrige la sección 7 y el criterio 34) El ejemplo literal del texto compartido pasa a `3/5 🟩🟩🟥🟩⬛`, porque `AAFAT` tiene 3 aciertos. `textoCompartir` no recibe `aciertos`: los calcula siempre contando las `A` de `resultados`.
+- D-48 · (ajuste menor, D-44) `#pantalla-ya-jugado` lleva `p#ya-jugado-texto` con `data-texto="ya_jugado.texto"` justo después del `h2`, para mostrar ese texto. Lo rellena main.js con el resto de `data-texto`.
+- D-49 · (ajuste menor, D-44) Clave nueva `final.alt_prueba` ("Prueba {n}") para el `alt` de las miniaturas de `#resultado-revision`; sustituye al literal que había en main.js.
+- D-50 · Confirmado que `validarCalendario` solo comprueba la estructura; la comprobación de `lanzamiento === "2026-11-01"` [D-20] queda para `validar.mjs`. `sharp` está en `devDependencies` de `package.json`, no en `dependencies`.
+
 ## DECISIONES PENDIENTES
 
 Ninguna.

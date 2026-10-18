@@ -77,6 +77,7 @@ export const TEXTOS = {
   },
 
   final: {
+    alt_prueba: 'Prueba {n}',
     mensajes: [
       'La IA te tiene dominado. Ningún acierto. El caso queda archivado sin pruebas a tu favor.',
       'Un solo acierto. Demasiadas sombras para un detective. Mañana, con la vista afinada.',
