@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muestras de pantallas (solo revision)</title>
+<link rel="stylesheet" href="../css/variables.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/componentes.css">
+<style>
+  /* Solo para esta pagina de revision */
+  .aviso-revision {
+    padding: 1rem;
+    font-family: var(--fuente-datos);
+    color: #17120a;
+    text-align: center;
+    background: var(--color-ambar);
+    border-bottom: 4px solid #17120a;
+  }
+  .aviso-revision strong { display: block; font-family: var(--fuente-titulos); font-size: 1.5rem; text-transform: uppercase; }
+  .nota { max-width: 60rem; margin: 1rem auto; padding: 0 1rem; font-family: var(--fuente-datos); color: var(--color-texto-suave); }
+  .muestras { display: flex; flex-direction: column; gap: 2.5rem; align-items: center; padding: 1rem 1rem 4rem; }
+  .muestra { width: 100%; max-width: 23.5rem; }
+  .muestra > h2 {
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    color: var(--color-ambar);
+  }
+  .muestra-caja {
+    overflow: hidden;
+    background-color: var(--color-fondo);
+    background-image: var(--luz-flexo);
+    background-repeat: no-repeat;
+    border: 2px dashed var(--color-borde);
+  }
+  /* Las pantallas del juego ocupan toda la ventana: aqui solo el contenido */
+  .muestra-caja .pantalla { min-height: 0; margin: 0; }
+  .muestra-caja #pantalla-caso { height: auto; overflow: visible; }
+  .muestra-caja #caso-escena { width: 100%; }
+  .muestra-caja #caso-botones { margin-top: 0; }
+  .muestra-caja #compartir-aviso,
+  .muestra-caja #aviso-almacen { position: static; transform: none; }
+  .muestra-caja #compartir-aviso { margin: 1rem; }
+  .muestra-caja #compartir-manual { margin: 1rem auto; width: calc(100% - 2rem); }
+  .muestra-caja #compartir-manual + label { display: none; }
+  /* Imagen de prueba de muestra: colores planos 4:5 */
+  .prueba-falsa { width: 100%; height: 100%; background: linear-gradient(135deg, #3b5b7a 0 50%, #c98a22 50% 100%); }
+  #resultado-revision .miniatura-falsa { width: 3.5rem; aspect-ratio: 4 / 5; border: 3px solid var(--color-papel); background: linear-gradient(135deg, #3b5b7a 0 50%, #c98a22 50% 100%); }
+</style>
+</head>
+<body>
+<header class="aviso-revision">
+  <strong>Pagina temporal de revision. No forma parte del juego.</strong>
+  Muestra todas las pantallas de index.html con el mismo css/ y los textos de js/textos.js. Hay que servirla por HTTP (npx serve) porque lee ../index.html.
+</header>
+<p class="nota">Ancho de cada recuadro: 360 px. Las media queries dependen de la ventana del navegador, no del recuadro: para ver la version movil (fichas apiladas), estrecha la ventana a 360 px. Los ids se repiten entre recuadros a proposito (los estilos dependen de ellos).</p>
+<main class="muestras" id="muestras"></main>
+
+<script type="module">
+import { TEXTOS } from '../js/textos.js';
+
+const ruta = (p) => p.split('.').reduce((o, k) => (o == null ? o : o[k]), TEXTOS);
+const fmt = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]);
+const contenedor = document.getElementById('muestras');
+
+try {
+  const resp = await fetch('../index.html');
+  if (!resp.ok) throw new Error(resp.status);
+  var plantilla = new DOMParser().parseFromString(await resp.text(), 'text/html');
+} catch (e) {
+  contenedor.innerHTML = '<p class="nota">No se pudo leer ../index.html. Sirve el proyecto con npx serve.</p>';
+  throw e;
+}
+
+function rellenarTextos(raiz) {
+  raiz.querySelectorAll('[data-texto]').forEach((el) => {
+    const t = ruta(el.dataset.texto);
+    if (typeof t === 'string') el.textContent = t;
+  });
+}
+
+function caja(titulo, contenido) {
+  const m = document.createElement('section');
+  m.className = 'muestra';
+  const h = document.createElement('h2');
+  h.textContent = titulo;
+  const c = document.createElement('div');
+  c.className = 'muestra-caja';
+  c.append(contenido);
+  m.append(h, c);
+  contenedor.append(m);
+  return c;
+}
+
+function pantalla(id, titulo, ajustar) {
+  const s = plantilla.getElementById(id).cloneNode(true);
+  s.removeAttribute('hidden');
+  rellenarTextos(s);
+  if (ajustar) ajustar(s);
+  return caja(titulo, document.importNode(s, true));
+}
+
+const $ = (s, q) => s.querySelector(q);
+const miniatura = () => Object.assign(document.createElement('div'), { className: 'miniatura-falsa' });
+
+// Portada
+pantalla('pantalla-portada', 'Portada', (s) => {
+  $(s, '#portada-caso').textContent = fmt(TEXTOS.portada.etiqueta_caso, { n: 12 });
+  $(s, '#modo-medio').checked = true;
+  const r = $(s, '#portada-racha');
+  r.hidden = false;
+  r.textContent = fmt(TEXTOS.portada.racha, { racha: 3 });
+});
+
+// Como jugar
+pantalla('pantalla-como-jugar', 'Como jugar', (s) => {
+  TEXTOS.como_jugar.pasos.forEach((p) => {
+    const li = document.createElement('li');
+    li.textContent = p;
+    $(s, '#como-jugar-pasos').append(li);
+  });
+});
+
+pantalla('pantalla-cargando', 'Cargando');
+pantalla('pantalla-cuenta-atras', 'Cuenta atras', (s) => { $(s, '#cuenta-atras-numero').textContent = '3'; });
+
+// Caso
+function caso(titulo, { fase, nivel = 'normal', restante = 0.6, estado, sello, texto, siguiente = TEXTOS.partida.boton_siguiente }) {
+  pantalla('pantalla-caso', titulo, (s) => {
+    s.dataset.fase = fase;
+    $(s, '#caso-etiqueta').textContent = fmt(TEXTOS.partida.etiqueta_prueba, { i: 2 });
+    $(s, '#caso-marcador').textContent = fmt(TEXTOS.partida.marcador, { aciertos: 1 });
+    const img = document.createElement('div');
+    img.className = 'prueba-falsa';
+    img.setAttribute('role', 'img');
+    img.setAttribute('aria-label', fmt(TEXTOS.partida.alt_prueba, { i: 2 }));
+    $(s, '#prueba-marco').append(img);
+    const t = $(s, '#temporizador');
+    t.dataset.nivel = nivel;
+    t.style.setProperty('--restante', restante);
+    if (fase === 'veredicto') {
+      const v = $(s, '#veredicto');
+      v.hidden = false;
+      v.dataset.estado = estado;
+      $(s, '#veredicto-sello').textContent = sello;
+      $(s, '#veredicto-texto').textContent = texto;
+      $(s, '[data-accion="siguiente"]').textContent = siguiente;
+    }
+  });
+}
+caso('Caso: fase pregunta', { fase: 'pregunta' });
+caso('Caso: fase pregunta, ultimo 30 %', { fase: 'pregunta', nivel: 'critico', restante: 0.2 });
+caso('Caso: veredicto, acierto', { fase: 'veredicto', estado: 'acierto', restante: 0.5, sello: TEXTOS.partida.sello_autentica, texto: TEXTOS.veredictos.acierto[0] });
+caso('Caso: veredicto, fallo', { fase: 'veredicto', estado: 'fallo', restante: 0.5, sello: TEXTOS.partida.sello_generada, texto: TEXTOS.veredictos.fallo[0] });
+caso('Caso: veredicto, tiempo agotado', { fase: 'veredicto', estado: 'tiempo', restante: 0, nivel: 'critico', sello: TEXTOS.partida.sello_generada, texto: TEXTOS.veredictos.tiempo[0], siguiente: TEXTOS.partida.boton_ver_resultado });
+
+// Resultado
+pantalla('pantalla-resultado', 'Resultado', (s) => {
+  $(s, '#resultado-aciertos').textContent = fmt(TEXTOS.final.aciertos, { aciertos: 3 });
+  $(s, '#resultado-mensaje').textContent = TEXTOS.final.mensajes[3];
+  const c = $(s, '#resultado-cuadros');
+  c.textContent = '🟩⬛🟩🟥🟩';
+  c.setAttribute('aria-label', '3 aciertos de 5');
+  $(s, '#resultado-racha').textContent = fmt(TEXTOS.final.racha, { racha: 3 });
+  $(s, '#resultado-mejor-racha').textContent = fmt(TEXTOS.final.mejor_racha, { racha: 7 });
+  const datos = [['acierto', 'REAL'], ['tiempo', 'IA'], ['acierto', 'IA'], ['fallo', 'REAL'], ['oculta', 'IA']];
+  datos.forEach(([estado, sello], i) => {
+    const li = document.createElement('li');
+    li.dataset.estado = estado;
+    const img = miniatura();
+    const oculto = document.createElement('span');
+    oculto.className = 'solo-lectores';
+    oculto.textContent = fmt(TEXTOS.final.estado_prueba, { i: i + 1, estado: TEXTOS.final.estados[estado] });
+    const era = document.createElement('span');
+    era.className = 'revision-era';
+    era.textContent = fmt(TEXTOS.final.era, { sello });
+    li.append(img, oculto, era);
+    $(s, '#resultado-revision').append(li);
+  });
+});
+
+// Ya jugado
+pantalla('pantalla-ya-jugado', 'Ya jugado', (s) => {
+  $(s, '#ya-jugado-aciertos').textContent = fmt(TEXTOS.final.aciertos, { aciertos: 4 });
+  $(s, '#ya-jugado-modo').textContent = fmt(TEXTOS.ya_jugado.modo, { modo: TEXTOS.portada.modo_dificil });
+  $(s, '#ya-jugado-cuadros').textContent = '🟩🟩⬛🟩🟩';
+  $(s, '#ya-jugado-racha').textContent = fmt(TEXTOS.final.racha, { racha: 2 });
+  $(s, '#ya-jugado-cuenta-atras').textContent = fmt(TEXTOS.ya_jugado.proximo, { tiempo: '07:42:15' });
+});
+
+pantalla('pantalla-sin-casos', 'Sin casos');
+pantalla('pantalla-error', 'Error', (s) => { $(s, '#error-texto').textContent = TEXTOS.errores.calendario; });
+
+// Elementos comunes
+{
+  const g = document.createElement('div');
+  const aviso = plantilla.getElementById('compartir-aviso').cloneNode(true);
+  aviso.dataset.visible = 'si';
+  aviso.textContent = TEXTOS.compartir.copiado;
+  const manual = plantilla.getElementById('compartir-manual').cloneNode(true);
+  manual.hidden = false;
+  manual.value = fmt(TEXTOS.compartir.plantilla, { caso: 12, modo: 'Dificil', aciertos: 4, cuadros: '🟩🟩⬛🟩🟩', racha: 3, url: 'https://usuario.github.io/identifAI-it/' });
+  const etiqueta = document.createElement('p');
+  etiqueta.className = 'nota';
+  etiqueta.textContent = 'Etiqueta (oculta en el juego): ' + TEXTOS.compartir.manual;
+  const almacen = plantilla.getElementById('aviso-almacen').cloneNode(true);
+  almacen.hidden = false;
+  almacen.textContent = TEXTOS.avisos.sin_guardar;
+  g.append(almacen, aviso, etiqueta, manual);
+  caja('Elementos comunes: avisos y texto manual', g);
+}
+</script>
+</body>
+</html>

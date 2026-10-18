@@ -1,6 +1,6 @@
 # identifAI-it: registro de decisiones
 
-Cada decisión ocupa una línea. La especificación (`docs/ESPECIFICACION.md`, versión 1.0) las cita como [D-nn].
+Cada decisión ocupa una línea. La especificación (`docs/ESPECIFICACION.md`, versión 1.1) las cita como [D-nn].
 
 Para cambiar una decisión:
 1. Añade una entrada nueva con fecha.
@@ -42,7 +42,7 @@ Para cambiar una decisión:
 - D-26 · (antes DP-7) El intento se gasta al terminar la cuenta atrás; si se recarga a mitad, las pruebas pendientes cuentan como `O`.
 - D-27 · (antes DP-8) Tras cada veredicto se avanza a mano (Siguiente o Enter).
 - D-28 · (antes DP-9) El día de lanzamiento es el Caso nº 1.
-- D-29 · (antes DP-10, CAMBIO) Fuentes woff2 propias en `fonts/` (Oswald 600 y Special Elite 400), con licencias OFL; prohibido cualquier CDN. Las consigue el archivero.
+- D-29 · (antes DP-10, CAMBIO; **MODIFICADA por D-40** en cuanto a la licencia de Special Elite) Fuentes woff2 propias en `fonts/` (Oswald 600 y Special Elite 400), con licencias OFL; prohibido cualquier CDN. Las consigue el archivero.
 - D-30 · (antes DP-11) Plantilla exacta del texto compartido según la sección 7.
 - D-31 · (antes DP-12) El marcador "Aciertos: n" está visible durante la partida.
 - D-32 · Un único intento al día para los tres modos: la partida se guarda por fecha (confirmado por el usuario).
@@ -59,6 +59,14 @@ Para cambiar una decisión:
 - D-37 · (**MODIFICADA por D-39**) Pie `footer#portada-pie` con `a#portada-creditos`: discreto, 14 px como mínimo, contraste AA, subrayado y área táctil de 44 x 44 px. Ya no apunta a `CREDITOS.md`, ni abre en otra pestaña, ni usa el texto `portada.nueva_pestana`.
 - D-38 · (**SUPERADA por D-39**) Se creaba `.nojekyll` para que Pages sirviera `CREDITOS.md` sin convertirlo, y había un `CREDITOS.md` provisional. Ya no aplica, como tampoco el riesgo de que el navegador mostrara o descargara el `.md`.
 - D-39 · Los créditos pasan a ser `creditos.html` en la raíz. Es una página estática sin JS, con las mismas fuentes y CSS del juego, la CSP del juego y landmarks, y un enlace "Volver a la portada" a `index.html`. La genera `herramientas/creditos.mjs` con los textos de `TEXTOS.creditos` y escapando en HTML la fuente y la licencia. El enlace de la portada apunta a `creditos.html` y se abre en la misma pestaña. El archivero crea una versión provisional en la tarea 1. `.nojekyll` **se mantiene**: es inofensivo y garantiza que Pages publique los archivos tal cual, sin pasar por Jekyll, como corresponde a un proyecto sin build.
+
+### 2026-10-19 · Licencia de Special Elite y revisión de resultados (versión 1.1, decisiones del usuario)
+
+- D-40 · (modifica D-29) Special Elite se mantiene, pero su licencia es la **Apache License 2.0**, no la SIL OFL (lo confirma el paquete oficial de @fontsource). Oswald sigue con la SIL OFL 1.1. El texto completo de la licencia está en `fonts/LICENSE-special-elite.txt` (sustituye a `fonts/OFL-special-elite.txt`); `TIPOGRAFIAS`, `creditos.html` y `validar.mjs` usan esa ruta.
+- D-41 · Claves nuevas de `textos.js`: `final.estado_prueba` ("Prueba {i}: {estado}") y `final.estados` (acierto, fallo, tiempo agotado, pestaña oculta). Cada `li` de `#resultado-revision` lleva miniatura, estado para lectores de pantalla y "Era: …", con el icono puesto por CSS (`li::after`). Se recogen además en 2.3 los ajustes ya hechos en `index.html`: `#caso-escena`, `label` de `#compartir-manual`, `data-foco` en párrafos, `span.boton-texto` en los votos, `#veredicto-icono` como `span` con fondo CSS y `role="img"` en `#resultado-cuadros`.
+- D-42 · Especificación subida a la versión 1.1 (2026-10-19) con los ajustes D-40 y D-41.
+- D-43 · (2026-10-19, ajuste menor, sin subir versión) Clave nueva `final.cuadros_etiqueta` ("{aciertos} aciertos de 5") para el `aria-label` de los cuadros, y `role="img"` en `#ya-jugado-cuadros` igual que en `#resultado-cuadros`. Se reflejan en 2.3 y 3.1.
+- D-44 · Norma de versionado: los ajustes pequeños (una clave de texto, un atributo, un ajuste de marcado) se apuntan solo en este archivo y se reflejan en la especificación sin cambiar su número de versión. La versión sube únicamente cuando cambia el comportamiento del juego. Los cambios de una línea los puede hacer y anotar directamente quien los detecta, sin pasar por el inspector-jefe.
 
 ## DECISIONES PENDIENTES
 

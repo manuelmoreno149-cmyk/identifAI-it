@@ -1,6 +1,6 @@
 # identifAI-it: especificación técnica
 
-**Versión 1.0, cerrada el 2026-10-18.** Incluye los ajustes D-37, D-38 y D-39 de ese mismo día. Cualquier cambio posterior necesita una decisión nueva en `docs/DECISIONES.md` y subir la versión (1.1, 1.2...).
+**Versión 1.1, del 2026-10-19.** Parte de la versión 1.0 (cerrada el 2026-10-18, con los ajustes D-37, D-38 y D-39) e incorpora los ajustes D-40 (licencia Apache 2.0 de Special Elite y archivo `fonts/LICENSE-special-elite.txt`) y D-41 (claves `final.estado_prueba` y `final.estados`, marcado de la revisión de resultado y ajustes de `index.html` en 2.3). Cualquier cambio posterior necesita una decisión nueva en `docs/DECISIONES.md`. La versión solo sube (1.2, 1.3...) cuando cambia el comportamiento del juego; los ajustes pequeños se apuntan en DECISIONES.md y se reflejan aquí sin cambiar el número de versión [D-44].
 
 Este documento es la fuente de verdad técnica del proyecto. Si algo no está aquí, no se inventa: se pregunta o se registra en `docs/DECISIONES.md`.
 Las reglas de `CLAUDE.md` (juego, stack, anti-trampas) prevalecen sobre este documento.
@@ -31,17 +31,17 @@ Las marcas **[D-nn]** remiten a la decisión correspondiente de `docs/DECISIONES
 - **Ninguna petición a dominios externos**: nada de CDN (tampoco Google Fonts), analítica ni fuentes remotas. Todo se sirve desde el propio sitio [D-29].
 - Los textos visibles salen siempre de `js/textos.js`:
   - En `index.html`, `main.js` los inserta al arrancar. No se escribe a mano ningún texto de interfaz, salvo el `<title>` y el contenido de `<noscript>`.
-  - En `creditos.html`, el generador los inserta al crear la página. La única excepción temporal es la página inicial provisional de la tarea 1.
+  - En `creditos.html`, el generador (`herramientas/creditos.mjs`) los inserta al crear la página. Los únicos valores que no vienen de `textos.js` son datos, no textos de interfaz: las familias, licencias y rutas de la constante `TIPOGRAFIAS` de `creditos.mjs` y las parejas fuente · licencia del banco (4.5). La única excepción temporal es la página inicial provisional de la tarea 1, escrita a mano con esos mismos valores.
 
 ### 0.2 Estructura de carpetas
 
 | Ruta | Se publica | Contenido |
 |---|---|---|
 | `index.html` | sí | Todas las pantallas del juego. |
-| `creditos.html` | sí | Página estática de créditos, sin JS: tipografías y fuentes y licencias de las imágenes de forma agregada, sin relación con imágenes concretas [D-39]. La genera `herramientas/creditos.mjs` (sección 4.5). |
+| `creditos.html` | sí | Página estática de créditos, sin JS: tipografías y fuentes y licencias de las imágenes de forma agregada, sin relación con imágenes concretas [D-39]. La genera `herramientas/creditos.mjs` (sección 4.5), que toma las tipografías de su constante `TIPOGRAFIAS`. |
 | `.nojekyll` | sí | Archivo vacío. Se mantiene para que GitHub Pages publique los archivos tal cual, sin pasar Jekyll, coherente con "sin build" [D-39]. |
 | `css/variables.css`, `css/base.css`, `css/componentes.css` | sí | Los `@font-face` van en `base.css`. Las dos páginas usan los mismos tres archivos. |
-| `fonts/` | sí | `oswald-600.woff2`, `special-elite-400.woff2`, `OFL-oswald.txt`, `OFL-special-elite.txt` [D-29]. |
+| `fonts/` | sí | `oswald-600.woff2`, `special-elite-400.woff2`, `OFL-oswald.txt` (SIL OFL 1.1) y `LICENSE-special-elite.txt` (Apache License 2.0) [D-29, D-40]. |
 | `js/` | sí | `main.js`, `juego.js`, `temporizador.js`, `diario.js`, `almacen.js`, `compartir.js`, `textos.js`. |
 | `img/ui/` | sí | `sello.svg`, `huella.svg`, `lupa.svg`, `papel.svg`, `icono-acierto.svg`, `icono-fallo.svg`, `icono-tiempo.svg`. |
 | `casos/` | sí | `{id}.webp`, 1080 x 1350, sin metadatos. |
@@ -168,25 +168,25 @@ El Perito Visual crea el marcado y los estilos; el Agente de Campo solo usa los 
 
 - `<main id="app" data-pantalla="portada" data-modo="medio">`: main.js mantiene `data-pantalla` y `data-modo` al día, y CSS puede usarlos.
 - Cada pantalla es una `<section class="pantalla" id="pantalla-{nombre}" hidden>`. **Solo una puede estar sin `hidden` en cada momento**, y main.js es el único que cambia `hidden`.
-- Al cambiar de pantalla, main.js mueve el foco al elemento con `data-foco` si existe y, si no, al primer `h1` o `h2` de la sección (que lleva `tabindex="-1"`).
+- Al cambiar de pantalla, main.js mueve el foco al elemento con `data-foco` si existe y, si no, al primer `h1` o `h2` de la sección (que lleva `tabindex="-1"`). Todo elemento con `data-foco` que no sea enfocable de forma nativa (por ejemplo, un `p`) lleva `tabindex="-1"` [D-41].
 - La pantalla `iniciando` no tiene sección: mientras dura, todas las secciones están `hidden`.
 
 ### 2.2 Atributos genéricos
 
 | Atributo | Dónde | Uso |
 |---|---|---|
-| `data-texto="grupo.clave"` | cualquier elemento con texto fijo de `index.html` | main.js pone `textContent = TEXTOS.grupo.clave` al arrancar. En `index.html`, el contenido inicial es el marcador `[[grupo.clave]]`. |
+| `data-texto="grupo.clave"` | cualquier elemento con texto fijo de `index.html` | main.js pone `textContent = TEXTOS.grupo.clave` al arrancar. En `index.html`, el contenido inicial es el marcador `[[grupo.clave]]`. Como `textContent` sustituye todo el contenido, `data-texto` va siempre en un elemento que solo contiene ese texto (por eso los botones de voto lo llevan en un `span.boton-texto` y no en el `button`). |
 | `data-accion="..."` | `<button>` | Delegación de eventos. Valores: `empezar`, `como-jugar`, `entendido`, `siguiente`, `compartir`, `reintentar`. Puede haber varios botones con la misma acción (por ejemplo, `compartir` en resultado y en ya jugado). |
 | `data-voto="autentica"` / `data-voto="generada"` | los dos botones de respuesta | Voto. Son fijos y no dependen de la imagen. |
 | `data-foco` | un elemento por pantalla como máximo | Recibe el foco al entrar en su pantalla. |
-| `data-estado="acierto\|fallo\|tiempo\|oculta"` | `#veredicto` y cada `li` de la revisión | Resultado de una prueba. No está presente mientras no hay respuesta. |
+| `data-estado="acierto\|fallo\|tiempo\|oculta"` | `#veredicto` y cada `li` de `#resultado-revision` | Resultado de una prueba. No está presente mientras no hay respuesta. |
 | `data-fase="pregunta\|veredicto"` | `#pantalla-caso` | Fase actual. |
 | `data-nivel="normal\|critico"` | `#temporizador` | Vale `critico` cuando queda el 30 % del tiempo o menos. |
 | `--restante` (propiedad CSS) | `#temporizador` | Número de 1 a 0. CSS fija `#temporizador { --restante: 1; }` y la cinta usa `transform: scaleX(var(--restante))`. main.js lo cambia con `style.setProperty('--restante', f)`. No se usa el atributo `style` en el HTML, porque la CSP lo bloquearía. |
 | `data-visible="si\|no"` | `#compartir-aviso` | Aviso de "copiado". |
 | `data-pagina="juego\|creditos"` | `<body>` | Permite a CSS distinguir las dos páginas. `index.html` lleva `juego` y `creditos.html`, `creditos`. |
 
-Clase utilitaria: `.solo-lectores` (visualmente oculta, pero accesible para lectores de pantalla). No hay más clases de estado: los estados van siempre en atributos `data-*` [D-03].
+Clase utilitaria: `.solo-lectores` (visualmente oculta, pero accesible para lectores de pantalla). No hay más clases de estado: los estados van siempre en atributos `data-*` [D-03]. Las únicas clases estructurales que forman parte del contrato con main.js son `.pantalla`, `.prueba-img`, `.boton-texto` y `.revision-era` (2.3); las demás clases del HTML son solo de estilo y main.js no las usa.
 
 ### 2.3 Elementos por pantalla
 
@@ -209,42 +209,68 @@ Portada (`#pantalla-portada`):
   - No es un `button` ni lleva `data-accion`: main.js solo rellena su texto.
 
 Cómo jugar (`#pantalla-como-jugar`):
-- `h2 data-texto="como_jugar.titulo"`, `<ol id="como-jugar-pasos">` (main.js crea 4 `li` a partir de `TEXTOS.como_jugar.pasos`) y `button[data-accion="entendido"]`.
+- `h2 data-texto="como_jugar.titulo"` (con `tabindex="-1"`), `<ol id="como-jugar-pasos">` (main.js crea 4 `li` a partir de `TEXTOS.como_jugar.pasos`) y `button[data-accion="entendido"]`.
 
-Cargando (`#pantalla-cargando`): `p data-texto="cargando.texto"` con `role="status"`.
+Cargando (`#pantalla-cargando`): `<p role="status" tabindex="-1" data-foco data-texto="cargando.texto">`.
 
-Cuenta atrás (`#pantalla-cuenta-atras`): `p data-texto="cuenta_atras.aviso"` y `#cuenta-atras-numero` (`aria-live="assertive"`, con el contenido "3", "2" o "1").
+Cuenta atrás (`#pantalla-cuenta-atras`): `<p tabindex="-1" data-foco data-texto="cuenta_atras.aviso">` y `#cuenta-atras-numero` (`aria-live="assertive"`, con el contenido "3", "2" o "1").
 
 Caso (`#pantalla-caso`, con `data-fase`):
-- `#caso-etiqueta`: "Prueba 2/5" (`partida.etiqueta_prueba`).
+- `<p id="caso-etiqueta" tabindex="-1" data-foco>`: "Prueba 2/5" (`partida.etiqueta_prueba`).
 - `#caso-marcador`: aciertos hasta el momento, "Aciertos: 1" (`partida.marcador`). Siempre visible durante la partida [D-31].
+- `<div id="caso-escena">`: envuelve `#prueba-marco` y `#veredicto` para que el veredicto se superponga a la imagen [D-41]. main.js no lo toca.
 - `<figure id="prueba-marco">`: vacío en el HTML. main.js inserta **una** `<img class="prueba-img" alt="Prueba 2 de 5" width="1080" height="1350">` ya decodificada y la sustituye en cada prueba. Proporción 4:5 con `object-fit: contain`.
-- `#veredicto`: dentro o encima de `#prueba-marco`, con `hidden` en fase pregunta, `role="status"` y `aria-live="polite"`. Contiene:
-  - `#veredicto-sello`: vacío hasta que hay respuesta. Después, `TEXTOS.partida.sello_autentica` ("REAL") o `sello_generada` ("IA").
-  - `#veredicto-icono`: icono de acierto, fallo o tiempo (`img/ui/icono-*.svg`). CSS lo elige según `data-estado` (`oculta` usa el de tiempo).
-  - `#veredicto-texto`: una variante al azar de `TEXTOS.veredictos.{acierto|fallo|tiempo|oculta}`.
+- `<div id="veredicto" role="status" aria-live="polite" hidden>`, dentro de `#caso-escena` y después de `#prueba-marco`, con `hidden` en fase pregunta. Contiene, en este orden:
+  - `<p id="veredicto-sello">`: vacío hasta que hay respuesta. Después, `TEXTOS.partida.sello_autentica` ("REAL") o `sello_generada` ("IA").
+  - `<div id="veredicto-pie">`, que agrupa:
+    - `<span id="veredicto-icono" aria-hidden="true">`: vacío. CSS le pone como `background-image` el icono de `img/ui/icono-*.svg` según el `data-estado` de `#veredicto` (acierto, fallo; `tiempo` y `oculta` usan el de tiempo) [D-41]. main.js no le pone contenido ni atributos.
+    - `<p id="veredicto-texto">`: una variante al azar de `TEXTOS.veredictos.{acierto|fallo|tiempo|oculta}`.
 - `<div id="temporizador" data-nivel="normal" aria-hidden="true">` con `<div id="temporizador-cinta">` dentro.
 - `#temporizador-anuncio` (`.solo-lectores`, `aria-live="polite"`): main.js escribe "Quedan N s" cada vez que cambia el segundo entero, solo en los modos `facil` y `medio`. En `dificil` no se anuncia nada durante la prueba [D-17].
-- `button[data-voto="autentica"]` (texto `partida.boton_autentica`, con `<kbd>R</kbd>`) y `button[data-voto="generada"]` (texto `partida.boton_generada`, con `<kbd>I</kbd>`). Solo se ven en fase pregunta (CSS con `data-fase`) y van en la mitad inferior de la pantalla.
-- `button[data-accion="siguiente"]`: solo se ve en fase veredicto. Su texto es `partida.boton_siguiente`, o `partida.boton_ver_resultado` en la prueba 5. Recibe el foco al entrar en veredicto.
+- `#caso-botones` agrupa los tres botones. Los dos de voto tienen esta forma exacta [D-41]:
+  ```html
+  <button type="button" class="boton boton-voto" data-voto="autentica" aria-keyshortcuts="R">
+    <span class="boton-texto" data-texto="partida.boton_autentica">[[partida.boton_autentica]]</span>
+    <kbd aria-hidden="true">R</kbd>
+  </button>
+  <button type="button" class="boton boton-voto" data-voto="generada" aria-keyshortcuts="I">
+    <span class="boton-texto" data-texto="partida.boton_generada">[[partida.boton_generada]]</span>
+    <kbd aria-hidden="true">I</kbd>
+  </button>
+  ```
+  El `data-texto` va en el `span.boton-texto`, nunca en el `button`, para que rellenar el texto no borre el `<kbd>`. Solo se ven en fase pregunta (CSS con `data-fase`) y van en la mitad inferior de la pantalla.
+- `button[data-accion="siguiente"]` (con `data-texto="partida.boton_siguiente"`): solo se ve en fase veredicto. Su texto es `partida.boton_siguiente`, o `partida.boton_ver_resultado` en la prueba 5. Recibe el foco al entrar en veredicto.
 
 Resultado (`#pantalla-resultado`):
-- `#resultado-aciertos` ("4/5"), `#resultado-mensaje`, `#resultado-cuadros` (con un `aria-label` descriptivo, por ejemplo "4 aciertos de 5"), `#resultado-racha` y `#resultado-mejor-racha`.
-- `<ol id="resultado-revision">`: main.js crea 5 `li`. Cada uno lleva `data-estado`, una miniatura `<img alt="Prueba N">` (con la misma ruta `casos/…`) y el texto `final.era` ("Era: REAL") ya revelado [D-19].
+- `<p id="resultado-aciertos" tabindex="-1" data-foco>` ("4/5"), `#resultado-mensaje`, `<p id="resultado-cuadros" role="img">` (main.js le pone los cuadros como texto y un `aria-label` con `rellenar(TEXTOS.final.cuadros_etiqueta, {aciertos})`, por ejemplo "4 aciertos de 5" [D-43]; con `role="img"` el lector anuncia la etiqueta y no los emojis uno a uno) [D-41], `#resultado-racha` y `#resultado-mejor-racha`.
+- `<ol id="resultado-revision">`: vacío en el HTML. Al entrar en `resultado`, main.js crea 5 `li` (ya revelados [D-19]), uno por prueba en orden, con este marcado exacto [D-41]:
+  ```html
+  <li data-estado="acierto|fallo|tiempo|oculta">
+    <img src="casos/{id}.webp" alt="Prueba N" width="1080" height="1350">
+    <span class="solo-lectores">{final.estado_prueba}</span>
+    <span class="revision-era">{final.era}</span>
+  </li>
+  ```
+  - `data-estado` = `estadoDeCodigo(resultados[i])`.
+  - `src` = `rutaPrueba(id)`; `alt` = `"Prueba N"` con N de 1 a 5 (nunca la verdad).
+  - `span.solo-lectores` = `rellenar(TEXTOS.final.estado_prueba, {i: N, estado: TEXTOS.final.estados[estado]})`, por ejemplo "Prueba 3: tiempo agotado".
+  - `span.revision-era` = `rellenar(TEXTOS.final.era, {sello})`, con `sello` = `partida.sello_autentica` o `sello_generada` según `desofuscar(clave, n, i)`, por ejemplo "Era: IA".
+  - El icono de acierto, fallo o tiempo lo pone CSS con `li::after` según `data-estado` (`oculta` usa el de tiempo). main.js no inserta iconos.
+  - Los textos se ponen con `textContent` (nunca con `innerHTML`).
 - `button[data-accion="compartir"]`.
 
 Ya jugado (`#pantalla-ya-jugado`):
-- `h2 data-texto="ya_jugado.titulo"`, `#ya-jugado-aciertos`, `#ya-jugado-modo`, `#ya-jugado-cuadros`, `#ya-jugado-racha` y `#ya-jugado-cuenta-atras` (HH:MM:SS, se actualiza cada segundo, `aria-live="off"`).
+- `h2 data-texto="ya_jugado.titulo"` (con `tabindex="-1"`), `#ya-jugado-aciertos`, `#ya-jugado-modo`, `#ya-jugado-cuadros` (con `role="img"` y el mismo `aria-label` que `#resultado-cuadros` [D-43]), `#ya-jugado-racha` y `#ya-jugado-cuenta-atras` (HH:MM:SS, se actualiza cada segundo, `aria-live="off"`).
 - `button[data-accion="compartir"]`.
 
 Elementos comunes, dentro de `#app` pero fuera de las secciones (los usan resultado y ya jugado):
 - `#compartir-aviso` (`aria-live="polite"`, `data-visible="no"`).
-- `<textarea id="compartir-manual" readonly hidden>`: alternativa cuando no hay portapapeles.
-- `#aviso-almacen` (con `hidden` salvo que localStorage no funcione) y `data-texto="avisos.sin_guardar"`.
+- `<textarea id="compartir-manual" rows="5" readonly hidden>`: alternativa cuando no hay portapapeles. Justo detrás, como hermano inmediato, va `<label for="compartir-manual" class="solo-lectores" data-texto="compartir.manual">` [D-41]. CSS depende de ese orden (`#compartir-manual[hidden] + label`), así que main.js **no mueve ni recrea** ni el `textarea` ni el `label`: solo cambia `hidden` y `value` del `textarea`.
+- `<p id="aviso-almacen" role="status" hidden data-texto="avisos.sin_guardar">` (con `hidden` salvo que localStorage no funcione).
 
-Sin casos (`#pantalla-sin-casos`): `p data-texto="sin_casos.texto"`.
+Sin casos (`#pantalla-sin-casos`): `<p tabindex="-1" data-foco data-texto="sin_casos.texto">`.
 
-Error (`#pantalla-error`): `#error-texto` (main.js pone `errores.calendario` o `errores.imagenes`) y `button[data-accion="reintentar"]`.
+Error (`#pantalla-error`): `<p id="error-texto" role="alert" tabindex="-1" data-foco>` (main.js pone `errores.calendario` o `errores.imagenes`) y `button[data-accion="reintentar"]`.
 
 Fuera de JS: un `<noscript>` con un aviso breve en español.
 
@@ -265,7 +291,7 @@ Fuera de JS: un `<noscript>` con un aviso breve en español.
 - No hay ningún `<link>` a `fonts.googleapis.com`, `fonts.gstatic.com` ni a otro dominio.
 - `<html lang="es">` y `<body data-pagina="juego">`.
 
-### 2.5 Tipografías (alojadas en el repositorio) [D-29]
+### 2.5 Tipografías (alojadas en el repositorio) [D-29, D-40]
 
 En `css/base.css`, al principio:
 
@@ -296,8 +322,15 @@ Tokens en `css/variables.css`:
 
 - Títulos: Oswald 600. Datos de expediente (etiquetas, "PRUEBA Nº", marcador, cuenta atrás): Special Elite 400. Cuerpo: fuentes del sistema, a 16 px como mínimo (el enlace de créditos puede bajar a 14 px).
 - Solo se incluye el woff2 del subconjunto latino, que cubre á, é, í, ó, ú, ñ, ü, ¿, ¡, º y ·. Se busca que cada archivo pese menos de 60 KB.
-- Las licencias SIL Open Font License 1.1 van junto a las fuentes (`fonts/OFL-oswald.txt` y `fonts/OFL-special-elite.txt`), y `creditos.html` las enlaza.
-- Si el perito visual prefiere Courier Prime o Bebas Neue (opciones que permite su agente), debe mantener el patrón `fonts/{familia}-{peso}.woff2`, cambiar los `@font-face`, los tokens y la constante `TIPOGRAFIAS` de `herramientas/creditos.mjs`, y registrarlo en DECISIONES.
+- Licencias, junto a las fuentes [D-40]:
+
+  | Familia | Licencia | Archivo |
+  |---|---|---|
+  | Oswald | SIL Open Font License 1.1 | `fonts/OFL-oswald.txt` (texto completo de la OFL 1.1 con el aviso de copyright de la familia) |
+  | Special Elite | Apache License 2.0 | `fonts/LICENSE-special-elite.txt` (texto completo de la Apache License 2.0) |
+
+  `creditos.html` las enlaza a partir de la constante `TIPOGRAFIAS` de `herramientas/creditos.mjs` (4.5), que debe coincidir con esta tabla. No existe `fonts/OFL-special-elite.txt`.
+- Si el perito visual prefiere Courier Prime o Bebas Neue (opciones que permite su agente), debe mantener el patrón `fonts/{familia}-{peso}.woff2`, comprobar la licencia real de la familia en su paquete oficial y guardar su texto completo como `fonts/OFL-{familia}.txt` (SIL OFL) o `fonts/LICENSE-{familia}.txt` (otras licencias), cambiar los `@font-face`, los tokens, la tabla anterior y la constante `TIPOGRAFIAS`, y registrarlo en DECISIONES.
 
 ### 2.6 Reglas visuales que afectan a la lógica
 
@@ -307,7 +340,7 @@ Tokens en `css/variables.css`:
 
 ### 2.7 creditos.html [D-39]
 
-Es una página estática sin JS. La escribe entera `generarCreditosHtml` (sección 4.5) con esta estructura exacta. Los valores entre `{}` se sustituyen ya escapados:
+Es una página estática sin JS. La escribe entera `generarCreditosHtml` (sección 4.5) con esta estructura exacta. Los valores entre `{}` se sustituyen ya escapados. La lista de tipografías se genera a partir de `TIPOGRAFIAS` (un `li` por elemento, con la forma `<li>{familia} · {licencia} (<a href="{archivo}">{creditos.ver_licencia}</a>)</li>`); con los valores actuales [D-40] queda así:
 
 ```html
 <!doctype html>
@@ -329,7 +362,7 @@ Es una página estática sin JS. La escribe entera `generarCreditosHtml` (secci�
     <h2 id="creditos-tipografias">{creditos.tipografias}</h2>
     <ul>
       <li>Oswald · SIL Open Font License 1.1 (<a href="fonts/OFL-oswald.txt">{creditos.ver_licencia}</a>)</li>
-      <li>Special Elite · SIL Open Font License 1.1 (<a href="fonts/OFL-special-elite.txt">{creditos.ver_licencia}</a>)</li>
+      <li>Special Elite · Apache License 2.0 (<a href="fonts/LICENSE-special-elite.txt">{creditos.ver_licencia}</a>)</li>
     </ul>
   </section>
   <section aria-labelledby="creditos-imagenes">
@@ -383,7 +416,7 @@ Claves exactas (las que llevan `{x}` son plantillas):
 | `cuenta_atras` | `aviso` |
 | `partida` | `etiqueta_prueba` ("Prueba {i}/5"), `marcador` ("Aciertos: {aciertos}"), `alt_prueba` ("Prueba {i} de 5"), `boton_autentica` ("REAL"), `boton_generada` ("IA"), `sello_autentica` ("REAL"), `sello_generada` ("IA"), `quedan` ("Quedan {s} s"), `boton_siguiente`, `boton_ver_resultado` |
 | `veredictos` | `acierto` (≥ 4), `fallo` (≥ 4), `tiempo` (≥ 3), `oculta` (≥ 2): arrays de cadenas |
-| `final` | `mensajes` (array de exactamente 6, con índice = aciertos de 0 a 5), `aciertos` ("{aciertos}/5"), `racha` ("Racha: {racha}"), `mejor_racha` ("Mejor racha: {racha}"), `era` ("Era: {sello}") |
+| `final` | `mensajes` (array de exactamente 6, con índice = aciertos de 0 a 5), `aciertos` ("{aciertos}/5"), `racha` ("Racha: {racha}"), `mejor_racha` ("Mejor racha: {racha}"), `era` ("Era: {sello}"), `cuadros_etiqueta` ("{aciertos} aciertos de 5") [D-43], `estado_prueba` ("Prueba {i}: {estado}"), `estados` (objeto con exactamente `acierto: 'acierto'`, `fallo: 'fallo'`, `tiempo: 'tiempo agotado'`, `oculta: 'pestaña oculta'`) [D-41] |
 | `ya_jugado` | `titulo`, `texto`, `proximo` ("Próximo caso en {tiempo}"), `modo` ("Modo: {modo}") |
 | `sin_casos` | `texto` |
 | `errores` | `calendario`, `imagenes`, `boton_reintentar` |
@@ -393,6 +426,7 @@ Claves exactas (las que llevan `{x}` son plantillas):
 
 - Ninguna cadena supera los 90 caracteres, salvo `como_jugar.pasos`.
 - Los valores entre comillas de `portada.enlace_creditos`, `creditos.titulo`, `creditos.volver` y `creditos.sin_imagenes` son exactos: el cronista puede proponer otros al usuario, pero no cambiarlos por su cuenta.
+- `final.estado_prueba` y `final.estados` solo se usan en el `span.solo-lectores` de cada `li` de `#resultado-revision` (2.3). Las claves de `final.estados` coinciden con los valores de `estadoDeCodigo` (3.3); no forman parte del DOM, solo sus valores (texto visible para lectores de pantalla).
 - El grupo `creditos` no lo usa `main.js`; lo lee `herramientas/creditos.mjs` al generar la página.
 
 ### 3.2 js/diario.js (agente-de-campo): fechas, calendario, clave e imágenes
@@ -483,9 +517,9 @@ Si localStorage falla, el juego funciona igual con los datos en memoria (main.js
 ### 3.7 js/main.js (agente-de-campo)
 
 No exporta nada. Responsabilidades:
-1. **Arranque**: `leer()` del almacén y `estadoInicial`. Rellenar todos los `[data-texto]` (también el del enlace de créditos), crear los pasos de cómo jugar y marcar el radio del modo guardado. Después, `cargarCalendario()`. Si la partida de hoy está `en_curso`, aplicar `cerrarAbandonada` y guardar. Por último, despachar `CARGADO` (con `casoDelDia(cal, fechaLocal(new Date()))` y `partidaDe(datos, hoy)`) o `ERROR_CALENDARIO`.
+1. **Arranque**: `leer()` del almacén y `estadoInicial`. Rellenar todos los `[data-texto]` (también el del enlace de créditos, los `span.boton-texto` de los votos y el `label` de `#compartir-manual`), crear los pasos de cómo jugar y marcar el radio del modo guardado. Después, `cargarCalendario()`. Si la partida de hoy está `en_curso`, aplicar `cerrarAbandonada` y guardar. Por último, despachar `CARGADO` (con `casoDelDia(cal, fechaLocal(new Date()))` y `partidaDe(datos, hoy)`) o `ERROR_CALENDARIO`.
 2. **`despachar(evento)`**: `nuevo = transicion(estado, evento)`. Si cambió, ejecutar los efectos de la transición y `render(nuevo)`. Es el único sitio donde se asigna el estado.
-3. **`render(estado)`**: `hidden` de las secciones; `data-pantalla`, `data-modo` y `data-fase`; etiquetas y marcador; `#veredicto` (`data-estado`, sello y texto solo en fase veredicto; en fase pregunta, `#veredicto-sello` vacío y sin `data-estado`); resultado; ya jugado.
+3. **`render(estado)`**: `hidden` de las secciones; `data-pantalla`, `data-modo` y `data-fase`; etiquetas y marcador; `#veredicto` (`data-estado`, sello y texto solo en fase veredicto; en fase pregunta, `#veredicto-sello` vacío y sin `data-estado`); resultado (incluidos el `aria-label` de `#resultado-cuadros` y los 5 `li` de `#resultado-revision` con el marcado de 2.3); ya jugado.
 4. **Efectos**:
    - Al entrar en `cargando`, precarga.
    - Cuenta atrás.
@@ -495,14 +529,14 @@ No exporta nada. Responsabilidades:
    - Tras cada veredicto, `registrarPrueba` y guardar.
    - Al entrar en `resultado`, `registrarFin` y guardar.
 5. **Entrada**:
-   - Clic en `[data-voto]` y `[data-accion]` (delegación en `#app`) y `change` en `input[name=modo]`.
+   - Clic en `[data-voto]` y `[data-accion]` (delegación en `#app`, buscando el botón con `closest`, porque el clic puede caer en el `span` o el `kbd` interiores) y `change` en `input[name=modo]`.
    - Teclado: `keydown` en `document`, ignorando `e.repeat` y las teclas pulsadas con Ctrl, Alt o Meta.
    - `r`/`R` → `VOTO autentica` e `i`/`I` → `VOTO generada`, solo en `caso/pregunta`.
    - `Enter` → `SIGUIENTE`, solo en `caso/veredicto` y si el foco no está en un `button` ni en un enlace (para no duplicar la acción nativa).
 6. **`visibilitychange`**: al ocultarse la pestaña → `OCULTA`. Al volver a estar visible: en `cuenta-atras`, reiniciarla; en `portada`, `ya-jugado` o `sin-casos`, si la fecha local cambió, `MEDIANOCHE`.
 7. **Medianoche**: en `ya-jugado`, la cuenta atrás se actualiza cada segundo con `setTimeout` encadenado (no es el temporizador de juego). Al llegar a 0, `MEDIANOCHE`.
 8. **Otras pestañas**: escuchar `storage`. Si durante `cuenta-atras` o `caso` el registro de la fecha actual aparece con otra `sesion`, o como `terminada` sin que lo haya terminado esta pestaña, `OTRA_PESTANA`. Antes de `FIN_CUENTA` se vuelve a leer el almacén: si ya hay partida de hoy (en cualquier modo), `OTRA_PESTANA`.
-9. **Compartir**: construir el texto y llamar a `compartir()`. Según lo que devuelva, mostrar `#compartir-aviso` 2 s (`copiado`) o `#compartir-manual` con el texto seleccionado (`manual`).
+9. **Compartir**: construir el texto y llamar a `compartir()`. Según lo que devuelva, mostrar `#compartir-aviso` 2 s (`copiado`) o `#compartir-manual` con el texto seleccionado (`manual`), sin mover el `textarea` ni su `label` (2.3).
 10. **Errores**: `try/catch` en el arranque; cualquier fallo de carga lleva a `error`. Nada de `console.log` en producción (sí `console.error` en fallos reales).
 
 ---
@@ -613,7 +647,7 @@ Comprobaciones de `validar.mjs`:
   - No hay palabras prohibidas en nada de lo publicado (ids, clases, `data-*` y `alt` de `index.html` y de `creditos.html`, nombres y rutas).
   - `herramientas/banco.json` **no** está rastreado por git (`git ls-files --error-unmatch herramientas/banco.json` debe fallar) y está en `.gitignore`.
   - No hay URL externas (`http://`, `https://`, `//`) en `index.html`, `creditos.html`, `css/` ni `js/`.
-  - Existen los `fonts/*.woff2` referenciados y sus `OFL-*.txt`.
+  - Existen los `fonts/*.woff2` referenciados y el archivo de licencia de cada tipografía: los `archivo` de `TIPOGRAFIAS` (importada de `herramientas/creditos.mjs`), hoy `fonts/OFL-oswald.txt` y `fonts/LICENSE-special-elite.txt` [D-40]. Ninguno puede estar vacío.
   - Existen `.nojekyll` y `creditos.html` en la raíz.
   - Todo `href` y `src` relativo de `index.html` y de `creditos.html` apunta a un archivo existente, con las mismas mayúsculas.
   - `creditos.html` cumple la estructura de 2.7: `lang="es"`, `<title>`, viewport, CSP idéntica a la de `index.html`, `#creditos-volver` con `href="index.html"`, sin `<script>` ni atributo `style`, y sin ningún id de imagen de `casos/`.
@@ -627,17 +661,17 @@ Comprobaciones de `validar.mjs`:
 
 `npm test` no lee `banco.json` en ningún caso.
 
-### 4.5 creditos.html y herramientas/creditos.mjs [D-39, sustituye a CREDITOS.md]
+### 4.5 creditos.html y herramientas/creditos.mjs [D-39, D-40; sustituye a CREDITOS.md]
 
-`herramientas/creditos.mjs` es un módulo sin dependencias que importa `../js/textos.js`. Exporta:
+`herramientas/creditos.mjs` es un módulo sin dependencias que importa `../js/textos.js`. Es la única fuente de la lista de tipografías de `creditos.html` y de la lista de archivos de licencia que comprueba `validar.mjs`. Exporta:
 
 | Exportación | Tipo | Descripción |
 |---|---|---|
-| `TIPOGRAFIAS` | constante | `[{familia: 'Oswald', licencia: 'SIL Open Font License 1.1', archivo: 'fonts/OFL-oswald.txt'}, {familia: 'Special Elite', licencia: 'SIL Open Font License 1.1', archivo: 'fonts/OFL-special-elite.txt'}]`. |
+| `TIPOGRAFIAS` | constante | `[{familia: 'Oswald', licencia: 'SIL Open Font License 1.1', archivo: 'fonts/OFL-oswald.txt'}, {familia: 'Special Elite', licencia: 'Apache License 2.0', archivo: 'fonts/LICENSE-special-elite.txt'}]` [D-40]. Debe coincidir con la tabla de licencias de 2.5. |
 | `escaparHtml(texto)` | pura | Sustituye `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;`, `"` → `&quot;` y `'` → `&#39;` (en ese orden, `&` primero). Convierte a cadena lo que no lo sea. |
 | `parejasCreditos(banco)` | pura | Devuelve las parejas `{fuente, licencia}` distintas de **todas** las imágenes del banco (todas están publicadas en `casos/`), sin espacios sobrantes y ordenadas con `localeCompare(…, 'es')` por fuente y luego por licencia. No devuelve ids, tipos, categorías, fechas ni recuentos. |
-| `generarCreditosHtml({textos, tipografias, parejas})` | pura | Devuelve el HTML completo de 2.7 como cadena. Escapa con `escaparHtml` **todos** los valores insertados: textos, familias, licencias, fuentes y rutas. Si se llama dos veces con los mismos datos, devuelve el mismo resultado. |
-| `escribirCreditos({banco, ruta = 'creditos.html'})` | efecto | Escribe el archivo en UTF-8 con saltos LF. Lo usan `importar.mjs` y el script `npm run creditos`. |
+| `generarCreditosHtml({textos, tipografias, parejas})` | pura | Devuelve el HTML completo de 2.7 como cadena, con un `li` de tipografía por elemento de `tipografias`, en su orden. Escapa con `escaparHtml` **todos** los valores insertados: textos, familias, licencias, fuentes y rutas. Si se llama dos veces con los mismos datos, devuelve el mismo resultado. |
+| `escribirCreditos({banco, ruta = 'creditos.html'})` | efecto | Escribe el archivo en UTF-8 con saltos LF, usando `TIPOGRAFIAS`. Lo usan `importar.mjs` y el script `npm run creditos`. |
 
 Formato de cada línea de imágenes: `{fuente} · {licencia}`, con `·` (U+00B7) entre espacios normales. Ejemplo de la lista generada con el banco de 4.1:
 
@@ -648,7 +682,7 @@ Formato de cada línea de imágenes: `{fuente} · {licencia}`, con `·` (U+00B7)
 </ul>
 ```
 
-Página inicial provisional (tarea 1): el archivero la escribe a mano con la estructura de 2.7, sin imágenes y con los textos por defecto de 3.1. Sirve para que el enlace de la portada nunca dé 404. En la tarea 13 se sustituye por la versión generada con `npm run creditos`.
+Página inicial provisional (tarea 1): el archivero la escribe a mano con la estructura de 2.7, sin imágenes, con los textos por defecto de 3.1 y con las dos líneas de tipografías exactamente como en el ejemplo de 2.7 (Special Elite con Apache License 2.0 y `fonts/LICENSE-special-elite.txt`). Sirve para que el enlace de la portada nunca dé 404. En la tarea 13 se sustituye por la versión generada con `npm run creditos`.
 
 ---
 
@@ -783,22 +817,22 @@ Solo indica acierto o fallo por posición: **no** revela qué pruebas eran IA. T
 37. `urlDelJuego({origin: 'https://u.github.io', pathname: '/identifAI-it/index.html'})` → `'https://u.github.io/identifAI-it/'`.
 
 ### 8.6 textos.js
-38. Están todas las claves de 3.1, incluidos `portada.enlace_creditos === 'Créditos'` y el grupo `creditos` completo (con `volver === 'Volver a la portada'`). `final.mensajes.length === 6` y `como_jugar.pasos.length === 4`. `veredictos.acierto` y `veredictos.fallo` tienen 4 o más variantes, `tiempo` 3 o más y `oculta` 2 o más. No existe `portada.nueva_pestana`.
+38. Están todas las claves de 3.1, incluidos `portada.enlace_creditos === 'Créditos'` y el grupo `creditos` completo (con `volver === 'Volver a la portada'`). `final.mensajes.length === 6` y `como_jugar.pasos.length === 4`. `final.estado_prueba === 'Prueba {i}: {estado}'` y `final.estados` es exactamente `{ acierto: 'acierto', fallo: 'fallo', tiempo: 'tiempo agotado', oculta: 'pestaña oculta' }` (las mismas cuatro claves que devuelve `estadoDeCodigo`, ni una más). `veredictos.acierto` y `veredictos.fallo` tienen 4 o más variantes, `tiempo` 3 o más y `oculta` 2 o más. No existe `portada.nueva_pestana`.
 39. Ninguna cadena (salvo `como_jugar.pasos`) supera los 90 caracteres.
 40. `compartir.plantilla` es exactamente igual a la cadena de la sección 7.
 
 ### 8.7 index.html, CSS y fuentes
-41. Existen todos los ids y atributos de la sección 2, y ningún id ni clase contiene palabras prohibidas (por palabra completa, según 0.1).
+41. Existen todos los ids y atributos de la sección 2, y ningún id ni clase contiene palabras prohibidas (por palabra completa, según 0.1). En particular: `#caso-escena` envuelve `#prueba-marco` y `#veredicto`; los botones de voto llevan `data-texto` en un `span.boton-texto` junto a su `<kbd>`; el `label[for="compartir-manual"]` es el hermano inmediato siguiente del `textarea`; `#resultado-cuadros` tiene `role="img"`; y todo elemento con `data-foco` que no sea un control lleva `tabindex="-1"`.
 42. En todo momento hay como mucho una sección `.pantalla` sin `hidden`. Antes de que cargue el JS no hay ninguna, y sin JS se ve el `<noscript>`.
 43. A 360 x 640 px, en la pantalla `caso`, no hay scroll horizontal y la imagen y los dos botones se ven sin desplazar.
 44. El texto y los botones cumplen el contraste AA (4,5:1 para texto normal; 3:1 para texto grande e iconos), y todos los controles tienen foco visible.
 45. Con `prefers-reduced-motion: reduce` no hay animación del sello ni sacudidas.
 46. Todas las rutas (`css/`, `js/`, `fonts/`, `img/ui/`, `data/`, `casos/`, `creditos.html` e `index.html`) son relativas, y el sitio funciona servido bajo `/identifAI-it/`.
-47. Antes de responder, el DOM no contiene la verdad: `#veredicto-sello` está vacío, `#veredicto` no tiene `data-estado`, y ningún atributo, `alt`, clase ni ruta de la imagen cambia según la verdad.
+47. Antes de responder, el DOM no contiene la verdad: `#veredicto-sello` está vacío, `#veredicto` no tiene `data-estado`, y ningún atributo, `alt`, clase ni ruta de la imagen cambia según la verdad. `#resultado-revision` está vacío hasta entrar en `resultado`; entonces cada `li` tiene el marcado de 2.3, con `alt="Prueba N"`, el icono puesto solo por CSS (`li::after`) y ninguna clase ni atributo que dependa de la verdad (solo `data-estado`, que indica el resultado del jugador).
 48. En la pestaña Red, al cargar el juego, jugar una partida completa y abrir los créditos, **todas** las peticiones van al mismo origen; ninguna va a `fonts.googleapis.com`, `fonts.gstatic.com` ni a otro dominio. `index.html`, `creditos.html`, `css/` y `js/` no contienen `http://`, `https://` ni `//` como URL de recurso.
 49. `index.html` lleva la CSP de 2.4, y la consola no muestra violaciones de CSP durante una partida completa.
 50. Las dos fuentes se cargan desde `fonts/` (aparecen en Red con estado 200). Si se borran los woff2, el juego sigue siendo legible con las fuentes del sistema de respaldo.
-51. Existen `fonts/OFL-oswald.txt` y `fonts/OFL-special-elite.txt`, con el texto completo de la SIL OFL 1.1 y el aviso de copyright de cada familia.
+51. Existen `fonts/OFL-oswald.txt`, con el texto completo de la SIL OFL 1.1 y el aviso de copyright de Oswald, y `fonts/LICENSE-special-elite.txt`, con el texto completo de la Apache License 2.0 [D-40]. No existe `fonts/OFL-special-elite.txt`.
 52. La portada tiene `a#portada-creditos` dentro de `footer#portada-pie`:
     - con `href="creditos.html"` exacto, sin `/` inicial, y sin `target` ni `rel`;
     - con el texto visible de `TEXTOS.portada.enlace_creditos`;
@@ -829,6 +863,7 @@ Solo indica acierto o fallo por posición: **no** revela qué pruebas eran IA. T
     - `herramientas/banco.json` está rastreado por git o falta en `.gitignore`.
     - Hay URL externas.
     - Faltan `.nojekyll` o `creditos.html`, o un `href`/`src` relativo de `index.html` o `creditos.html` apunta a un archivo inexistente.
+    - Falta (o está vacío) un woff2 referenciado o alguno de los archivos de licencia de `TIPOGRAFIAS` (`fonts/OFL-oswald.txt`, `fonts/LICENSE-special-elite.txt`).
     - `creditos.html` no cumple 2.7 o contiene un id de imagen.
     - Si hay banco, además: un día tiene más de 2 pruebas de la misma categoría, un tipo del banco no coincide con la clave, o `creditos.html` no coincide con lo que generaría `creditos.mjs`.
 67. En un clon limpio del repositorio (sin `banco.json`), `npm run validar` muestra el aviso de banco ausente, ejecuta el resto de comprobaciones y termina con código 0 si pasan. `npm run validar -- --estricto` termina con código 1.
@@ -843,7 +878,7 @@ Solo indica acierto o fallo por posición: **no** revela qué pruebas eran IA. T
 ### 8.10 creditos.html y creditos.mjs
 75. `creditos.html` empieza por `<!doctype html>` y tiene `<html lang="es">`, viewport, una CSP idéntica a la de `index.html` y `<title>` igual a `TEXTOS.creditos.titulo_pagina`. Solo carga `css/variables.css`, `css/base.css` y `css/componentes.css` con rutas relativas. No tiene `<script>` ni atributo `style`.
 76. Tiene un único `<main id="creditos">`, un `<footer id="creditos-pie">`, un `h1` y un `h2` por sección (con `aria-labelledby`). `a#creditos-volver` tiene `href="index.html"`; al seguirlo, se llega a la portada con estado 200, tanto con `npx serve` como bajo `/identifAI-it/`.
-77. La sección de tipografías lista Oswald y Special Elite con enlaces a `fonts/OFL-oswald.txt` y `fonts/OFL-special-elite.txt`, que existen. Sin imágenes en el banco, en lugar de la lista aparece `TEXTOS.creditos.sin_imagenes`.
+77. `TIPOGRAFIAS` es exactamente la constante de 4.5. La sección de tipografías tiene exactamente estas dos líneas, que coinciden con el ejemplo de 2.7: "Oswald · SIL Open Font License 1.1" con enlace a `fonts/OFL-oswald.txt` y "Special Elite · Apache License 2.0" con enlace a `fonts/LICENSE-special-elite.txt`; ambos archivos existen. Ninguna línea menciona la OFL para Special Elite ni enlaza `fonts/OFL-special-elite.txt` [D-40]. Sin imágenes en el banco, en lugar de la lista aparece `TEXTOS.creditos.sin_imagenes`.
 78. `escaparHtml('<b>Fotos & "Co"</b> \'x\'')` → `'&lt;b&gt;Fotos &amp; &quot;Co&quot;&lt;/b&gt; &#39;x&#39;'`. `generarCreditosHtml` con esa fuente produce un `li` sin ninguna etiqueta inyectada.
 79. `parejasCreditos` elimina duplicados, ordena con `localeCompare(…, 'es')` y devuelve objetos con solo `fuente` y `licencia`. Con el banco de ejemplo de 4.1, la lista es exactamente la del ejemplo de 4.5.
 80. Generar dos veces con el mismo banco produce archivos idénticos byte a byte (UTF-8, LF y un único salto de línea final).
@@ -858,27 +893,27 @@ Una tarea = un commit. El orden es el recomendado: ninguna tarea empieza hasta q
 
 | # | Tarea | Agente | Depende de | Commit |
 |---|---|---|---|---|
-| 1 | Crear `package.json` con `"type": "module"`, `engines.node >= 20`, los scripts `test` (`node --test tests/`), `validar`, `importar`, `importar-dataset`, `calendario` y `creditos`, y `sharp` como `devDependency`. Añadir `herramientas/banco.json` a `.gitignore`. Crear `.nojekyll` vacío y un `creditos.html` inicial provisional, escrito a mano según 2.7, sin imágenes y con los textos por defecto de 3.1, para que el enlace no dé 404 antes del primer lote. | archivero | — | `feat: package.json, scripts, banco privado y créditos iniciales` |
-| 2 | Fuentes: descargar Oswald 600 y Special Elite 400 en woff2 (subconjunto latino) de una fuente oficial con licencia OFL, sin añadir dependencias. Por ejemplo: `npm pack @fontsource/oswald` y `@fontsource/special-elite` en una carpeta temporal, copiar el `.woff2` latino y el `LICENSE`, y borrar lo temporal. Guardarlas como `fonts/oswald-600.woff2`, `fonts/special-elite-400.woff2`, `fonts/OFL-oswald.txt` y `fonts/OFL-special-elite.txt`. Si no hay red, pedir los archivos al usuario. | archivero | 1 | `feat: fuentes locales con licencia OFL` |
-| 3 | Escribir `js/textos.js` con todas las claves de 3.1, incluidos `portada.enlace_creditos` y el grupo `creditos`, y con la plantilla exacta de la sección 7. Mostrar al usuario los 6 mensajes finales y los textos de créditos para que los apruebe. | cronista | — | `feat: textos del juego` |
+| 1 | Crear `package.json` con `"type": "module"`, `engines.node >= 20`, los scripts `test` (`node --test tests/`), `validar`, `importar`, `importar-dataset`, `calendario` y `creditos`, y `sharp` como `devDependency`. Añadir `herramientas/banco.json` a `.gitignore`. Crear `.nojekyll` vacío y un `creditos.html` inicial provisional, escrito a mano según 2.7 (con Special Elite bajo Apache License 2.0 y el enlace a `fonts/LICENSE-special-elite.txt`), sin imágenes y con los textos por defecto de 3.1, para que el enlace no dé 404 antes del primer lote. | archivero | — | `feat: package.json, scripts, banco privado y créditos iniciales` |
+| 2 | Fuentes: descargar Oswald 600 y Special Elite 400 en woff2 (subconjunto latino) de una fuente oficial, sin añadir dependencias. Por ejemplo: `npm pack @fontsource/oswald` y `@fontsource/special-elite` en una carpeta temporal, copiar el `.woff2` latino y el `LICENSE` de cada paquete, y borrar lo temporal. Guardarlas como `fonts/oswald-600.woff2`, `fonts/special-elite-400.woff2`, `fonts/OFL-oswald.txt` (SIL OFL 1.1) y `fonts/LICENSE-special-elite.txt` (Apache License 2.0) [D-40]. Si no hay red, pedir los archivos al usuario. Estado a 2026-10-19: los cuatro archivos ya están en `fonts/`, pendientes de commit; no se tocan. | archivero | 1 | `feat: fuentes locales con sus licencias` |
+| 3 | Escribir `js/textos.js` con todas las claves de 3.1, incluidos `portada.enlace_creditos`, `final.estado_prueba`, `final.estados` y el grupo `creditos`, y con la plantilla exacta de la sección 7. Mostrar al usuario los 6 mensajes finales y los textos de créditos para que los apruebe. | cronista | — | `feat: textos del juego` |
 | 4 | `css/variables.css` (tokens, incluidos los de fuente de 2.5) y `css/base.css` (`@font-face` de 2.5, reset, tipografía, layout móvil primero) | perito-visual | 2 | `estilo: tokens, fuentes y base` |
-| 5 | Nuevo `index.html` con la cabecera de 2.4 (CSP, sin enlaces externos), `body[data-pagina="juego"]`, todas las secciones y los ganchos de la sección 2, incluido el pie `#portada-pie` con `#portada-creditos` (`href="creditos.html"`). Sustituye por completo al prototipo actual [D-01]. | perito-visual | 4 | `feat: estructura de pantallas` |
-| 6 | `css/componentes.css`: fichas de modo, botones, marco de prueba, temporizador, sello, veredicto, resultado, avisos, pie con el enlace de créditos y estilos de la página de créditos bajo `body[data-pagina="creditos"]` (2.7) | perito-visual | 5 | `estilo: componentes y página de créditos` |
+| 5 | Nuevo `index.html` con la cabecera de 2.4 (CSP, sin enlaces externos), `body[data-pagina="juego"]`, todas las secciones y los ganchos de la sección 2, incluidos el pie `#portada-pie` con `#portada-creditos` (`href="creditos.html"`), `#caso-escena`, `span.boton-texto` en los votos, el `label` de `#compartir-manual` y los `data-foco` con `tabindex="-1"`. Sustituye por completo al prototipo actual [D-01]. | perito-visual | 4 | `feat: estructura de pantallas` |
+| 6 | `css/componentes.css`: fichas de modo, botones, marco de prueba, temporizador, sello, veredicto (con `#veredicto-icono` por `background-image`), resultado (revisión con icono en `li::after`), avisos, pie con el enlace de créditos y estilos de la página de créditos bajo `body[data-pagina="creditos"]` (2.7) | perito-visual | 5 | `estilo: componentes y página de créditos` |
 | 7 | `img/ui/`: los SVG de 0.2 (sello, huella, lupa, papel e iconos de acierto, fallo y tiempo) | perito-visual | 6 | `estilo: iconos y texturas` |
 | 8 | `js/diario.js` (funciones puras y de carga) + `tests/diario.test.mjs` (criterios 1–10) | agente-de-campo | 1 | `feat: fechas, calendario y clave` |
 | 9 | `js/temporizador.js` + `tests/temporizador.test.mjs` (20–23) | agente-de-campo | 1 | `feat: temporizador` |
 | 10 | `js/juego.js` + `tests/juego.test.mjs` (11–19) | agente-de-campo | 8 | `feat: máquina de estados` |
 | 11 | `js/almacen.js` + `tests/almacen.test.mjs` (26–32) | agente-de-campo | 8 | `feat: almacenamiento` |
 | 12 | `js/compartir.js` + `tests/compartir.test.mjs` (33–37) y `tests/textos.test.mjs` (38–40) | agente-de-campo | 3 | `feat: compartir` |
-| 13 | `herramientas/creditos.mjs` (4.5) + `tests/creditos.test.mjs` (77–81, con bancos de ejemplo). Regenerar `creditos.html` con `npm run creditos` (todavía sin imágenes) para sustituir la página provisional. | archivero | 1, 3 | `feat: generador de créditos` |
+| 13 | `herramientas/creditos.mjs` (4.5, con `TIPOGRAFIAS` según D-40) + `tests/creditos.test.mjs` (77–81, con bancos de ejemplo). Regenerar `creditos.html` con `npm run creditos` (todavía sin imágenes) para sustituir la página provisional. | archivero | 1, 3 | `feat: generador de créditos` |
 | 14 | `herramientas/importar.mjs` con el esquema de 4.1, el comportamiento sin banco de 4.4 (`--banco-nuevo`) y la regeneración de `creditos.html` | archivero | 13 | `feat: importador de imágenes` |
 | 15 | `herramientas/importar-dataset.mjs` | archivero | 14 | `feat: importador de datasets` |
 | 16 | `herramientas/generar-calendario.mjs` (usa `ofuscar` de `js/diario.js`; se detiene si falta el banco) | archivero | 8, 14 | `feat: generador de calendario` |
-| 17 | `herramientas/validar.mjs` con los dos niveles de 4.4 y `--estricto` (criterios 66–68, 74, 75–76 y 81) | archivero | 16 | `feat: validador` |
+| 17 | `herramientas/validar.mjs` con los dos niveles de 4.4 (incluidos los archivos de licencia de `TIPOGRAFIAS`) y `--estricto` (criterios 51, 66–68, 74, 75–76 y 81) | archivero | 16 | `feat: validador` |
 | 18 | Primer lote real de imágenes (el usuario las deja en `entrada/`): calendario de al menos 30 días desde el 2026-11-01, `creditos.html` regenerado, validación y recordatorio de la copia privada de `banco.json`. El commit incluye `casos/`, `data/` y `creditos.html`, **no** `banco.json`. | archivero | 17 | `datos: primer lote de imágenes` |
 | 19 | `js/main.js`, parte 1: arranque, textos (incluido el del enlace de créditos), render de pantallas, portada, cómo jugar, error y sin casos | agente-de-campo | 5, 8–12 | `feat: arranque y pantallas` |
 | 20 | `js/main.js`, parte 2: precarga, cuenta atrás, pruebas, temporizador, votos, teclado y visibilidad | agente-de-campo | 19 | `feat: partida` |
-| 21 | `js/main.js`, parte 3: resultado, ya jugado, compartir, medianoche, otras pestañas y localStorage bloqueado | agente-de-campo | 20 | `feat: resultado y compartir` |
+| 21 | `js/main.js`, parte 3: resultado (con la revisión de 2.3 y `final.estado_prueba`), ya jugado, compartir, medianoche, otras pestañas y localStorage bloqueado | agente-de-campo | 20 | `feat: resultado y compartir` |
 | 22 | Ajustes visuales con el juego funcionando: 360, 768 y 1280 px; reduced motion; contraste; sin peticiones externas; página de créditos (criterio 82) | perito-visual | 21, 7, 13 | `estilo: ajustes finales` |
 | 23 | Revisión completa contra la sección 8 (informe BLOQUEANTE / IMPORTANTE / MENOR), con el criterio 53 en GitHub Pages tras el primer despliegue | asuntos-internos | 18, 22 | — (no edita) |
 | 24 | Corrección de los hallazgos, cada uno por su agente | según hallazgo | 23 | `fix: …` |
