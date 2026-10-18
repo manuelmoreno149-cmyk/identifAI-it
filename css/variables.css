@@ -1,0 +1,81 @@
+/* identifAI-it: tokens de diseno. Sala de analisis a oscuras, expediente policial. */
+:root {
+  /* Tipografias (ver 2.5 de la especificacion) */
+  --fuente-titulos: "Oswald", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --fuente-datos: "Special Elite", "Courier New", Courier, monospace;
+  --fuente-cuerpo: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Fondos oscuros azulados */
+  --color-fondo: #0a0f17;
+  --color-fondo-2: #111925;
+  --color-superficie: #172131;
+  --color-borde: #2c3a50;
+
+  /* Texto sobre fondo oscuro (contrastes sobre --color-fondo) */
+  --color-texto: #ece6d6;        /* 14:1 */
+  --color-texto-suave: #a9b2c1;  /* 8:1 */
+
+  /* Papel envejecido y su tinta */
+  --color-papel: #e8dcc0;
+  --color-papel-2: #d6c7a2;
+  --color-tinta: #17120a;        /* sobre papel: 13:1 */
+  --color-tinta-suave: #4a3f2a;  /* sobre papel: 7:1 */
+
+  /* Luz ambar de flexo */
+  --color-ambar: #f2a93b;
+  --color-ambar-suave: rgba(242, 169, 59, 0.16);
+
+  /* Rojo de sello de tinta */
+  --color-sello: #9b1c1c;        /* sobre papel: 6:1 */
+  --color-sello-vivo: #f0645a;   /* sobre fondo oscuro: 5.9:1 */
+
+  /* Estados (los iconos llevan su propio disco de color) */
+  --color-acierto: #1f7a46;
+  --color-fallo: #c4302b;
+  --color-tiempo: #5b6b86;
+
+  /* Cinta de no pasar */
+  --color-cinta: #f5c518;
+  --color-cinta-negro: #15120a;
+
+  /* Foco */
+  --color-foco: #ffd166;
+
+  /* Espaciados */
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-5: 1.5rem;
+  --espacio-6: 2rem;
+  --espacio-7: 3rem;
+
+  /* Medidas */
+  --ancho-contenido: 36rem;
+  --ancho-lectura: 65ch;
+  --tactil-min: 44px;
+  --alto-boton: 4rem;
+
+  /* Radios */
+  --radio-1: 2px;
+  --radio-2: 6px;
+  --radio-3: 12px;
+
+  /* Sombras */
+  --sombra-papel: 0 2px 0 rgba(0, 0, 0, 0.35), 0 10px 24px rgba(0, 0, 0, 0.5);
+  --sombra-foto: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 14px 30px rgba(0, 0, 0, 0.65);
+  --sombra-boton: 0 4px 0 rgba(0, 0, 0, 0.55);
+  --luz-flexo: radial-gradient(ellipse 80% 45% at 50% -8%, rgba(242, 169, 59, 0.2), transparent 70%);
+
+  /* Duraciones y curvas */
+  --duracion-corta: 120ms;
+  --duracion-media: 240ms;
+  --duracion-sello: 380ms;
+  --curva-sello: cubic-bezier(0.2, 1.4, 0.4, 1);
+
+  /* Tamanos de texto */
+  --texto-base: 1rem;
+  --texto-pequeno: 0.875rem;
+  --texto-grande: 1.25rem;
+  --texto-titulo: clamp(2.6rem, 14vw, 4.5rem);
+}
