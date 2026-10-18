@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>¿Real o IA?</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#f2f4f7;--surface:#fff;--ink:#12161d;--mute:#5b6472;--line:#d6dbe3;--real:#0b7a66;--ia:#6b3fd8;--bad:#c2362b;--on:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1116;--surface:#171c24;--ink:#eef1f6;--mute:#9aa4b3;--line:#2b3340;--real:#3ecfb2;--ia:#a98bff;--bad:#ff7b6e;--on:#0e1116;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1116;--surface:#171c24;--ink:#eef1f6;--mute:#9aa4b3;--line:#2b3340;--real:#3ecfb2;--ia:#a98bff;--bad:#ff7b6e;--on:#0e1116;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,sans-serif;line-height:1.45}
+main{max-width:560px;margin:0 auto;padding:28px 18px 40px}
+h1{font-size:clamp(2.6rem,12vw,4rem);font-weight:800;letter-spacing:-.03em;line-height:1;margin:0 0 14px}
+h1 .r{color:var(--real)}h1 .a{color:var(--ia)}
+p{margin:0 0 18px;color:var(--mute);max-width:46ch}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:15px 22px;font-weight:600;font-size:1.05rem;background:var(--ink);color:var(--bg)}
+button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--ia);outline-offset:2px}
+.top{display:flex;justify-content:space-between;font-weight:600;margin-bottom:10px}
+.frame{position:relative;aspect-ratio:4/3;border-radius:14px;overflow:hidden;border:4px solid var(--line);background:var(--surface)}
+.frame img{width:100%;height:100%;object-fit:cover;display:block}
+.frame.ok{border-color:var(--real)}.frame.bad{border-color:var(--bad)}
+.track{height:12px;border-radius:6px;background:var(--line);margin:14px 0;overflow:hidden}
+#bar{height:100%;background:var(--ink);transform-origin:left;transform:scaleX(1)}
+#fb{min-height:1.6em;font-weight:600;margin:0 0 10px;color:var(--ink)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btns button{padding:22px 10px;font-size:1.4rem}
+#bReal{background:var(--real);color:var(--on)}#bIA{background:var(--ia);color:var(--on)}
+.hint{font-size:.9rem;margin-top:14px}
+details{margin-top:26px;border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-weight:600}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px;margin:10px 0;align-items:center}
+.row span{grid-column:1/-1;font-size:.9rem;color:var(--mute)}
+select,input[type=file]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px;max-width:100%}
+.big{font-size:clamp(3rem,16vw,5rem);font-weight:800;letter-spacing:-.03em;line-height:1;margin:0 0 6px}
+ul{list-style:none;padding:0;margin:20px 0}
+li{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+li img{width:72px;height:54px;object-fit:cover;border-radius:8px}
+li b.ok{color:var(--real)}li b.no{color:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+<section id="start">
+  <h1><span class="r">¿Real</span> o <span class="a">IA?</span></h1>
+  <p>Verás 5 imágenes, una a una. Tienes 3 segundos en cada una para decidir si es una foto real o si la ha creado una inteligencia artificial.</p>
+  <button id="go">Empezar</button>
+  <details>
+    <summary>Usar mis imágenes</summary>
+    <p style="margin-top:12px">Sube hasta 5 imágenes e indica cuáles son reales y cuáles son de IA. Las que no subas se sustituyen por imágenes de ejemplo.</p>
+    <div id="rows"></div>
+    <p id="st" class="hint">Ahora mismo se muestran imágenes de ejemplo.</p>
+  </details>
+</section>
+
+<section id="play" hidden>
+  <div class="top"><span id="count"></span><span id="score"></span></div>
+  <div class="frame" id="frame"><img id="pic" alt="Imagen para decidir si es real o creada por IA"></div>
+  <div class="track"><div id="bar"></div></div>
+  <p id="fb" aria-live="polite"></p>
+  <div class="btns">
+    <button id="bReal">Real</button>
+    <button id="bIA">IA</button>
+  </div>
+  <p class="hint">Atajos de teclado: flecha izquierda para real, flecha derecha para IA.</p>
+</section>
+
+<section id="end" hidden>
+  <p class="big" id="final"></p>
+  <p id="msg"></p>
+  <ul id="review"></ul>
+  <button id="again">Jugar otra vez</button>
+</section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s), T=3000;
+const mk=(n,a,b)=>'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+a+'"/><stop offset="1" stop-color="'+b+'"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><circle cx="570" cy="190" r="90" fill="rgba(255,255,255,.35)"/><path d="M0 460L220 280L400 420L560 320L800 480V600H0Z" fill="rgba(0,0,0,.28)"/><text x="40" y="70" font-family="sans-serif" font-size="34" fill="#fff">Imagen de ejemplo '+n+'</text></svg>');
+const demo=[
+  {src:mk(1,'#3a7bd5','#00d2ff'),ai:false},
+  {src:mk(2,'#8e2de2','#f857a6'),ai:true},
+  {src:mk(3,'#11998e','#38ef7d'),ai:true},
+  {src:mk(4,'#f2994a','#f2c94c'),ai:false},
+  {src:mk(5,'#373b44','#4286f4'),ai:true}
+];
+const custom=[null,null,null,null,null], sels=[];
+const rows=$('#rows');
+for(let i=0;i<5;i++){
+  const d=document.createElement('div');d.className='row';
+  d.innerHTML='<span>Imagen '+(i+1)+'</span><input type="file" accept="image/*" aria-label="Archivo de la imagen '+(i+1)+'"><select aria-label="Tipo de la imagen '+(i+1)+'"><option value="real">Real</option><option value="ia">IA</option></select>';
+  rows.appendChild(d);
+  sels.push(d.querySelector('select'));
+  d.querySelector('input').addEventListener('change',e=>{
+    const f=e.target.files[0];
+    if(!f){custom[i]=null;return status()}
+    const r=new FileReader();
+    r.onload=()=>{custom[i]=r.result;status()};
+    r.readAsDataURL(f);
+  });
+}
+function status(){
+  const n=custom.filter(Boolean).length;
+  $('#st').textContent=n?n+' de 5 imágenes propias cargadas.':'Ahora mismo se muestran imágenes de ejemplo.';
+}
+const getItems=()=>demo.map((d,i)=>custom[i]?{src:custom[i],ai:sels[i].value==='ia'}:d);
+
+let round,idx,score,answers,raf,t0,locked=true;
+function show(id){['start','play','end'].forEach(k=>$('#'+k).hidden=k!==id)}
+function start(){round=getItems();idx=0;score=0;answers=[];show('play');next()}
+function next(){
+  if(idx>=round.length)return finish();
+  locked=true;
+  $('#count').textContent='Imagen '+(idx+1)+' de '+round.length;
+  $('#score').textContent='Aciertos: '+score;
+  $('#frame').className='frame';
+  $('#fb').textContent='';
+  $('#bar').style.transform='scaleX(1)';
+  const p=new Image();
+  const begin=()=>{$('#pic').src=round[idx].src;locked=false;t0=performance.now();raf=requestAnimationFrame(tick)};
+  p.onload=begin;p.onerror=begin;p.src=round[idx].src;
+}
+function tick(){
+  const e=performance.now()-t0;
+  $('#bar').style.transform='scaleX('+Math.max(0,1-e/T)+')';
+  if(e>=T)answer(null);else raf=requestAnimationFrame(tick);
+}
+function answer(a){
+  if(locked)return;
+  locked=true;cancelAnimationFrame(raf);
+  const ai=round[idx].ai, ok=a!==null&&a===ai;
+  if(ok)score++;
+  answers.push({a,ok});
+  $('#frame').className='frame '+(ok?'ok':'bad');
+  const was='Era '+(ai?'IA':'real')+'.';
+  $('#fb').textContent=a===null?'Se acabó el tiempo. '+was:ok?'Correcto. '+was:'Incorrecto. '+was;
+  $('#score').textContent='Aciertos: '+score;
+  setTimeout(()=>{idx++;next()},1200);
+}
+function finish(){
+  show('end');
+  $('#final').textContent=score+' de '+round.length;
+  $('#msg').textContent=score>=4?'Muy buen ojo: casi no te engaña la IA.':score===3?'Resultado intermedio: la IA engaña bien.':'La IA te ha engañado más de lo que crees.';
+  const ul=$('#review');ul.innerHTML='';
+  round.forEach((r,i)=>{
+    const a=answers[i], li=document.createElement('li');
+    const mine=a.a===null?'sin respuesta':a.a?'IA':'real';
+    li.innerHTML='<img alt=""><div><b class="'+(a.ok?'ok':'no')+'">'+(a.ok?'Acierto':'Fallo')+'</b><br>Tu respuesta: '+mine+'. Era '+(r.ai?'IA':'real')+'.</div>';
+    li.querySelector('img').src=r.src;
+    ul.appendChild(li);
+  });
+}
+$('#go').onclick=start;
+$('#again').onclick=()=>show('start');
+$('#bReal').onclick=()=>answer(false);
+$('#bIA').onclick=()=>answer(true);
+addEventListener('keydown',e=>{
+  if($('#play').hidden)return;
+  if(e.key==='ArrowLeft')answer(false);
+  if(e.key==='ArrowRight')answer(true);
+});
+</script>
+</body>
+</html>
