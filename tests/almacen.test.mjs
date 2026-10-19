@@ -11,7 +11,10 @@ import {
   registrarPrueba,
   registrarFin,
   cerrarAbandonada,
-  calcularRacha
+  calcularRacha,
+  leerConRespaldo,
+  guardarConRespaldo,
+  actualizar
 } from '../js/almacen.js';
 
 function almacenMemoria(inicial = {}) {
@@ -144,4 +147,70 @@ test('32. lo guardado no contiene la verdad ni el voto', () => {
     'resultados',
     'sesion'
   ]);
+});
+
+const F = '2026-11-01';
+
+test('33. dos pestañas: actualizar relee y solo aplica el cambio sobre lo último guardado', () => {
+  const compartido = almacenMemoria();
+  const sesionA = almacenMemoria();
+  // La pestaña A cargó datos antiguos en memoria.
+  const memoriaA = datosIniciales();
+  // La pestaña B empieza y termina la partida.
+  let b = actualizar((d) => registrarInicio(d, { fecha: F, n: 1, modo: 'facil', sesion: 'B' }), datosIniciales(), compartido, almacenMemoria());
+  b = actualizar((d) => registrarPrueba(d, F, 0, 'A', 'B'), b.datos, compartido, almacenMemoria());
+  b = actualizar((d) => registrarFin(d, F, F, 'B'), b.datos, compartido, almacenMemoria());
+  // A cambia de modo con datos viejos en memoria: no borra la partida de B.
+  const a = actualizar((d) => conAjustes(d, { modo: 'dificil' }), memoriaA, compartido, sesionA);
+  assert.equal(a.datos.ajustes.modo, 'dificil');
+  assert.equal(partidaDe(a.datos, F).estado, 'terminada');
+  assert.equal(partidaDe(leer(compartido).datos, F).modo, 'facil');
+  assert.equal(leer(compartido).datos.racha, 1);
+});
+
+test('34. una partida terminada nunca se sobrescribe', () => {
+  let d = registrarInicio(datosIniciales(), { fecha: F, n: 1, modo: 'medio', sesion: 'B' });
+  d = registrarPrueba(d, F, 0, 'A', 'B');
+  const fin = registrarFin(d, F, F, 'B');
+  assert.equal(registrarFin(fin, F, F, 'B'), fin);
+  assert.equal(registrarPrueba(fin, F, 1, 'A'), fin);
+  assert.equal(registrarPrueba(fin, F, 1, 'A', 'B'), fin);
+  assert.equal(cerrarAbandonada(fin, F, F), fin);
+  assert.equal(registrarInicio(fin, { fecha: F, n: 1, modo: 'facil', sesion: 'A' }), fin);
+  // Otra sesión no puede tocar una partida en curso que no es suya.
+  assert.equal(registrarPrueba(d, F, 1, 'F', 'A'), d);
+  assert.equal(registrarFin(d, F, F, 'A'), d);
+});
+
+test('35. registrarInicio atómico: la segunda pestaña ve la sesión de la primera', () => {
+  const compartido = almacenMemoria();
+  const r1 = actualizar((d) => registrarInicio(d, { fecha: F, n: 1, modo: 'medio', sesion: 'A' }), datosIniciales(), compartido, almacenMemoria());
+  const r2 = actualizar((d) => registrarInicio(d, { fecha: F, n: 1, modo: 'facil', sesion: 'B' }), datosIniciales(), compartido, almacenMemoria());
+  assert.equal(partidaDe(r1.datos, F).sesion, 'A');
+  assert.equal(partidaDe(r2.datos, F).sesion, 'A');
+  assert.equal(partidaDe(r2.datos, F).modo, 'medio');
+});
+
+test('36. la fecha de la partida manda: terminar tras medianoche cuenta para el día de inicio', () => {
+  let d = registrarInicio(datosIniciales(), { fecha: '2026-11-01', n: 1, modo: 'medio', sesion: 's' });
+  d = registrarFin(d, '2026-11-01', '2026-11-01', 's');
+  assert.equal(d.racha, 1);
+  assert.equal(partidaDe(d, '2026-11-02'), null);
+});
+
+test('37. localStorage roto: respaldo en sessionStorage y actualizar sigue funcionando', () => {
+  const sesion = almacenMemoria();
+  const r = actualizar((d) => conAjustes(d, { modo: 'facil' }), datosIniciales(), roto, sesion);
+  assert.equal(r.guardado, false);
+  assert.equal(r.datos.ajustes.modo, 'facil');
+  const lectura = leerConRespaldo(roto, sesion);
+  assert.equal(lectura.disponible, false);
+  assert.equal(lectura.respaldo, true);
+  assert.equal(lectura.datos.ajustes.modo, 'facil');
+  assert.deepEqual(guardarConRespaldo(datosIniciales(), roto, sesion), { guardado: false, respaldo: true });
+  // Si tampoco hay sessionStorage, se usan los datos en memoria y no lanza.
+  const memoria = conAjustes(datosIniciales(), { modo: 'dificil' });
+  const r2 = actualizar((d) => d, memoria, roto, roto);
+  assert.equal(r2.datos, memoria);
+  assert.equal(leerConRespaldo(roto, roto).respaldo, false);
 });

@@ -118,7 +118,8 @@ export const TEXTOS = {
   },
 
   avisos: {
-    sin_guardar: 'Este navegador no guarda datos. Tu intento de hoy no se recordará al recargar.'
+    sin_guardar: 'El archivo de este equipo está sellado. Tu intento de hoy no quedará registrado.',
+    otra_pestana: 'Este caso está abierto en otra pestaña. Termina allí el examen de las pruebas.'
   },
 
   compartir: {

@@ -127,7 +127,7 @@ Hay un único objeto de estado, gestionado por la función pura `transicion(esta
 | `caso/veredicto` | `SIGUIENTE` | `indice < 4` | `caso/pregunta`, `indice + 1`, `revelada: null`, `activo: false` |
 | `caso/veredicto` | `SIGUIENTE` | `indice === 4` | `resultado` (main.js guarda la partida `terminada`, la racha y la mejor racha) |
 | `caso/veredicto` | `OCULTA` | | sin cambios |
-| `cuenta-atras`, `caso` | `OTRA_PESTANA` | otra pestaña ha empezado o terminado la partida de esa fecha | `ya-jugado` |
+| `portada`, `como-jugar`, `cuenta-atras`, `caso` | `OTRA_PESTANA` | otra pestaña ha empezado o terminado la partida de esa fecha [D-51] | `ya-jugado` (si la partida sigue `en_curso` en la otra pestaña, solo se muestra `avisos.otra_pestana`) |
 | `resultado`, `ya-jugado` | `COMPARTIR` | | sin cambio de estado (main.js hace el efecto) |
 | `ya-jugado`, `sin-casos`, `portada` | `MEDIANOCHE` | la fecha local ha cambiado | `iniciando` (se recargan los datos) |
 | cualquiera | evento no listado | | sin cambios (se devuelve el mismo objeto) |
@@ -420,7 +420,7 @@ Claves exactas (las que llevan `{x}` son plantillas):
 | `ya_jugado` | `titulo`, `texto`, `proximo` ("Próximo caso en {tiempo}"), `modo` ("Modo: {modo}") |
 | `sin_casos` | `texto` |
 | `errores` | `calendario`, `imagenes`, `boton_reintentar` |
-| `avisos` | `sin_guardar` |
+| `avisos` | `sin_guardar`, `otra_pestana` [D-51] |
 | `compartir` | `boton`, `copiado`, `manual` ("Copia este texto:"), `plantilla` (exactamente la de la sección 7, sin cambios) |
 | `creditos` | `titulo_pagina` ("Créditos · identifAI-it"), `titulo` ("Créditos"), `intro`, `tipografias` ("Tipografías"), `imagenes` ("Imágenes"), `imagenes_intro` ("Las pruebas proceden de estas fuentes. La lista no indica qué imagen viene de cada una."), `sin_imagenes` ("Todavía no hay imágenes publicadas."), `ver_licencia` ("licencia"), `volver` ("Volver a la portada") |
 
@@ -497,11 +497,11 @@ La cuenta atrás inicial usa el mismo temporizador con `duracionMs: 3000` y mues
 | `conAjustes(datos, cambios)` | pura | Devuelve los datos con `ajustes` mezclados con `cambios`. |
 | `registrarInicio(datos, {fecha, n, modo, sesion})` | pura | Crea `partidas[fecha] = {n, modo, estado: 'en_curso', resultados: '-----', aciertos: 0, sesion}`. Si ya existe una partida para esa fecha, en cualquier modo, devuelve `datos` sin cambios. |
 | `registrarPrueba(datos, fecha, indice, codigo)` | pura | Escribe el código en la posición `indice` y actualiza `aciertos`. |
-| `registrarFin(datos, fecha, hoyISO)` | pura | Pone `estado: 'terminada'` y `aciertos`, recalcula `racha = calcularRacha(partidas, hoyISO)` y `mejorRacha = max(mejorRacha, racha)`. |
+| `registrarFin(datos, fecha, hoyISO, sesion?)` | pura | Pone `estado: 'terminada'` y `aciertos`, recalcula `racha = calcularRacha(partidas, hoyISO)` y `mejorRacha = max(mejorRacha, racha)`. |
 | `cerrarAbandonada(datos, fecha, hoyISO)` | pura | Cambia los `-` por `O` y aplica `registrarFin`. |
 | `calcularRacha(partidas, hoyISO)` | pura | Cuenta los días consecutivos con partida `terminada` (sea cual sea la puntuación) que acaban hoy, o ayer si hoy aún no se ha jugado. Si no hay partida terminada ni hoy ni ayer, devuelve 0. Un día sin casos también rompe la racha [D-25]. |
 
-Si localStorage falla, el juego funciona igual con los datos en memoria (main.js guarda la copia en una variable) y se muestra `#aviso-almacen`. Al recargar se podría volver a jugar; se acepta porque no hay otra forma sin servidor [D-11].
+Todo guardado relee el almacén y aplica solo su cambio (`actualizar`); una partida `terminada` no se modifica nunca; `leerConRespaldo`/`guardarConRespaldo` usan sessionStorage como copia si localStorage falla [D-51]. Si localStorage falla, el juego funciona igual con los datos en memoria (main.js guarda la copia en una variable) y se muestra `#aviso-almacen`. Al recargar se podría volver a jugar; se acepta porque no hay otra forma sin servidor [D-11].
 
 ### 3.6 js/compartir.js (agente-de-campo)
 

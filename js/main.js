@@ -22,7 +22,8 @@ import {
 import {
   CLAVE,
   leer,
-  guardar,
+  leerConRespaldo,
+  actualizar,
   partidaDe,
   conAjustes,
   registrarInicio,
@@ -72,11 +73,16 @@ function sesionAleatoria() {
   return [...bytes].map((b) => letras[b % letras.length]).join('');
 }
 
-function persistir() {
-  if (!guardar(datos)) {
-    disponible = false;
-    $('aviso-almacen').hidden = false;
-  }
+function marcarAlmacen(ok) {
+  disponible = ok;
+  $('aviso-almacen').hidden = ok;
+}
+
+// Relee lo último guardado, aplica solo el cambio y guarda (varias pestañas pueden escribir).
+function aplicar(cambio) {
+  const r = actualizar(cambio, datos);
+  datos = r.datos;
+  marcarAlmacen(r.guardado);
 }
 
 // ---- Despacho ----
@@ -93,29 +99,20 @@ function despachar(evento) {
 // Efectos que deben ocurrir antes de pintar nada (guardar la partida, elegir textos).
 function antesDeRender(previo, nuevo, evento) {
   if (evento.tipo === 'ELEGIR_MODO') {
-    datos = conAjustes(datos, { modo: nuevo.modo });
-    persistir();
+    aplicar((d) => conAjustes(d, { modo: nuevo.modo }));
   }
   if (evento.tipo === 'ENTENDIDO') {
-    datos = conAjustes(datos, { vistoComoJugar: true });
-    persistir();
-  }
-  if (evento.tipo === 'FIN_CUENTA') {
-    sesion = sesionAleatoria();
-    terminadaAqui = false;
-    datos = registrarInicio(datos, { fecha: nuevo.fecha, n: nuevo.n, modo: nuevo.modo, sesion });
-    persistir();
+    aplicar((d) => conAjustes(d, { vistoComoJugar: true }));
   }
   if (previo.fase !== 'veredicto' && nuevo.fase === 'veredicto') {
     const codigo = nuevo.resultados[nuevo.indice];
-    datos = registrarPrueba(datos, nuevo.fecha, nuevo.indice, codigo);
-    persistir();
+    aplicar((d) => registrarPrueba(d, nuevo.fecha, nuevo.indice, codigo, sesion));
     textoVeredicto = elegirVariante(TEXTOS.veredictos[estadoDeCodigo(codigo)]);
   }
   if (previo.pantalla === 'caso' && nuevo.pantalla === 'resultado') {
-    datos = registrarFin(datos, nuevo.fecha, fechaLocal(new Date()));
+    // La partida cuenta para el día en que empezó, aunque acabe pasada la medianoche.
+    aplicar((d) => registrarFin(d, nuevo.fecha, nuevo.fecha, sesion));
     terminadaAqui = true;
-    persistir();
   }
 }
 
@@ -145,18 +142,16 @@ function despuesDeRender(previo, nuevo) {
 // ---- Carga del día ----
 async function cargarDia() {
   try {
-    const lectura = leer();
-    if (lectura.disponible) datos = lectura.datos;
-    disponible = lectura.disponible;
-    $('aviso-almacen').hidden = disponible;
+    const lectura = leerConRespaldo();
+    if (lectura.disponible || lectura.respaldo) datos = lectura.datos;
+    marcarAlmacen(lectura.disponible);
     calendario = await cargarCalendario();
     const hoy = fechaLocal(new Date());
     fechaCarga = hoy;
     caso = casoDelDia(calendario, hoy);
     let partida = partidaDe(datos, hoy);
     if (partida && partida.estado === 'en_curso') {
-      datos = cerrarAbandonada(datos, hoy, hoy);
-      persistir();
+      aplicar((d) => cerrarAbandonada(d, hoy, hoy));
       partida = partidaDe(datos, hoy);
     }
     despachar({ tipo: 'CARGADO', caso, partidaHoy: partida });
@@ -207,15 +202,16 @@ function finCuenta() {
   cuentaAtras = null;
   if (estado.pantalla !== 'cuenta-atras') return;
   const fecha = caso.fecha;
-  // Se vuelve a leer el almacén: otra pestaña pudo haber empezado ya la partida.
-  if (disponible) {
-    const lectura = leer();
-    if (lectura.disponible) datos = lectura.datos;
-  }
-  if (partidaDe(datos, fecha)) {
+  // El intento se consume aquí, releyendo el almacén: si otra pestaña ya había
+  // empezado la partida, registrarInicio no cambia nada y la sesión no coincide.
+  const miSesion = sesionAleatoria();
+  aplicar((d) => registrarInicio(d, { fecha, n: caso.n, modo: estado.modo, sesion: miSesion }));
+  if (partidaDe(datos, fecha)?.sesion !== miSesion) {
     despachar({ tipo: 'OTRA_PESTANA' });
     return;
   }
+  sesion = miSesion;
+  terminadaAqui = false;
   despachar({ tipo: 'FIN_CUENTA', fecha });
 }
 
@@ -370,6 +366,13 @@ function renderResultado(e) {
 function renderYaJugado() {
   const partida = partidaDe(datos, fechaCarga);
   if (!partida) return;
+  const enCurso = partida.estado !== 'terminada';
+  $('ya-jugado-texto').textContent = enCurso ? TEXTOS.avisos.otra_pestana : TEXTOS.ya_jugado.texto;
+  for (const id of ['ya-jugado-aciertos', 'ya-jugado-modo', 'ya-jugado-cuadros', 'ya-jugado-racha']) {
+    $(id).hidden = enCurso;
+  }
+  for (const b of $('pantalla-ya-jugado').querySelectorAll('[data-accion="compartir"]')) b.hidden = enCurso;
+  if (enCurso) return;
   const aciertos = contarAciertos(partida.resultados);
   $('ya-jugado-aciertos').textContent = rellenar(TEXTOS.final.aciertos, { aciertos });
   $('ya-jugado-modo').textContent = rellenar(TEXTOS.ya_jugado.modo, { modo: nombreModo(partida.modo) });
@@ -431,7 +434,9 @@ function detenerBucleMedianoche() {
 
 // ---- Compartir ----
 function partidaActual() {
-  return partidaDe(datos, estado.pantalla === 'resultado' ? estado.fecha : fechaCarga);
+  const fecha = estado.pantalla === 'resultado' ? estado.fecha : fechaCarga;
+  const partida = partidaDe(datos, fecha);
+  return partida ? { ...partida, fechaISO: fecha } : null;
 }
 
 function ocultarCompartirManual() {
@@ -441,13 +446,13 @@ function ocultarCompartirManual() {
 
 async function accionCompartir() {
   const partida = partidaActual();
-  if (!partida) return;
+  if (!partida || partida.estado !== 'terminada') return;
   const mensaje = textoCompartir({
     plantilla: TEXTOS.compartir.plantilla,
     n: partida.n,
     nombreModo: nombreModo(partida.modo),
     resultados: partida.resultados,
-    racha: calcularRacha(datos.partidas, fechaLocal(new Date())),
+    racha: calcularRacha(datos.partidas, partida.fechaISO),
     url: urlDelJuego()
   });
   const resultado = await compartir(mensaje);
@@ -512,30 +517,45 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Relee el almacén y reacciona a lo que haya hecho otra pestaña.
+function sincronizar() {
+  const lectura = leer();
+  if (!lectura.disponible) return;
+  datos = lectura.datos;
+  const p = estado.pantalla;
+  if (p === 'ya-jugado') {
+    renderYaJugado();
+    return;
+  }
+  if (!['cuenta-atras', 'caso', 'portada', 'como-jugar'].includes(p) || !caso) return;
+  const registro = partidaDe(datos, p === 'caso' ? estado.fecha : caso.fecha);
+  if (!registro) return;
+  if (p === 'caso') {
+    if (registro.sesion !== sesion || (registro.estado === 'terminada' && !terminadaAqui)) {
+      despachar({ tipo: 'OTRA_PESTANA' });
+    }
+  } else {
+    despachar({ tipo: 'OTRA_PESTANA' });
+  }
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     if (estado.pantalla === 'cuenta-atras') detenerCuentaAtras();
     despachar({ tipo: 'OCULTA' });
     return;
   }
-  if (estado.pantalla === 'cuenta-atras') {
-    iniciarCuentaAtras();
-  } else if (['portada', 'ya-jugado', 'sin-casos'].includes(estado.pantalla)) {
-    if (fechaLocal(new Date()) !== fechaCarga) despachar({ tipo: 'MEDIANOCHE' });
+  if (['portada', 'ya-jugado', 'sin-casos'].includes(estado.pantalla) && fechaLocal(new Date()) !== fechaCarga) {
+    despachar({ tipo: 'MEDIANOCHE' });
+    return;
   }
+  sincronizar();
+  if (estado.pantalla === 'cuenta-atras') iniciarCuentaAtras();
 });
 
 window.addEventListener('storage', (e) => {
   if (e.key !== null && e.key !== CLAVE) return;
-  if (estado.pantalla !== 'cuenta-atras' && estado.pantalla !== 'caso') return;
-  const lectura = leer();
-  if (!lectura.disponible) return;
-  const registro = partidaDe(lectura.datos, caso.fecha);
-  if (!registro) return;
-  if (registro.sesion !== sesion || (registro.estado === 'terminada' && !terminadaAqui)) {
-    datos = lectura.datos;
-    despachar({ tipo: 'OTRA_PESTANA' });
-  }
+  sincronizar();
 });
 
 // ---- Arranque ----
@@ -555,10 +575,9 @@ function rellenarTextos() {
 }
 
 function arrancar() {
-  const lectura = leer();
+  const lectura = leerConRespaldo();
   datos = lectura.datos;
-  disponible = lectura.disponible;
-  $('aviso-almacen').hidden = disponible;
+  marcarAlmacen(lectura.disponible);
   estado = estadoInicial({
     modo: datos.ajustes.modo,
     vistoComoJugar: datos.ajustes.vistoComoJugar

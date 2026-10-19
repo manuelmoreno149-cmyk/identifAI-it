@@ -12,6 +12,14 @@ function almacenGlobal() {
   }
 }
 
+function respaldoGlobal() {
+  try {
+    return globalThis.sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 export function datosIniciales() {
   return {
     version: 1,
@@ -65,6 +73,47 @@ export function guardar(datos, almacen = almacenGlobal()) {
   }
 }
 
+// Lee la clave sin sondear. Devuelve los datos o null si no hay nada válido.
+function leerClave(almacen) {
+  try {
+    const texto = almacen.getItem(CLAVE);
+    if (texto === null || texto === undefined) return null;
+    const crudo = JSON.parse(texto);
+    if (!esObjeto(crudo) || crudo.version !== 1 || !esObjeto(crudo.partidas)) return null;
+    return normalizar(crudo);
+  } catch {
+    return null;
+  }
+}
+
+// Como leer, pero si localStorage no funciona recupera la copia de sessionStorage.
+// disponible: localStorage funciona. respaldo: los datos vienen de sessionStorage.
+export function leerConRespaldo(local = almacenGlobal(), sesion = respaldoGlobal()) {
+  const l = leer(local);
+  if (l.disponible) return { datos: l.datos, disponible: true, respaldo: false };
+  const copia = leerClave(sesion);
+  if (copia) return { datos: copia, disponible: false, respaldo: true };
+  return { datos: l.datos, disponible: false, respaldo: false };
+}
+
+// Guarda en localStorage y deja siempre una copia en sessionStorage.
+export function guardarConRespaldo(datos, local = almacenGlobal(), sesion = respaldoGlobal()) {
+  const guardado = guardar(datos, local);
+  const respaldo = guardar(datos, sesion);
+  return { guardado, respaldo };
+}
+
+// Relee lo último guardado, aplica solo el cambio y lo guarda. Si localStorage no
+// funciona, parte de los datos en memoria. Nunca lanza.
+export function actualizar(cambio, enMemoria, local = almacenGlobal(), sesion = respaldoGlobal()) {
+  const lectura = leer(local);
+  const base = lectura.disponible ? lectura.datos : (enMemoria ?? lectura.datos);
+  const nuevos = cambio(base);
+  if (lectura.disponible && nuevos === base) return { datos: base, guardado: true };
+  const { guardado } = guardarConRespaldo(nuevos, local, sesion);
+  return { datos: nuevos, guardado };
+}
+
 export function partidaDe(datos, fechaISO) {
   return datos.partidas[fechaISO] ?? null;
 }
@@ -88,9 +137,16 @@ function contar(resultados) {
   return [...resultados].filter((c) => c === 'A').length;
 }
 
-export function registrarPrueba(datos, fecha, indice, codigo) {
+// Una partida terminada nunca se modifica. Si se indica `sesion`, solo la pestaña
+// que la empezó puede tocar una partida en curso.
+function editable(partida, sesion) {
+  if (!partida || partida.estado === 'terminada') return false;
+  return sesion === undefined || partida.sesion === sesion;
+}
+
+export function registrarPrueba(datos, fecha, indice, codigo, sesion) {
   const partida = partidaDe(datos, fecha);
-  if (!partida) return datos;
+  if (!editable(partida, sesion)) return datos;
   const resultados = partida.resultados.slice(0, indice) + codigo + partida.resultados.slice(indice + 1);
   return {
     ...datos,
@@ -109,9 +165,10 @@ export function calcularRacha(partidas, hoyISO) {
   return racha;
 }
 
-export function registrarFin(datos, fecha, hoyISO) {
+// `hoyISO` es la fecha de la partida (la de su inicio), no la del momento de acabar.
+export function registrarFin(datos, fecha, hoyISO, sesion) {
   const partida = partidaDe(datos, fecha);
-  if (!partida) return datos;
+  if (!editable(partida, sesion)) return datos;
   const partidas = {
     ...datos.partidas,
     [fecha]: { ...partida, estado: 'terminada', aciertos: contar(partida.resultados) }
@@ -122,7 +179,7 @@ export function registrarFin(datos, fecha, hoyISO) {
 
 export function cerrarAbandonada(datos, fecha, hoyISO) {
   const partida = partidaDe(datos, fecha);
-  if (!partida) return datos;
+  if (!editable(partida)) return datos;
   const cerrada = {
     ...datos,
     partidas: { ...datos.partidas, [fecha]: { ...partida, resultados: partida.resultados.replaceAll('-', 'O') } }

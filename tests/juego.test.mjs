@@ -205,6 +205,7 @@ test('errores, reintentos, otra pestaña y medianoche', () => {
 
   assert.equal(ir(enPregunta(), 'OTRA_PESTANA').pantalla, 'ya-jugado');
   const portada = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
+  assert.equal(ir(portada, 'OTRA_PESTANA').pantalla, 'ya-jugado');
   assert.equal(ir(portada, 'MEDIANOCHE').pantalla, 'iniciando');
   assert.equal(ir(enPregunta(), 'MEDIANOCHE').pantalla, 'caso');
   assert.equal(ir(portada, { tipo: 'ELEGIR_MODO', modo: 'dificil' }).modo, 'dificil');

@@ -21,7 +21,7 @@ const CLAVES = {
   ya_jugado: ['titulo', 'texto', 'proximo', 'modo'],
   sin_casos: ['texto'],
   errores: ['calendario', 'imagenes', 'boton_reintentar'],
-  avisos: ['sin_guardar'],
+  avisos: ['sin_guardar', 'otra_pestana'],
   compartir: ['boton', 'copiado', 'manual', 'plantilla'],
   creditos: [
     'titulo_pagina', 'titulo', 'intro', 'tipografias', 'imagenes', 'imagenes_intro', 'sin_imagenes',

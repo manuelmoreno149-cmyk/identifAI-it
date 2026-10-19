@@ -137,7 +137,7 @@ export function transicion(estado, evento) {
       }
       return { ...estado, pantalla: 'resultado', fase: null, revelada: null, activo: false };
     case 'OTRA_PESTANA':
-      if (pantalla !== 'cuenta-atras' && pantalla !== 'caso') return estado;
+      if (!['cuenta-atras', 'caso', 'portada', 'como-jugar'].includes(pantalla)) return estado;
       return { ...estado, pantalla: 'ya-jugado', fase: null, activo: false, revelada: null };
     case 'MEDIANOCHE':
       if (pantalla !== 'ya-jugado' && pantalla !== 'sin-casos' && pantalla !== 'portada') return estado;
