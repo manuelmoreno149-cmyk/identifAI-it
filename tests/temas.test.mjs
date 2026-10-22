@@ -1,0 +1,245 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  analizarCarpeta, temaDeCarpeta, contienePalabraProhibida, fuenteDeArchivo, planificar,
+  barajar, nuevoId, distanciaHamming, compararPesos, avisosMezcla, analizarPesos,
+  POSICIONES_RECORTE, analizarLote, analizarArgumentos, comprobarReimportacion, mensajeReimportacion,
+  analizarPruebasAbiertas
+} from '../herramientas/temas.mjs';
+
+const nombres = ['01-fuegos-artificiales', '02-perros', '03-gente-comiendo', '04-gente-bebiendo', '05-mesa-con-comida', '06-discoteca', '07-gente-peleando'];
+const carpeta = (nombre, ia = 2, real = 3) => ({
+  nombre, subcarpetas: ['ia', 'real'], sueltos: [],
+  ia: Array.from({ length: ia }, (_, i) => `Gemini_Generated_Image_${i}.jpg`),
+  real: Array.from({ length: real }, (_, i) => `autor-${i}-unsplash.jpg`)
+});
+const carpetas = () => nombres.map((n, i) => carpeta(n, (i % 4) + 1, 4 - (i % 4)));
+const base = { ultimoDia: 0, hoyISO: '2026-10-21', lanzamiento: '2026-11-01' };
+
+test('83 temaDeCarpeta y analizarCarpeta', () => {
+  assert.equal(temaDeCarpeta('01-fuegos-artificiales'), 'Fuegos artificiales');
+  assert.equal(temaDeCarpeta('02-perros'), 'Perros');
+  assert.equal(temaDeCarpeta('05-mesa-con-comida'), 'Mesa con comida');
+  assert.equal(temaDeCarpeta('08-perros-de-Madrid'), 'Perros de Madrid');
+  assert.deepEqual(analizarCarpeta('07-gente-peleando'), { n: 7, tema: 'Gente peleando' });
+  for (const mal of ['2-perros', '00-perros', '02_perros', '02-perros-', '02--perros', '02-', 'perros']) {
+    assert.throws(() => analizarCarpeta(mal), mal);
+  }
+});
+
+test('84 contienePalabraProhibida', () => {
+  for (const ok of ['Gente peleando', 'Fotos reales', 'Tiarras', 'Aire libre', 'identifAI-it']) assert.equal(contienePalabraProhibida(ok), null, ok);
+  assert.equal(contienePalabraProhibida('Real Madrid'), 'real');
+  assert.equal(contienePalabraProhibida('Arte IA'), 'ia');
+  assert.equal(contienePalabraProhibida('fakeNews'), 'fake');
+  assert.equal(contienePalabraProhibida('Retrato-AI'), 'ai');
+});
+
+test('85 fuenteDeArchivo', () => {
+  assert.deepEqual(fuenteDeArchivo('Gemini_Generated_Image_lwfc7alwfc7alwfc.jpg', 'generada'), { fuente: 'Creación propia (Gemini)', licencia: 'Términos de uso de Gemini' });
+  assert.equal(fuenteDeArchivo('ChatGPT Image 21 oct 2026.png', 'generada').fuente, 'Creación propia (ChatGPT)');
+  assert.equal(fuenteDeArchivo('ray-hennessy-gdTxVSAE5sk-unsplash.jpg', 'autentica').fuente, 'Unsplash');
+  assert.equal(fuenteDeArchivo('pexels-ana-123.jpg', 'autentica').fuente, 'Pexels');
+  assert.throws(() => fuenteDeArchivo('foto.jpg', 'autentica'));
+  assert.throws(() => fuenteDeArchivo('x-unsplash.jpg', 'generada'));
+  assert.throws(() => fuenteDeArchivo('Gemini_Generated_Image_x.jpg', 'autentica'));
+});
+
+test('86 planificar: caso correcto y calendario ya importado', () => {
+  const r = planificar({ ...base, carpetas: carpetas() });
+  assert.deepEqual(r.errores, []);
+  assert.equal(r.nuevos.length, 7);
+  assert.deepEqual(r.nuevos.map((d) => d.n), [1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(r.nuevos[0].fecha, '2026-11-01');
+  assert.equal(r.nuevos[6].fecha, '2026-11-07');
+  assert.equal(r.nuevos[1].tema, 'Perros');
+  assert.ok(r.nuevos.every((d) => d.imagenes.length === 5));
+  const o = planificar({ ...base, ultimoDia: 7, carpetas: carpetas() });
+  assert.deepEqual(o.omitidos, [1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(o.nuevos.length, 0);
+  assert.deepEqual(o.errores, []);
+});
+
+test('86 planificar: errores sin lanzar', () => {
+  const con = (i, nueva) => { const c = carpetas(); c[i] = nueva; return planificar({ ...base, carpetas: c }); };
+  let r = con(5, carpeta('06-discoteca', 3, 3));
+  assert.ok(r.errores.some((e) => e.includes('06-discoteca') && e.includes('6 imágenes')));
+  r = con(2, carpeta('03-gente-comiendo', 5, 0));
+  assert.ok(r.errores.some((e) => e.includes('03-gente-comiendo') && e.includes('entre 1 y 4')));
+  r = con(2, carpeta('03-gente-comiendo', 0, 5));
+  assert.ok(r.errores.some((e) => e.includes('entre 1 y 4')));
+  r = con(1, { ...carpeta('02-perros'), subcarpetas: ['ia'], real: [] });
+  assert.ok(r.errores.length > 0);
+  const hueco = carpetas().filter((c) => !c.nombre.startsWith('02'));
+  assert.ok(planificar({ ...base, carpetas: hueco }).errores.some((e) => /consecutiva/.test(e)));
+  const rep = [...carpetas(), carpeta('03-otra')];
+  assert.ok(planificar({ ...base, carpetas: rep }).errores.some((e) => /dos carpetas/.test(e)));
+  const salto = carpetas().slice(0, 2).concat([carpeta('05-mesa')]);
+  assert.ok(planificar({ ...base, ultimoDia: 3, carpetas: salto }).errores.length > 0);
+  r = con(0, carpeta('01-arte-ia'));
+  assert.ok(r.errores.some((e) => e.includes('"ia"')));
+  r = planificar({ ...base, hoyISO: '2026-11-03', carpetas: carpetas() });
+  assert.ok(r.errores.some((e) => /ya ha llegado/.test(e)));
+});
+
+test('87 barajar', () => {
+  const l = [1, 2, 3, 4, 5];
+  const sec = () => { let i = 0; const v = [0.1, 0.9, 0.4, 0.7]; return () => v[i++ % v.length]; };
+  const a = barajar(l, sec());
+  assert.deepEqual([...a].sort(), l);
+  assert.deepEqual(l, [1, 2, 3, 4, 5]);
+  assert.deepEqual(barajar(l, sec()), a);
+});
+
+test('88 nuevoId', () => {
+  const usados = new Set(['aaaaaaaaaa']);
+  for (let i = 0; i < 10000; i++) {
+    const id = nuevoId(Math.random, usados);
+    assert.match(id, /^[a-z0-9]{10}$/);
+    assert.ok(!/ia|ai|real|fake/.test(id));
+    assert.ok(!usados.has(id));
+  }
+});
+
+test('89 compararPesos', () => {
+  assert.equal(compararPesos([100, 100], [130, 130]).aviso, true);
+  assert.equal(compararPesos([100], [125]).aviso, false);
+  assert.equal(compararPesos([125], [100]).aviso, false);
+  assert.equal(compararPesos([], [100]), null);
+});
+
+test('90 avisosMezcla devuelve los arrays exactos de D-67', () => {
+  assert.deepEqual(avisosMezcla([4, 2, 2, 1, 3, 3, 1]), []);
+  assert.deepEqual(avisosMezcla([2, 2, 2, 1]), [
+    'AVISO: 65 % de las pruebas son auténticas (13 de 20); más del 60 % de un mismo tipo.',
+    'AVISO: 3 días seguidos (del 1 al 3) con 2 generadas cada uno; el reparto se vuelve predecible.'
+  ]);
+  assert.deepEqual(avisosMezcla([4, 4, 3, 4]), ['AVISO: 75 % de las pruebas son generadas (15 de 20); más del 60 % de un mismo tipo.']);
+  assert.deepEqual(avisosMezcla([]), []);
+});
+
+test('distanciaHamming', () => {
+  assert.equal(distanciaHamming('0000000000000000', '0000000000000000'), 0);
+  assert.equal(distanciaHamming('f000000000000000', '0000000000000001'), 5);
+});
+
+test('analizarPesos detecta días afectados', () => {
+  const desof = (clave, n, i) => (i === 0 ? 1 : 0);
+  const dias = [{ n: 1, pruebas: ['a', 'b'], clave: 'x' }, { n: 2, pruebas: ['c', 'd'], clave: 'x' }];
+  const r = analizarPesos({ dias, tamanos: { a: 200, b: 100, c: 100, d: 100 }, desofuscar: desof });
+  assert.deepEqual(r.diasAfectados, [1]);
+  assert.equal(r.global.aviso, true);
+});
+
+test('95 POSICIONES_RECORTE', () => {
+  assert.deepEqual(POSICIONES_RECORTE, { izquierda: 'left', centro: 'centre', derecha: 'right', arriba: 'top', abajo: 'bottom' });
+});
+
+const rutas = ['04-gente-bebiendo/real/a.jpg', '04-gente-bebiendo/ia/b.png'];
+const lim = { recortes: {}, errores: [], avisos: [] };
+
+test('96 analizarLote: sin lote, vacío y valores válidos', () => {
+  assert.deepEqual(analizarLote(null, rutas), lim);
+  assert.deepEqual(analizarLote(undefined, rutas), lim);
+  assert.deepEqual(analizarLote({}, rutas), lim);
+  for (const v of Object.keys(POSICIONES_RECORTE)) {
+    assert.deepEqual(analizarLote({ [rutas[0]]: v }, rutas), { recortes: { [rutas[0]]: v }, errores: [], avisos: [] });
+  }
+});
+
+test('96 analizarLote: claves y valores no válidos', () => {
+  for (const clave of ['04-gente-bebiendo/real/x.jpg', '04-gente-bebiendo\real\a.jpg', 'entrada/temas/04-gente-bebiendo/real/a.jpg', '04-gente-bebiendo/REAL/a.jpg']) {
+    const r = analizarLote({ [clave]: 'izquierda' }, rutas);
+    assert.equal(r.errores.length, 1, clave);
+    assert.ok(r.errores[0].includes(clave));
+    assert.deepEqual(r.recortes, {});
+  }
+  for (const v of ['Izquierda', 'left', 'atencion', '', 3, null]) {
+    const r = analizarLote({ [rutas[0]]: v }, rutas);
+    assert.equal(r.errores.length, 1, String(v));
+    assert.ok(r.errores[0].includes(rutas[0]) && r.errores[0].includes('izquierda, centro, derecha, arriba o abajo'));
+    assert.deepEqual(r.recortes, {});
+  }
+  for (const malo of [[], 'izquierda', 3, true]) {
+    assert.deepEqual(analizarLote(malo, rutas), {
+      recortes: {}, errores: ['herramientas/lote.json debe ser un objeto JSON con rutas como claves.'], avisos: []
+    });
+  }
+});
+
+test('96 analizarLote: omitidas, NFC, varios errores y sin mutar', () => {
+  const r = analizarLote({ '01-perros/ia/z.jpg': 'arriba' }, rutas, ['01-perros/ia/z.jpg']);
+  assert.equal(r.errores.length, 0);
+  assert.equal(r.avisos.length, 1);
+  assert.ok(r.avisos[0].includes('01-perros/ia/z.jpg') && r.avisos[0].includes('--reimportar'));
+  assert.deepEqual(r.recortes, {});
+  const nfc = ['09-años/real/a.jpg'];
+  const nfd = '09-años/real/a.jpg'.normalize('NFD');
+  assert.notEqual(nfd, nfc[0]);
+  assert.deepEqual(analizarLote({ [nfd]: 'centro' }, nfc).recortes, { [nfc[0]]: 'centro' });
+  const lote = { [rutas[0]]: 'mal', 'no/existe.jpg': 'abajo', [rutas[1]]: 'derecha' };
+  const copia = structuredClone(lote);
+  const listas = structuredClone(rutas);
+  const m = analizarLote(lote, rutas);
+  assert.equal(m.errores.length, 2);
+  assert.deepEqual(m.recortes, { [rutas[1]]: 'derecha' });
+  assert.deepEqual(lote, copia);
+  assert.deepEqual(rutas, listas);
+});
+
+test('analizarArgumentos', () => {
+  assert.deepEqual(analizarArgumentos([]).errores, []);
+  const ok = analizarArgumentos(['--reimportar', '--confirmar', '--simular']);
+  assert.deepEqual([ok.reimportar, ok.confirmar, ok.simular, ok.errores.length], [true, true, true, 0]);
+  assert.deepEqual(analizarArgumentos(['--confirmar']).errores, ['--confirmar solo vale junto a --reimportar.']);
+  assert.equal(analizarArgumentos(['--reimportar', '--banco-nuevo']).errores.length, 1);
+  assert.match(analizarArgumentos(['--raro']).errores[0], /desconocido: --raro/);
+});
+
+const diasCal = (desde = 1) => Array.from({ length: 7 }, (_, i) => ({ n: i + 1, fecha: `2026-11-0${i + 1}` })).slice(desde - 1);
+
+test('comprobarReimportacion', () => {
+  const base = { calendario: { dias: diasCal() }, nombresCarpetas: nombres, hoyISO: '2026-10-22' };
+  assert.deepEqual(comprobarReimportacion(base), []);
+  assert.deepEqual(comprobarReimportacion({ ...base, calendario: { dias: [] } }), ['No hay nada que reimportar; usa npm run importar.']);
+  assert.deepEqual(comprobarReimportacion({ ...base, calendario: undefined }), ['No hay nada que reimportar; usa npm run importar.']);
+  assert.match(comprobarReimportacion({ ...base, hoyISO: '2026-11-01' })[0], /^El día 01 \(2026-11-01\) ya ha llegado o ha pasado: después del lanzamiento/);
+  assert.deepEqual(comprobarReimportacion({ ...base, nombresCarpetas: nombres.filter((n) => !n.startsWith('03')) }), [
+    'Para reimportar falta la carpeta del día 03 en entrada/temas/.'
+  ]);
+  assert.deepEqual(comprobarReimportacion({ ...base, nombresCarpetas: [...nombres, '08-nueva'] }), []);
+});
+
+test('mensajeReimportacion', () => {
+  assert.equal(
+    mensajeReimportacion({ dias: diasCal(), borradas: 35 }),
+    'Se regenerarían 7 días (2026-11-01 a 2026-11-07) y se borrarían 35 imágenes antiguas de casos/. Para hacerlo: npm run importar -- --reimportar --confirmar'
+  );
+});
+
+test('97 el recorte manual conserva la mitad pedida', async () => {
+  const { default: sharp } = await import('sharp');
+  const mitad = (c) => ({ create: { width: 500, height: 500, channels: 3, background: c } });
+  const negro = await sharp(mitad({ r: 0, g: 0, b: 0 })).png().toBuffer();
+  const blanco = await sharp(mitad({ r: 255, g: 255, b: 255 })).png().toBuffer();
+  const origen = await sharp({ create: { width: 1000, height: 500, channels: 3, background: { r: 128, g: 128, b: 128 } } })
+    .composite([{ input: negro, left: 0, top: 0 }, { input: blanco, left: 500, top: 0 }])
+    .png()
+    .toBuffer();
+  const media = async (recorte) => {
+    const { data } = await sharp(origen).resize(80, 100, { fit: 'cover', position: POSICIONES_RECORTE[recorte] }).greyscale().raw().toBuffer({ resolveWithObject: true });
+    return data.reduce((s, x) => s + x, 0) / data.length;
+  };
+  assert.ok((await media('izquierda')) < 10);
+  assert.ok((await media('derecha')) > 245);
+});
+
+test('118. analizarPruebasAbiertas', () => {
+  assert.equal(analizarPruebasAbiertas("import x from './x.js';\nconst PRUEBAS_ABIERTAS = true; // D-71\n"), true);
+  assert.equal(analizarPruebasAbiertas("import x from './x.js';\nconst PRUEBAS_ABIERTAS = false; // D-71\n"), false);
+  for (const t of [
+    '', 'const PRUEBAS_ABIERTAS=true;', '  const PRUEBAS_ABIERTAS = true;', 'let PRUEBAS_ABIERTAS = true;',
+    'export const PRUEBAS_ABIERTAS = true;', '// const PRUEBAS_ABIERTAS = true;',
+    'const PRUEBAS_ABIERTAS = true;\nconst PRUEBAS_ABIERTAS = false;'
+  ]) assert.equal(analizarPruebasAbiertas(t), null, t);
+});

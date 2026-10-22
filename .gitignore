@@ -2,3 +2,6 @@ entrada/
 node_modules/
 .DS_Store
 herramientas/banco.json
+docs/revision-lote.html
+herramientas/banco.anterior.json
+herramientas/lote.json

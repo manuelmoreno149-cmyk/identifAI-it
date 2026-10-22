@@ -11,8 +11,6 @@
     "test": "node --test tests/",
     "validar": "node herramientas/validar.mjs",
     "importar": "node herramientas/importar.mjs",
-    "importar-dataset": "node herramientas/importar-dataset.mjs",
-    "calendario": "node herramientas/generar-calendario.mjs",
     "creditos": "node herramientas/creditos.mjs"
   },
   "devDependencies": {
