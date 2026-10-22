@@ -3,7 +3,7 @@
 Juego web diario (estilo Wordle): cada día se muestran 5 imágenes, de una en una, y el jugador decide si cada una es REAL o IA antes de que se acabe el tiempo. Temática policíaca / forense oscura: el jugador es un detective que examina pruebas.
 
 ## Reglas del juego (no cambiar sin permiso del usuario)
-- 5 casos al día, los mismos para todos los jugadores. La mezcla real/IA varía cada día (de 1 a 4 de IA).
+- 5 casos al día, los mismos para todos los jugadores. Cada día tiene un tema ("Caso del día: Perros") y sus 5 imágenes las elige el usuario. La mezcla real/IA la decide el usuario en cada día, de 1 a 4 de IA.
 - Modos: fácil 7 s, medio 3 s, difícil 1 s por imagen. Tiempo agotado = fallo.
 - Las 5 imágenes se precargan antes de empezar. El temporizador arranca solo cuando la imagen está decodificada y pintada.
 - Si la pestaña se oculta durante un caso, ese caso cuenta como fallo.
@@ -24,10 +24,10 @@ Juego web diario (estilo Wordle): cada día se muestran 5 imágenes, de una en u
 - js/: main.js, juego.js, temporizador.js, diario.js, almacen.js, compartir.js, textos.js.
 - img/ui/: SVG propios de la interfaz.
 - casos/: imágenes del juego, nombres aleatorios.
-- data/calendario.json: los 5 casos de cada día.
+- data/calendario.json: los 5 casos de cada día y su tema (versión 2).
 - fonts/: fuentes woff2 alojadas en el repo (con @font-face y fuentes del sistema de respaldo). Nada de CDN de Google ni de terceros.
-- herramientas/: scripts del banco de imágenes y banco.json (solo local, en .gitignore: no se publica).
-- entrada/reales/ y entrada/ia/: imágenes nuevas por importar (en .gitignore).
+- herramientas/: importar.mjs (genera también el calendario), validar.mjs, creditos.mjs y temas.mjs. banco.json, banco.anterior.json y lote.json (recortes manuales) son solo locales, en .gitignore: no se publican.
+- entrada/temas/NN-nombre-del-tema/{ia,real}/: imágenes originales por importar, una carpeta por día (en .gitignore). Ya no se usan entrada/reales/ ni entrada/ia/.
 - tests/: node --test.
 - docs/ESPECIFICACION.md (fuente de verdad técnica) y docs/DECISIONES.md.
 
@@ -35,7 +35,7 @@ Juego web diario (estilo Wordle): cada día se muestran 5 imágenes, de una en u
 - Nunca "real", "ia", "ai", "fake" ni la respuesta en nombres de archivo, rutas, alt, clases, ids ni atributos data-*.
 - Imágenes publicadas sin metadatos (EXIF, XMP, C2PA), todas en WebP, 1080 x 1350, misma calidad.
 - La respuesta de un caso no existe en el DOM hasta que el jugador responde.
-- herramientas/banco.json (con tipo y fuente de cada imagen) nunca se sube a GitHub: va en .gitignore y vive solo en local.
+- herramientas/banco.json (con tipo y fuente de cada imagen), herramientas/banco.anterior.json y herramientas/lote.json (sus rutas contienen ia/ y real/) nunca se suben a GitHub: van en .gitignore y viven solo en local.
 
 ## Forma de trabajar
 - Lee docs/ESPECIFICACION.md antes de tocar código. Si algo no está ahí, pregunta o regístralo en docs/DECISIONES.md.
