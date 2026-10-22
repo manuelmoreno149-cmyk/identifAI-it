@@ -37,6 +37,7 @@ export function estadoInicial({ modo = MODO_POR_DEFECTO, vistoComoJugar = false 
     modo: modo in MODOS ? modo : MODO_POR_DEFECTO,
     fecha: null,
     n: null,
+    tema: null,
     pruebas: [],
     clave: null,
     indice: 0,
@@ -71,6 +72,7 @@ export function transicion(estado, evento) {
       const base = { ...estado, error: null, fase: null, activo: false, revelada: null };
       if (evento.caso) {
         base.n = evento.caso.n;
+        base.tema = evento.caso.tema;
         base.pruebas = evento.caso.pruebas;
         base.clave = evento.caso.clave;
       }

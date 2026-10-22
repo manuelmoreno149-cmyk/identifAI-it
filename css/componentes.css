@@ -147,6 +147,23 @@
   transform: rotate(-1.5deg);
 }
 
+#portada-tema,
+#caso-tema {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--fuente-datos);
+}
+
+#portada-tema {
+  align-self: flex-start;
+}
+
+#caso-tema {
+  flex: 0 0 100%;
+}
+
 #portada-modos legend {
   padding: 0;
   margin-bottom: var(--espacio-3);
@@ -342,6 +359,7 @@
   flex: none;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--espacio-3);
   font-family: var(--fuente-datos);
@@ -728,6 +746,69 @@
   color: var(--color-tinta);
   background: var(--color-ambar);
   border-bottom: 3px solid var(--color-tinta);
+}
+
+/* Modo prueba [D-70] */
+#selector-prueba {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: var(--espacio-2) var(--espacio-3);
+  font-family: var(--fuente-datos);
+  font-size: 0.875rem;
+  color: var(--color-tinta);
+  background: var(--color-papel);
+  border: 1px dashed var(--color-tinta-suave);
+  border-radius: var(--radio-1);
+}
+
+#selector-prueba label {
+  flex: 0 0 100%;
+}
+
+#selector-prueba-dia {
+  flex: 1 1 10rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 var(--espacio-2);
+  font: inherit;
+  color: var(--color-tinta);
+  background: var(--color-papel-2);
+  border: 2px solid var(--color-tinta);
+  border-radius: var(--radio-1);
+}
+
+#selector-prueba .boton {
+  min-height: 2.75rem;
+  padding: 0 var(--espacio-3);
+  font-size: 1rem;
+}
+
+#selector-prueba-dia:focus-visible,
+#selector-prueba .boton:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+#aviso-previsualizacion {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: var(--espacio-1) var(--espacio-4);
+  padding-top: calc(var(--espacio-1) + env(safe-area-inset-top));
+  font-family: var(--fuente-datos);
+  font-size: 0.875rem;
+  text-align: center;
+  color: var(--color-tinta);
+  background: var(--color-ambar);
+  border-bottom: 2px solid var(--color-tinta);
+}
+
+#aviso-previsualizacion[hidden] {
+  display: none;
 }
 
 /* ---------- Escritorio ---------- */

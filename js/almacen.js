@@ -20,6 +20,20 @@ function respaldoGlobal() {
   }
 }
 
+// Almacén en memoria con la interfaz mínima de Storage (previsualización local).
+export function crearAlmacenMemoria() {
+  const mapa = new Map();
+  return {
+    getItem: (clave) => (mapa.has(clave) ? mapa.get(clave) : null),
+    setItem: (clave, valor) => {
+      mapa.set(clave, String(valor));
+    },
+    removeItem: (clave) => {
+      mapa.delete(clave);
+    }
+  };
+}
+
 export function datosIniciales() {
   return {
     version: 1,

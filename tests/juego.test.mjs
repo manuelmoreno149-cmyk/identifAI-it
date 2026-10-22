@@ -18,6 +18,7 @@ const VERDADES = [0, 1, 1, 0, 1];
 const CASO = {
   n: 3,
   fecha: '2026-11-03',
+  tema: 'Gente comiendo',
   pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'],
   clave: ofuscar(VERDADES, 3, () => 0.3)
 };
@@ -156,6 +157,12 @@ test('17. CARGADO: partida terminada, sin casos y portada', () => {
   const p = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
   assert.equal(p.pantalla, 'portada');
   assert.equal(p.n, 3);
+  assert.equal(p.tema, 'Gente comiendo');
+  assert.equal(estadoInicial({}).tema, null);
+  assert.equal(
+    ir(estadoInicial({}), { tipo: 'CARGADO', caso: null, partidaHoy: null }).tema,
+    null
+  );
   assert.deepEqual(p.pruebas, CASO.pruebas);
 });
 

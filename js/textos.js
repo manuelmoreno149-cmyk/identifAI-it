@@ -15,6 +15,7 @@ export const TEXTOS = {
     boton_empezar: 'Empezar',
     boton_como_jugar: 'Cómo jugar',
     etiqueta_caso: 'Caso nº {n}',
+    tema: 'Caso del día: {tema}',
     racha: 'Racha: {racha}',
     enlace_creditos: 'Créditos'
   },
@@ -39,6 +40,7 @@ export const TEXTOS = {
   },
 
   partida: {
+    caso_del_dia: 'Caso del día: {tema}',
     etiqueta_prueba: 'Prueba {i}/5',
     marcador: 'Aciertos: {aciertos}',
     alt_prueba: 'Prueba {i} de 5',
@@ -119,7 +121,14 @@ export const TEXTOS = {
 
   avisos: {
     sin_guardar: 'El archivo de este equipo está sellado. Tu intento de hoy no quedará registrado.',
-    otra_pestana: 'Este caso está abierto en otra pestaña. Termina allí el examen de las pruebas.'
+    otra_pestana: 'Este caso está abierto en otra pestaña. Termina allí el examen de las pruebas.',
+    previsualizacion: 'Previsualización del {fecha}: no se guarda nada.'
+  },
+
+  prueba: {
+    etiqueta: 'Día de prueba',
+    opcion: 'Día {n}: {tema}',
+    boton: 'Abrir este día'
   },
 
   compartir: {

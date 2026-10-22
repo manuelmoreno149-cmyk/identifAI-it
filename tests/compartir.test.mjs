@@ -99,4 +99,8 @@ test('37. urlDelJuego', () => {
     'https://u.github.io/identifAI-it/'
   );
   assert.equal(urlDelJuego({ origin: 'http://localhost:3000', pathname: '/' }), 'http://localhost:3000/');
+  assert.equal(
+    urlDelJuego({ origin: 'https://u.github.io', pathname: '/identifAI-it/index.html', search: '?prueba=1&dia=3' }),
+    'https://u.github.io/identifAI-it/'
+  );
 });

@@ -8,7 +8,11 @@ import {
   rutaPrueba,
   desofuscar,
   cargarCalendario,
-  precargar
+  precargar,
+  fechaPrevisualizada,
+  pruebaActiva,
+  diasDePrueba,
+  diaDePrueba
 } from './diario.js';
 import {
   MODOS,
@@ -21,6 +25,7 @@ import {
 } from './juego.js';
 import {
   CLAVE,
+  crearAlmacenMemoria,
   leer,
   leerConRespaldo,
   actualizar,
@@ -39,6 +44,21 @@ import {
   segundosRestantes
 } from './temporizador.js';
 import { rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from './compartir.js';
+
+const PRUEBAS_ABIERTAS = true; // Modo prueba [D-71]: poner false antes del 2026-11-01.
+
+// Previsualización local [D-68]: fecha fija y almacenes en memoria (undefined = los del navegador).
+const fechaFija = fechaPrevisualizada(location.search, location.hostname);
+// Modo prueba [D-70]: manda ?fecha= si es válido en un host local.
+const modoPrueba = fechaFija === null && pruebaActiva(location.search, PRUEBAS_ABIERTAS);
+const enMemoria = fechaFija !== null || modoPrueba;
+const almacenLocal = enMemoria ? crearAlmacenMemoria() : undefined;
+const almacenSesion = enMemoria ? crearAlmacenMemoria() : undefined;
+let fechaPrueba = null;
+
+function hoy() {
+  return fechaFija ?? fechaPrueba ?? fechaLocal(new Date());
+}
 
 const $ = (id) => document.getElementById(id);
 const app = $('app');
@@ -80,7 +100,7 @@ function marcarAlmacen(ok) {
 
 // Relee lo último guardado, aplica solo el cambio y guarda (varias pestañas pueden escribir).
 function aplicar(cambio) {
-  const r = actualizar(cambio, datos);
+  const r = actualizar(cambio, datos, almacenLocal, almacenSesion);
   datos = r.datos;
   marcarAlmacen(r.guardado);
 }
@@ -142,17 +162,18 @@ function despuesDeRender(previo, nuevo) {
 // ---- Carga del día ----
 async function cargarDia() {
   try {
-    const lectura = leerConRespaldo();
+    const lectura = leerConRespaldo(almacenLocal, almacenSesion);
     if (lectura.disponible || lectura.respaldo) datos = lectura.datos;
     marcarAlmacen(lectura.disponible);
     calendario = await cargarCalendario();
-    const hoy = fechaLocal(new Date());
-    fechaCarga = hoy;
-    caso = casoDelDia(calendario, hoy);
-    let partida = partidaDe(datos, hoy);
+    if (modoPrueba) prepararModoPrueba();
+    const dia = hoy();
+    fechaCarga = dia;
+    caso = casoDelDia(calendario, dia);
+    let partida = partidaDe(datos, dia);
     if (partida && partida.estado === 'en_curso') {
-      aplicar((d) => cerrarAbandonada(d, hoy, hoy));
-      partida = partidaDe(datos, hoy);
+      aplicar((d) => cerrarAbandonada(d, dia, dia));
+      partida = partidaDe(datos, dia);
     }
     despachar({ tipo: 'CARGADO', caso, partidaHoy: partida });
   } catch (e) {
@@ -160,6 +181,41 @@ async function cargarDia() {
     calendario = null;
     despachar({ tipo: 'ERROR_CALENDARIO' });
   }
+}
+
+// ---- Modo prueba [D-70] ----
+function prepararModoPrueba() {
+  const dias = diasDePrueba(calendario);
+  const elegido = diaDePrueba(location.search, dias, fechaLocal(new Date()));
+  fechaPrueba = elegido?.fecha ?? null;
+  const aviso = $('aviso-previsualizacion');
+  aviso.textContent = rellenar(TEXTOS.avisos.previsualizacion, { fecha: hoy() });
+  aviso.hidden = false;
+  if (elegido && !$('selector-prueba')) crearSelectorPrueba(dias, elegido);
+}
+
+function crearSelectorPrueba(dias, elegido) {
+  const caja = document.createElement('div');
+  caja.id = 'selector-prueba';
+  const etiqueta = document.createElement('label');
+  etiqueta.htmlFor = 'selector-prueba-dia';
+  etiqueta.textContent = TEXTOS.prueba.etiqueta;
+  const select = document.createElement('select');
+  select.id = 'selector-prueba-dia';
+  for (const d of dias) {
+    const opcion = document.createElement('option');
+    opcion.value = String(d.n);
+    opcion.textContent = rellenar(TEXTOS.prueba.opcion, { n: d.n, tema: d.tema });
+    if (d.n === elegido.n) opcion.selected = true;
+    select.append(opcion);
+  }
+  const boton = document.createElement('button');
+  boton.type = 'button';
+  boton.className = 'boton';
+  boton.dataset.accion = 'abrir-prueba';
+  boton.textContent = TEXTOS.prueba.boton;
+  caja.append(etiqueta, select, boton);
+  $('portada-tema').after(caja);
 }
 
 // ---- Precarga ----
@@ -293,8 +349,9 @@ function renderCuadros(elemento, resultados, aciertos) {
 
 function renderPortada(e) {
   $('portada-caso').textContent = e.n ? rellenar(TEXTOS.portada.etiqueta_caso, { n: e.n }) : '';
+  $('portada-tema').textContent = e.tema ? rellenar(TEXTOS.portada.tema, { tema: e.tema }) : '';
   for (const radio of app.querySelectorAll('input[name="modo"]')) radio.checked = radio.value === e.modo;
-  const racha = calcularRacha(datos.partidas, fechaCarga ?? fechaLocal(new Date()));
+  const racha = calcularRacha(datos.partidas, fechaCarga ?? hoy());
   const elRacha = $('portada-racha');
   elRacha.hidden = racha === 0;
   elRacha.textContent = racha === 0 ? '' : rellenar(TEXTOS.portada.racha, { racha });
@@ -303,6 +360,7 @@ function renderPortada(e) {
 function renderCaso(e) {
   const seccion = $('pantalla-caso');
   seccion.dataset.fase = e.fase ?? 'pregunta';
+  $('caso-tema').textContent = e.tema ? rellenar(TEXTOS.partida.caso_del_dia, { tema: e.tema }) : '';
   $('caso-etiqueta').textContent = rellenar(TEXTOS.partida.etiqueta_prueba, { i: e.indice + 1 });
   $('caso-marcador').textContent = rellenar(TEXTOS.partida.marcador, {
     aciertos: contarAciertos(e.resultados)
@@ -415,7 +473,7 @@ function iniciarBucleMedianoche() {
     $('ya-jugado-cuenta-atras').textContent = rellenar(TEXTOS.ya_jugado.proximo, {
       tiempo: formatearCuentaAtras(msHastaMedianoche(ahora))
     });
-    if (fechaLocal(ahora) !== fechaCarga) {
+    if (hoy() !== fechaCarga) {
       bucleMedianoche = null;
       despachar({ tipo: 'MEDIANOCHE' });
       return;
@@ -487,6 +545,11 @@ const EVENTOS_ACCION = {
 app.addEventListener('click', (e) => {
   const boton = e.target.closest('[data-voto], [data-accion]');
   if (!boton || !app.contains(boton)) return;
+  if (boton.dataset.accion === 'abrir-prueba') {
+    const select = $('selector-prueba-dia');
+    if (modoPrueba && select) location.assign(`?prueba=1&dia=${select.value}`);
+    return;
+  }
   if (boton.dataset.voto) {
     despachar({ tipo: 'VOTO', voto: boton.dataset.voto });
     return;
@@ -519,7 +582,7 @@ document.addEventListener('keydown', (e) => {
 
 // Relee el almacén y reacciona a lo que haya hecho otra pestaña.
 function sincronizar() {
-  const lectura = leer();
+  const lectura = leer(almacenLocal);
   if (!lectura.disponible) return;
   datos = lectura.datos;
   const p = estado.pantalla;
@@ -545,7 +608,7 @@ document.addEventListener('visibilitychange', () => {
     despachar({ tipo: 'OCULTA' });
     return;
   }
-  if (['portada', 'ya-jugado', 'sin-casos'].includes(estado.pantalla) && fechaLocal(new Date()) !== fechaCarga) {
+  if (['portada', 'ya-jugado', 'sin-casos'].includes(estado.pantalla) && hoy() !== fechaCarga) {
     despachar({ tipo: 'MEDIANOCHE' });
     return;
   }
@@ -553,10 +616,12 @@ document.addEventListener('visibilitychange', () => {
   if (estado.pantalla === 'cuenta-atras') iniciarCuentaAtras();
 });
 
-window.addEventListener('storage', (e) => {
-  if (e.key !== null && e.key !== CLAVE) return;
-  sincronizar();
-});
+if (!enMemoria) {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== null && e.key !== CLAVE) return;
+    sincronizar();
+  });
+}
 
 // ---- Arranque ----
 function rellenarTextos() {
@@ -575,7 +640,7 @@ function rellenarTextos() {
 }
 
 function arrancar() {
-  const lectura = leerConRespaldo();
+  const lectura = leerConRespaldo(almacenLocal, almacenSesion);
   datos = lectura.datos;
   marcarAlmacen(lectura.disponible);
   estado = estadoInicial({
@@ -583,6 +648,11 @@ function arrancar() {
     vistoComoJugar: datos.ajustes.vistoComoJugar
   });
   rellenarTextos();
+  if (fechaFija) {
+    const aviso = $('aviso-previsualizacion');
+    aviso.textContent = rellenar(TEXTOS.avisos.previsualizacion, { fecha: fechaFija });
+    aviso.hidden = false;
+  }
   for (const radio of app.querySelectorAll('input[name="modo"]')) radio.checked = radio.value === estado.modo;
   app.dataset.modo = estado.modo;
   mostrarPantalla('iniciando');

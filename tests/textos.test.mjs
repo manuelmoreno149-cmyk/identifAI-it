@@ -5,13 +5,13 @@ import { TEXTOS } from '../js/textos.js';
 const CLAVES = {
   portada: [
     'titulo', 'lema', 'elige_modo', 'modo_facil', 'modo_medio', 'modo_dificil', 'desc_facil', 'desc_medio',
-    'desc_dificil', 'boton_empezar', 'boton_como_jugar', 'etiqueta_caso', 'racha', 'enlace_creditos'
+    'desc_dificil', 'boton_empezar', 'boton_como_jugar', 'etiqueta_caso', 'tema', 'racha', 'enlace_creditos'
   ],
   como_jugar: ['titulo', 'pasos', 'boton_entendido'],
   cargando: ['texto'],
   cuenta_atras: ['aviso'],
   partida: [
-    'etiqueta_prueba', 'marcador', 'alt_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica',
+    'caso_del_dia', 'etiqueta_prueba', 'marcador', 'alt_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica',
     'sello_generada', 'quedan', 'boton_siguiente', 'boton_ver_resultado'
   ],
   veredictos: ['acierto', 'fallo', 'tiempo', 'oculta'],
@@ -21,7 +21,8 @@ const CLAVES = {
   ya_jugado: ['titulo', 'texto', 'proximo', 'modo'],
   sin_casos: ['texto'],
   errores: ['calendario', 'imagenes', 'boton_reintentar'],
-  avisos: ['sin_guardar', 'otra_pestana'],
+  avisos: ['sin_guardar', 'otra_pestana', 'previsualizacion'],
+  prueba: ['etiqueta', 'opcion', 'boton'],
   compartir: ['boton', 'copiado', 'manual', 'plantilla'],
   creditos: [
     'titulo_pagina', 'titulo', 'intro', 'tipografias', 'imagenes', 'imagenes_intro', 'sin_imagenes',
@@ -59,6 +60,8 @@ test('38. están todas las claves de 3.1 y los valores exactos', () => {
   assert.ok(TEXTOS.veredictos.tiempo.length >= 3);
   assert.ok(TEXTOS.veredictos.oculta.length >= 2);
   assert.equal(TEXTOS.portada.etiqueta_caso, 'Caso nº {n}');
+  assert.equal(TEXTOS.portada.tema, 'Caso del día: {tema}');
+  assert.equal(TEXTOS.partida.caso_del_dia, 'Caso del día: {tema}');
   assert.equal(TEXTOS.final.cuadros_etiqueta, '{aciertos} aciertos de 5');
 });
 
@@ -74,4 +77,23 @@ test('40. la plantilla de compartir es exactamente la de la sección 7', () => {
     TEXTOS.compartir.plantilla,
     'identifAI-it · Caso nº {caso} · {modo}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
   );
+});
+
+test('avisos.previsualizacion: valor exacto, un marcador y longitud', () => {
+  const t = TEXTOS.avisos.previsualizacion;
+  assert.equal(t, 'Previsualización del {fecha}: no se guarda nada.');
+  assert.deepEqual(t.match(/\{[^}]+\}/g), ['{fecha}']);
+  assert.ok(t.replace('{fecha}', '2026-11-03').length <= 90);
+});
+
+test('prueba.*: valores, marcadores, longitud y palabras prohibidas', async () => {
+  const { contienePalabraProhibida } = await import('../herramientas/temas.mjs');
+  const t = TEXTOS.prueba;
+  assert.equal(t.opcion, 'Día {n}: {tema}');
+  assert.deepEqual(t.opcion.match(/\{[^}]+\}/g), ['{n}', '{tema}']);
+  assert.ok(t.opcion.replace('{n}', '99').replace('{tema}', 'x'.repeat(30)).length <= 50);
+  for (const k of ['etiqueta', 'opcion', 'boton']) {
+    assert.ok(t[k].length <= 90);
+    assert.equal(contienePalabraProhibida(t[k]), null, k);
+  }
 });

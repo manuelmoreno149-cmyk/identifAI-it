@@ -14,7 +14,8 @@ import {
   calcularRacha,
   leerConRespaldo,
   guardarConRespaldo,
-  actualizar
+  actualizar,
+  crearAlmacenMemoria
 } from '../js/almacen.js';
 
 function almacenMemoria(inicial = {}) {
@@ -213,4 +214,31 @@ test('37. localStorage roto: respaldo en sessionStorage y actualizar sigue funci
   const r2 = actualizar((d) => d, memoria, roto, roto);
   assert.equal(r2.datos, memoria);
   assert.equal(leerConRespaldo(roto, roto).respaldo, false);
+});
+
+test('105. crearAlmacenMemoria', () => {
+  const g = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const g2 = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  const bomba = { get: () => { throw new Error('tocado'); }, configurable: true };
+  Object.defineProperty(globalThis, 'localStorage', bomba);
+  Object.defineProperty(globalThis, 'sessionStorage', bomba);
+  try {
+    const m = crearAlmacenMemoria();
+    assert.deepEqual(leer(m), { datos: datosIniciales(), disponible: true });
+    const d = conAjustes(datosIniciales(), { modo: 'facil' });
+    assert.equal(guardar(d, m), true);
+    assert.deepEqual(leer(m).datos, d);
+    assert.equal(leer(crearAlmacenMemoria()).datos.ajustes.modo, 'medio');
+    assert.equal(m.getItem('inexistente'), null);
+    m.setItem('x', 5);
+    assert.equal(m.getItem('x'), '5');
+    m.removeItem('x');
+    assert.equal(m.getItem('x'), null);
+    const r = actualizar((x) => conAjustes(x, { vistoComoJugar: true }), null, crearAlmacenMemoria(), crearAlmacenMemoria());
+    assert.equal(r.guardado, true);
+    assert.equal(r.datos.ajustes.vistoComoJugar, true);
+  } finally {
+    if (g) Object.defineProperty(globalThis, 'localStorage', g); else delete globalThis.localStorage;
+    if (g2) Object.defineProperty(globalThis, 'sessionStorage', g2); else delete globalThis.sessionStorage;
+  }
 });
