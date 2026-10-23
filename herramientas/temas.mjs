@@ -6,6 +6,7 @@ export const UMBRAL_PESO = 0.25;
 
 const RE_CARPETA = /^(\d{2,})-([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)$/u;
 const EXT_IMAGEN = /\.(jpe?g|png|webp)$/i;
+const EXT_FICHA = /\.txt$/i;
 
 // ---------- Fechas (Date.UTC, sin importar nada) ----------
 
@@ -130,6 +131,8 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     const fecha = sumarDias(lanzamiento, n - 1);
     const ia = c.ia ?? [];
     const real = c.real ?? [];
+    const nIa = ia.filter((f) => !EXT_FICHA.test(f)).length;
+    const nReal = real.filter((f) => !EXT_FICHA.test(f)).length;
     const subs = [...(c.subcarpetas ?? [])].sort();
     let estructuraOk = true;
 
@@ -140,13 +143,13 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     if ((c.sueltos ?? []).length > 0) {
       errores.push(`${nom} contiene archivos o carpetas no admitidos: ${c.sueltos.join(', ')}.`);
     }
-    if (ia.length + real.length !== 5) {
+    if (nIa + nReal !== 5) {
       errores.push(
-        `${nom} tiene ${ia.length + real.length} imágenes (real: ${real.length}, ia: ${ia.length}). Cada día necesita exactamente 5; no se rellena ni se recorta. Retira o añade imágenes y vuelve a ejecutar.`
+        `${nom} tiene ${nIa + nReal} imágenes (real: ${nReal}, ia: ${nIa}). Cada día necesita exactamente 5; no se rellena ni se recorta. Retira o añade imágenes y vuelve a ejecutar.`
       );
     }
-    if (estructuraOk && (ia.length < 1 || ia.length > 4)) {
-      errores.push(`${nom} tiene ${ia.length} imágenes en ia/ y ${real.length} en real/. Cada día necesita entre 1 y 4 en ia/.`);
+    if (estructuraOk && (nIa < 1 || nIa > 4)) {
+      errores.push(`${nom} tiene ${nIa} imágenes en ia/ y ${nReal} en real/. Cada día necesita entre 1 y 4 en ia/.`);
     }
     if (diasEntre(hoyISO, fecha) < 1) {
       errores.push(
@@ -162,12 +165,55 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     }
 
     const imagenes = [];
-    for (const [tipo, dir, lista] of [['generada', 'ia', ia], ['autentica', 'real', real]]) {
+    // [1.3] Los .txt llegan mezclados con las imágenes; aquí se separan y se emparejan por nombre base.
+    const separar = (lista, dir) => {
+      const imgs = [];
+      const txts = [];
+      for (const archivo of lista) {
+        if (EXT_IMAGEN.test(archivo)) imgs.push(archivo);
+        else if (EXT_FICHA.test(archivo)) txts.push(archivo);
+        else errores.push(`${nom} contiene archivos o carpetas no admitidos: ${dir}/${archivo}.`);
+      }
+      return { imgs, txts };
+    };
+    const sIa = separar(ia, 'ia');
+    const sReal = separar(real, 'real');
+    const baseDe = (archivo) => archivo.normalize('NFC').replace(/\.[^.]+$/, '');
+    const porBase = new Map();
+    for (const archivo of sIa.imgs) {
+      const b = baseDe(archivo);
+      if (porBase.has(b)) {
+        errores.push(
+          `${nom}/ia/ tiene dos imágenes con el mismo nombre base (${porBase.get(b)} y ${archivo}); su ficha .txt sería ambigua. Renombra o retira una.`
+        );
+      } else {
+        porBase.set(b, archivo);
+      }
+    }
+    const fichaDe = new Map();
+    for (const t of sIa.txts) {
+      const b = baseDe(t);
+      if (porBase.has(b)) fichaDe.set(b, t);
+      else avisos.push(`${nom}/ia/${t} no tiene imagen con ese nombre base; se ignora.`);
+    }
+    for (const t of sReal.txts) {
+      avisos.push(`${nom}/real/${t} está en real/; se ignora (las auténticas siempre llevan la ficha de fotografía real).`);
+    }
+    for (const [tipo, dir, lista] of [['generada', 'ia', sIa.imgs], ['autentica', 'real', sReal.imgs]]) {
       for (const archivo of lista) {
         const ruta = `${nom}/${dir}/${archivo}`;
         try {
           const { fuente, licencia } = fuenteDeArchivo(ruta, tipo);
-          imagenes.push({ ruta, tipo, fuente, licencia });
+          let ficha = null;
+          if (tipo === 'generada') {
+            const b = baseDe(archivo);
+            if (fichaDe.has(b) && porBase.get(b) === archivo) {
+              ficha = `${nom}/ia/${fichaDe.get(b)}`;
+            } else {
+              avisos.push(`${ruta} no tiene ficha (${b}.txt); su confesión será la de «sin confesión».`);
+            }
+          }
+          imagenes.push({ ruta, tipo, fuente, licencia, ficha });
         } catch (e) {
           errores.push(e.message);
         }
@@ -177,6 +223,43 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
   }
 
   return { nuevos, omitidos, errores, avisos };
+}
+
+// ---------- Fichas [D-85, D-87] ----------
+
+const CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/g;
+const bytesUtf8 = (t) => new TextEncoder().encode(t).length;
+
+export function normalizarFicha(texto, maxBytes) {
+  let t = typeof texto === 'string' ? texto : String(texto ?? '');
+  if (t.charCodeAt(0) === 0xfeff) t = t.slice(1);
+  t = t.replace(/\r\n?/g, '\n').normalize('NFC').replace(CONTROL, ' ');
+  t = t.trim().replace(/\n{3,}/g, '\n\n');
+  const bytesOriginales = bytesUtf8(t);
+  if (t === '') return { texto: '', vacia: true, truncada: false, bytesOriginales };
+  if (bytesOriginales <= maxBytes) return { texto: t, vacia: false, truncada: false, bytesOriginales };
+  const puntos = Array.from(t);
+  while (puntos.length > 0 && bytesUtf8(puntos.join('')) + 3 > maxBytes) puntos.pop();
+  return { texto: puntos.join('').trimEnd() + '…', vacia: false, truncada: true, bytesOriginales };
+}
+
+export function calendarioAnteriorValido(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+  if (obj.version !== 2 && obj.version !== 3) return false;
+  if (obj.lanzamiento !== '2026-11-01') return false;
+  if (!Array.isArray(obj.dias)) return false;
+  return obj.dias.every(
+    (d) =>
+      d &&
+      typeof d === 'object' &&
+      Number.isInteger(d.n) &&
+      d.n >= 1 &&
+      typeof d.fecha === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(d.fecha) &&
+      Array.isArray(d.pruebas) &&
+      d.pruebas.length === 5 &&
+      d.pruebas.every((id) => typeof id === 'string')
+  );
 }
 
 // ---------- Recortes manuales (lote.json, spec 4.4.5) [D-65] ----------
@@ -393,4 +476,4 @@ export function analizarPruebasAbiertas(codigo) {
   return m.length === 1 ? m[0][1] === 'true' : null;
 }
 
-export { EXT_IMAGEN };
+export { EXT_IMAGEN, EXT_FICHA };

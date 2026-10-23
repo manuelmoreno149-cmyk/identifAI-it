@@ -1,11 +1,16 @@
 // Reglas del juego y máquina de estados (funciones puras).
-import { desofuscar } from './diario.js';
+import { desofuscar, desofuscarFicha } from './diario.js';
 
-export const MODOS = { facil: 7000, medio: 3000, dificil: 1000 };
-export const MODO_POR_DEFECTO = 'medio';
+// Milisegundos de observación por prueba; null = sin límite [D-81].
+export const MODOS = Object.freeze({ investigador: null, normal: 3000, perro: 1000 });
+export const MODO_POR_DEFECTO = 'normal';
 export const VOTOS = { autentica: 0, generada: 1 };
 
-const ESTADOS_CODIGO = { A: 'acierto', F: 'fallo', T: 'tiempo', O: 'oculta' };
+const ESTADOS_CODIGO = { A: 'acierto', F: 'fallo' };
+
+export function modoValido(modo) {
+  return typeof modo === 'string' && Object.hasOwn(MODOS, modo);
+}
 
 export function corregir(voto, verdad) {
   return VOTOS[voto] === verdad ? 'A' : 'F';
@@ -16,7 +21,7 @@ export function contarAciertos(resultados) {
 }
 
 export function estadoDeCodigo(codigo) {
-  return ESTADOS_CODIGO[codigo] ?? null;
+  return typeof codigo === 'string' && Object.hasOwn(ESTADOS_CODIGO, codigo) ? ESTADOS_CODIGO[codigo] : null;
 }
 
 export function elegirVariante(lista, aleatorio = Math.random) {
@@ -30,22 +35,35 @@ export function mensajeFinal(aciertos, mensajes) {
   return mensajes[aciertos];
 }
 
-export function estadoInicial({ modo = MODO_POR_DEFECTO, vistoComoJugar = false } = {}) {
+// Recorta la confesión mostrada en el veredicto sin partir puntos de código [D-88].
+export function recortarFicha(texto, max = 90) {
+  if (typeof texto !== 'string') return { texto: '', recortada: false };
+  const limpio = texto.replace(/\s+/gu, ' ').trim();
+  const puntos = [...limpio];
+  if (puntos.length <= max) return { texto: limpio, recortada: false };
+  let corte = puntos.slice(0, max - 1);
+  const ultimoEspacio = corte.lastIndexOf(' ');
+  if (ultimoEspacio > 0) corte = corte.slice(0, ultimoEspacio);
+  return { texto: corte.join('').trimEnd() + '…', recortada: true };
+}
+
+export function estadoInicial({ modo } = {}) {
   return {
     pantalla: 'iniciando',
     fase: null,
-    modo: modo in MODOS ? modo : MODO_POR_DEFECTO,
+    modo: modoValido(modo) ? modo : MODO_POR_DEFECTO,
     fecha: null,
     n: null,
     tema: null,
     pruebas: [],
     clave: null,
+    fichas: null,
     indice: 0,
     resultados: '-----',
     activo: false,
+    tapada: false,
     revelada: null,
-    volverA: 'portada',
-    vistoComoJugar: Boolean(vistoComoJugar),
+    ficha: null,
     error: null
   };
 }
@@ -60,7 +78,11 @@ function resolverPrueba(estado, codigo) {
     fase: 'veredicto',
     resultados: ponerCodigo(estado.resultados, estado.indice, codigo),
     activo: false,
-    revelada: desofuscar(estado.clave, estado.n, estado.indice)
+    tapada: false,
+    revelada: desofuscar(estado.clave, estado.n, estado.indice),
+    ficha: Array.isArray(estado.fichas)
+      ? desofuscarFicha(estado.fichas[estado.indice], estado.clave, estado.n, estado.indice)
+      : null
   };
 }
 
@@ -69,12 +91,13 @@ export function transicion(estado, evento) {
   switch (evento.tipo) {
     case 'CARGADO': {
       if (pantalla !== 'iniciando') return estado;
-      const base = { ...estado, error: null, fase: null, activo: false, revelada: null };
+      const base = { ...estado, error: null, fase: null, activo: false, tapada: false, revelada: null, ficha: null };
       if (evento.caso) {
         base.n = evento.caso.n;
         base.tema = evento.caso.tema;
         base.pruebas = evento.caso.pruebas;
         base.clave = evento.caso.clave;
+        base.fichas = evento.caso.fichas ?? null;
       }
       if (evento.partidaHoy && evento.partidaHoy.estado === 'terminada') {
         return { ...base, pantalla: 'ya-jugado' };
@@ -85,19 +108,10 @@ export function transicion(estado, evento) {
     case 'ERROR_CALENDARIO':
       return pantalla === 'iniciando' ? { ...estado, pantalla: 'error', error: 'calendario' } : estado;
     case 'ELEGIR_MODO':
-      if (pantalla !== 'portada' || !(evento.modo in MODOS) || evento.modo === estado.modo) return estado;
+      if (pantalla !== 'portada' || !modoValido(evento.modo) || evento.modo === estado.modo) return estado;
       return { ...estado, modo: evento.modo };
-    case 'VER_COMO_JUGAR':
-      return pantalla === 'portada' ? { ...estado, pantalla: 'como-jugar', volverA: 'portada' } : estado;
     case 'EMPEZAR':
-      if (pantalla !== 'portada') return estado;
-      return estado.vistoComoJugar
-        ? { ...estado, pantalla: 'cargando' }
-        : { ...estado, pantalla: 'como-jugar', volverA: 'cargando' };
-    case 'ENTENDIDO':
-      return pantalla === 'como-jugar'
-        ? { ...estado, pantalla: estado.volverA, vistoComoJugar: true }
-        : estado;
+      return pantalla === 'portada' ? { ...estado, pantalla: 'cargando' } : estado;
     case 'PRECARGA_OK':
       return pantalla === 'cargando' ? { ...estado, pantalla: 'cuenta-atras' } : estado;
     case 'PRECARGA_ERROR':
@@ -117,30 +131,41 @@ export function transicion(estado, evento) {
         indice: 0,
         resultados: '-----',
         activo: false,
-        revelada: null
+        tapada: false,
+        revelada: null,
+        ficha: null
       };
     case 'PINTADA':
       if (pantalla !== 'caso' || fase !== 'pregunta' || estado.activo) return estado;
       return { ...estado, activo: true };
     case 'VOTO': {
       if (pantalla !== 'caso' || fase !== 'pregunta' || !estado.activo) return estado;
-      if (!(evento.voto in VOTOS)) return estado;
+      if (typeof evento.voto !== 'string' || !Object.hasOwn(VOTOS, evento.voto)) return estado;
       const verdad = desofuscar(estado.clave, estado.n, estado.indice);
       return resolverPrueba(estado, corregir(evento.voto, verdad));
     }
     case 'AGOTADO':
-      return pantalla === 'caso' && fase === 'pregunta' ? resolverPrueba(estado, 'T') : estado;
-    case 'OCULTA':
-      return pantalla === 'caso' && fase === 'pregunta' ? resolverPrueba(estado, 'O') : estado;
+      // Sella la prueba: no cambia de fase, no corrige y no descifra nada [D-77].
+      if (pantalla !== 'caso' || fase !== 'pregunta' || !estado.activo || estado.tapada) return estado;
+      if (MODOS[estado.modo] === null) return estado;
+      return { ...estado, tapada: true };
     case 'SIGUIENTE':
       if (pantalla !== 'caso' || fase !== 'veredicto') return estado;
       if (estado.indice < 4) {
-        return { ...estado, fase: 'pregunta', indice: estado.indice + 1, revelada: null, activo: false };
+        return {
+          ...estado,
+          fase: 'pregunta',
+          indice: estado.indice + 1,
+          revelada: null,
+          ficha: null,
+          activo: false,
+          tapada: false
+        };
       }
-      return { ...estado, pantalla: 'resultado', fase: null, revelada: null, activo: false };
+      return { ...estado, pantalla: 'resultado', fase: null, revelada: null, ficha: null, activo: false, tapada: false };
     case 'OTRA_PESTANA':
-      if (!['cuenta-atras', 'caso', 'portada', 'como-jugar'].includes(pantalla)) return estado;
-      return { ...estado, pantalla: 'ya-jugado', fase: null, activo: false, revelada: null };
+      if (!['cuenta-atras', 'caso', 'portada'].includes(pantalla)) return estado;
+      return { ...estado, pantalla: 'ya-jugado', fase: null, activo: false, tapada: false, revelada: null, ficha: null };
     case 'MEDIANOCHE':
       if (pantalla !== 'ya-jugado' && pantalla !== 'sin-casos' && pantalla !== 'portada') return estado;
       return {
@@ -148,7 +173,9 @@ export function transicion(estado, evento) {
         pantalla: 'iniciando',
         fase: null,
         activo: false,
+        tapada: false,
         revelada: null,
+        ficha: null,
         indice: 0,
         resultados: '-----',
         fecha: null

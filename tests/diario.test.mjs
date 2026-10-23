@@ -13,6 +13,11 @@ import {
   rutaPrueba,
   ofuscar,
   desofuscar,
+  FICHA_BLOQUE,
+  FICHA_MAX_BYTES,
+  flujoFicha,
+  ofuscarFicha,
+  desofuscarFicha,
   cargarCalendario,
   precargar,
   HOSTS_LOCALES,
@@ -24,13 +29,17 @@ import {
 
 const clave = ofuscar([0, 1, 1, 0, 1], 1, () => 0);
 
+function fichasDe(n) {
+  return [0, 1, 2, 3, 4].map((i) => ofuscarFicha(i % 2 ? `Prompt ${i}` : 'Fotografía real', clave, n, i, () => 0.5));
+}
+
 function diaValido(n, fecha) {
-  return { n, fecha, tema: 'Perros', pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'], clave };
+  return { n, fecha, tema: 'Perros', pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'], clave, fichas: fichasDe(n) };
 }
 
 function calendarioValido() {
   return {
-    version: 2,
+    version: 3,
     lanzamiento: '2026-11-01',
     dias: [diaValido(1, '2026-11-01'), diaValido(2, '2026-11-02')]
   };
@@ -93,6 +102,9 @@ test('8. casoDelDia devuelve null fuera de calendario o con fecha distinta', () 
   assert.equal(caso.clave, clave);
   assert.equal(caso.tema, 'Perros');
   assert.equal(caso.pruebas.length, 5);
+  assert.deepEqual(Object.keys(caso).sort(), ['clave', 'fecha', 'fichas', 'n', 'pruebas', 'tema']);
+  caso.fichas.forEach((f, i) => assert.ok(f === cal.dias[1].fichas[i]));
+  assert.equal(desofuscarFicha(caso.fichas[0], clave, 2, 0), 'Fotografía real');
 });
 
 test('9. validarCalendario', () => {
@@ -132,9 +144,30 @@ test('9. validarCalendario', () => {
 
   assert.equal(validarCalendario(null), false);
 
+  for (const v of [1, 2, 4]) {
+    c = calendarioValido();
+    c.version = v;
+    assert.equal(validarCalendario(c), false, `version ${v}`);
+  }
+
   c = calendarioValido();
-  c.version = 1;
+  delete c.dias[0].fichas;
   assert.equal(validarCalendario(c), false);
+
+  for (const cambio of [
+    (f) => f.slice(0, 4),
+    (f) => [...f, f[0]],
+    (f) => [f[0].slice(0, 683) + '=', ...f.slice(1)].map((x, i) => (i === 0 ? x.slice(0, 683) : x)),
+    (f) => [f[0].slice(0, 683) + 'A=', ...f.slice(1)],
+    (f) => [f[0].slice(0, 10) + '!' + f[0].slice(11), ...f.slice(1)],
+    (f) => [f[0].slice(0, 683) + 'A', ...f.slice(1)],
+    (f) => [7, ...f.slice(1)],
+    () => 'no es un array'
+  ]) {
+    c = calendarioValido();
+    c.dias[0].fichas = cambio(c.dias[0].fichas);
+    assert.equal(validarCalendario(c), false);
+  }
 
   c = calendarioValido();
   delete c.dias[0].tema;
@@ -271,4 +304,78 @@ test('117. diaDePrueba', () => {
   assert.equal(diaDePrueba('?prueba=1&dia=2', dias, '2026-11-04'), dias[1]);
   assert.equal(diaDePrueba('?prueba=1&dia=99', dias, '2026-11-04'), dias[3]);
   assert.equal(diaDePrueba('?prueba=1&dia=1', [], '2026-10-22'), null);
+});
+
+const CL = 'Mpb9Ycc=';
+
+test('139. flujoFicha: 512 bytes deterministas y vector de regresión', () => {
+  const f = flujoFicha(CL, 1, 0);
+  assert.equal(f.length, FICHA_BLOQUE);
+  assert.equal(FICHA_BLOQUE, 512);
+  assert.equal(FICHA_MAX_BYTES, 510);
+  assert.ok([...f].every((b) => Number.isInteger(b) && b >= 0 && b <= 255));
+  assert.deepEqual([...flujoFicha(CL, 1, 0)], [...f]);
+  // Vector de regresión (4.3.1): cambiarlo invalida el calendario publicado.
+  assert.deepEqual([...f.slice(0, 8)], [140, 64, 54, 92, 177, 170, 222, 108]);
+  assert.equal(
+    ofuscarFicha('Fotografía real', CL, 1, 0, () => 0),
+    'jFBwM8XFuR5ZnUV94BNErwRuQJS2kY4Y8dkbgLBUUi1lyBB4U2ipzadweUOy+9giNc0e7LD1iSKfgLCHBcvemRFsOA2UtuVnVo7HYR9s/UeIt0TEEA08yCFQIC/o0FHwd5Z/VZsnLU1ytDF1WdtpO4+GqrNepMNz8yCJbtDSZQxMZ4OLXn+UwFLdtB7VsrSdGo6h8gbsG9sd/w8zY/6jP08HHd2N2ZCgIlFkQK8bIvCH3Q5FzcJkLJ4WYnL0j649Uc9VyZJzwB2oHL87rt60S/ibb3w/3OijhBHpJOpSC6Q4dr2yEVAZZOpln5PTnOlgEtxHVKmfSzQj/EuNlaSU/Qh+UL+h6GxX0EGEIGpc2F0WB9tnGpMRpTvLDP1mEvXk6czBidSa+01cuPCZdKmD2UunzLqKv+R5X4+k7knAhUyOaEEbGxYejkflSSidsswIATzr8vu52snzKNsWzkaOS/pfQS1TFGO9Bmwuhj4crIWU1CXMbx+uOuyx2l5pKgNo6uPG8sl9D3knqUzUNpmoXBsUV7Hax+3jUmPSvnrxqdd7ainaPefeOMU/JxJ+RWA7BcLTVujr+WWDpEA5PWlya+uceovdLGanddCUOXiI75psE8XcwAvlOFn25J/elFCuBrh2H2DL1ZTjOzCHBjekCdM9jqeyzlIKp5UufR0XTaU='
+  );
+});
+
+test('139. ofuscarFicha y desofuscarFicha: ida y vuelta, formato y relleno', () => {
+  const textos = ['', 'Fotografía real', 'ñandú 🐕 «comillas»\nsegunda línea', 'é'.repeat(255)];
+  assert.equal(new TextEncoder().encode(textos[3]).length, 510);
+  for (const t of textos) {
+    const f = ofuscarFicha(t, CL, 4, 2);
+    assert.match(f, /^[A-Za-z0-9+/]{683}=$/);
+    assert.equal(desofuscarFicha(f, CL, 4, 2), t);
+  }
+  const a = ofuscarFicha('hola', CL, 1, 0, () => 0.1);
+  assert.equal(ofuscarFicha('hola', CL, 1, 0, () => 0.1), a);
+  const b = ofuscarFicha('hola', CL, 1, 0, () => 0.9);
+  assert.notEqual(a, b);
+  assert.equal(desofuscarFicha(b, CL, 1, 0), 'hola');
+  // el flujo depende de clave, n e indice
+  const base = ofuscarFicha('hola', CL, 1, 0, () => 0);
+  assert.notEqual(ofuscarFicha('hola', 'Ax7Pq1E=', 1, 0, () => 0), base);
+  assert.notEqual(ofuscarFicha('hola', CL, 2, 0, () => 0), base);
+  assert.notEqual(ofuscarFicha('hola', CL, 1, 1, () => 0), base);
+  // con otro flujo no descifra el mismo texto
+  assert.notEqual(desofuscarFicha(base, CL, 1, 1), 'hola');
+});
+
+test('139. ofuscarFicha: errores', () => {
+  assert.throws(() => ofuscarFicha('a'.repeat(511), CL, 1, 0), RangeError);
+  assert.throws(() => ofuscarFicha('é'.repeat(256), CL, 1, 0), RangeError);
+  assert.throws(() => ofuscarFicha(null, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarFicha(5, CL, 1, 0), TypeError);
+});
+
+test('139. desofuscarFicha devuelve null sin lanzar', () => {
+  const ok = ofuscarFicha('hola', CL, 1, 0, () => 0);
+  for (const malo of [ok.slice(0, 683), ok + 'A', ok.slice(0, 10) + '!' + ok.slice(11), ok.slice(0, 683) + 'A', null, undefined, 5, {}]) {
+    assert.equal(desofuscarFicha(malo, CL, 1, 0), null);
+  }
+  const cifrar = (bloque) => {
+    const flujo = flujoFicha(CL, 1, 0);
+    return btoa(String.fromCharCode(...bloque.map((b, k) => b ^ flujo[k])));
+  };
+  const largo511 = new Uint8Array(512);
+  largo511[0] = 1;
+  largo511[1] = 255;
+  assert.equal(desofuscarFicha(cifrar(largo511), CL, 1, 0), null);
+  const invalido = new Uint8Array(512);
+  invalido[1] = 2;
+  invalido[2] = 0xc3;
+  invalido[3] = 0x28;
+  assert.equal(desofuscarFicha(cifrar(invalido), CL, 1, 0), null);
+  const vacio = new Uint8Array(512);
+  assert.equal(desofuscarFicha(cifrar(vacio), CL, 1, 0), '');
+});
+
+test('el calendario de ejemplo no contiene textos de fichas en claro', () => {
+  const texto = JSON.stringify(calendarioValido());
+  assert.equal(/Fotograf|Prompt/.test(texto), false);
+  assert.ok(calendarioValido().dias.every((d) => d.fichas.every((f) => f.length === 684)));
 });

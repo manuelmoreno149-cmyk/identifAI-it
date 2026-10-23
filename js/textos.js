@@ -6,14 +6,13 @@ export const TEXTOS = {
     titulo: 'identifAI-it',
     lema: 'Cinco pruebas, un solo intento: ¿auténtica o generada?',
     elige_modo: 'Elige tu modo de investigación',
-    modo_facil: 'Fácil',
-    modo_medio: 'Medio',
-    modo_dificil: 'Difícil',
-    desc_facil: '7 s por prueba. Tiempo de sobra para examinar la escena.',
-    desc_medio: '3 s por prueba. Lo justo para no dudar demasiado.',
-    desc_dificil: '1 s por prueba. Solo para ojos de forense.',
+    modo_investigador: 'Investigador',
+    modo_normal: 'Normal',
+    modo_perro: 'Perro de presa',
+    desc_investigador: 'Sin límite de tiempo',
+    desc_normal: '3 segundos de observación',
+    desc_perro: '1 segundo de observación',
     boton_empezar: 'Empezar',
-    boton_como_jugar: 'Cómo jugar',
     etiqueta_caso: 'Caso nº {n}',
     tema: 'Caso del día: {tema}',
     racha: 'Racha: {racha}',
@@ -25,10 +24,9 @@ export const TEXTOS = {
     pasos: [
       'Cada día hay un caso con cinco pruebas, las mismas para todos los detectives.',
       'Examina cada imagen y decide si es REAL o si la ha generado una IA.',
-      'Tienes un tiempo límite por prueba. Si se agota, cuenta como fallo.',
+      'Si se agota el tiempo de observación, la prueba se sella y responde sin prisa.',
       'Solo hay un intento al día, sea cual sea el modo. Elige bien.'
-    ],
-    boton_entendido: 'Entendido'
+    ]
   },
 
   cargando: {
@@ -50,7 +48,9 @@ export const TEXTOS = {
     sello_generada: 'IA',
     quedan: 'Quedan {s} s',
     boton_siguiente: 'Siguiente',
-    boton_ver_resultado: 'Ver resultado'
+    boton_ver_resultado: 'Ver resultado',
+    sobre_texto: 'PRUEBA SELLADA',
+    sobre_anuncio: 'Tiempo de observación agotado. La prueba está sellada: responde cuando quieras.'
   },
 
   veredictos: {
@@ -65,17 +65,22 @@ export const TEXTOS = {
       'Te has equivocado. Anótalo en el expediente.',
       'Error de detective. Toca revisar la coartada.',
       'La prueba no era lo que parecía. Sigue adelante.'
-    ],
-    tiempo: [
-      'Se acabó el tiempo. El sospechoso se ha escapado.',
-      'Tarde. La prueba ya no espera a nadie.',
-      'El reloj ha ganado esta vez.'
-    ],
-    oculta: [
-      'Has dejado la escena sin vigilancia. Cuenta como fallo.',
-      'Te has ido sin mirar. La prueba queda archivada como fallo.',
-      'Pestaña oculta: el caso no perdona las distracciones.'
     ]
+  },
+
+  confesion: {
+    titulo: 'Confesión del sospechoso',
+    leer_entera: 'Leer entera',
+    no_disponible: 'La confesión se ha traspapelado.'
+  },
+
+  ficha: {
+    cerrar: 'Cerrar'
+  },
+
+  fichas: {
+    autentica: 'Fotografía real',
+    sin_prompt: 'El sospechoso se niega a confesar.'
   },
 
   final: {
@@ -96,9 +101,7 @@ export const TEXTOS = {
     estado_prueba: 'Prueba {i}: {estado}',
     estados: {
       acierto: 'acierto',
-      fallo: 'fallo',
-      tiempo: 'tiempo agotado',
-      oculta: 'pestaña oculta'
+      fallo: 'fallo'
     }
   },
 
@@ -135,7 +138,7 @@ export const TEXTOS = {
     boton: 'Compartir',
     copiado: 'Copiado al portapapeles',
     manual: 'Copia este texto:',
-    plantilla: 'identifAI-it · Caso nº {caso} · {modo}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
+    plantilla: 'identifAI-it · Caso nº {caso}\nModo: {modo}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
   },
 
   creditos: {

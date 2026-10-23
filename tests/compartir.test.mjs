@@ -4,25 +4,26 @@ import { CUADROS, rellenar, cuadros, textoCompartir, urlDelJuego, compartir } fr
 import { TEXTOS } from '../js/textos.js';
 
 const EJEMPLO =
-  'identifAI-it · Caso nº 12 · Difícil\n3/5 🟩🟩🟥🟩⬛\nRacha: 3\nhttps://usuario.github.io/identifAI-it/';
+  'identifAI-it · Caso nº 12\nModo: Perro de presa\n3/5 🟩🟩🟥🟩🟥\nRacha: 3\nhttps://usuario.github.io/identifAI-it/';
 
 test('33. cuadros', () => {
-  assert.equal(cuadros('AAFAT'), '🟩🟩🟥🟩⬛');
-  assert.equal(cuadros('AOFAT'), '🟩⬛🟥🟩⬛');
-  assert.deepEqual(CUADROS, { A: '🟩', F: '🟥', T: '⬛', O: '⬛' });
+  assert.equal(cuadros('AAFAF'), '🟩🟩🟥🟩🟥');
+  assert.equal(cuadros('A-FAF'), '🟩🟥🟥🟩🟥');
+  assert.deepEqual(CUADROS, { A: '🟩', F: '🟥' });
+  assert.equal(cuadros('AAFAF').includes('⬛'), false);
 });
 
 test('34. textoCompartir coincide con el ejemplo literal', () => {
   const texto = textoCompartir({
     plantilla: TEXTOS.compartir.plantilla,
     n: 12,
-    nombreModo: 'Difícil',
-    resultados: 'AAFAT',
+    nombreModo: 'Perro de presa',
+    resultados: 'AAFAF',
     racha: 3,
     url: 'https://usuario.github.io/identifAI-it/'
   });
   assert.equal(texto, EJEMPLO);
-  assert.equal(texto.split('\n').length, 4);
+  assert.equal(texto.split('\n').length, 5);
   assert.equal(texto.includes('\r'), false);
 });
 
@@ -30,8 +31,8 @@ test('35. el texto no revela nada de las pruebas', () => {
   const texto = textoCompartir({
     plantilla: TEXTOS.compartir.plantilla,
     n: 7,
-    nombreModo: 'Medio',
-    resultados: 'FAAFO',
+    nombreModo: 'Normal',
+    resultados: 'FAAFF',
     racha: 1,
     url: 'https://u.github.io/identifAI-it/'
   });

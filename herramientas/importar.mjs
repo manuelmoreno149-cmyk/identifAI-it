@@ -4,12 +4,15 @@ import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import sharp from 'sharp';
-import { ofuscar, sumarDias, fechaLocal, desofuscar, temaValido, validarCalendario } from '../js/diario.js';
+import { ofuscar, sumarDias, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES } from '../js/diario.js';
+import { TEXTOS } from '../js/textos.js';
 import {
   analizarCarpeta,
   analizarArgumentos,
   analizarLote,
   comprobarReimportacion,
+  calendarioAnteriorValido,
+  normalizarFicha,
   mensajeReimportacion,
   planificar,
   barajar,
@@ -19,7 +22,8 @@ import {
   mensajePeso,
   avisosMezcla,
   POSICIONES_RECORTE,
-  EXT_IMAGEN
+  EXT_IMAGEN,
+  EXT_FICHA
 } from './temas.mjs';
 import { escribirCreditos } from './creditos.mjs';
 
@@ -69,7 +73,7 @@ function leerCarpetas() {
         if (hijo.name !== 'ia' && hijo.name !== 'real') continue;
         for (const f of readdirSync(join(base, hijo.name), { withFileTypes: true })) {
           if (ignorable(f.name)) continue;
-          if (f.isFile() && EXT_IMAGEN.test(f.name)) c[hijo.name].push(f.name);
+          if (f.isFile() && (EXT_IMAGEN.test(f.name) || EXT_FICHA.test(f.name))) c[hijo.name].push(f.name);
           else c.sueltos.push(`${hijo.name}/${f.name}`);
         }
       } else {
@@ -109,7 +113,10 @@ function leerLote(errores) {
   }
 }
 
-const rutasDe = (carpeta) => [...carpeta.ia.map((f) => `${carpeta.nombre}/ia/${f}`), ...carpeta.real.map((f) => `${carpeta.nombre}/real/${f}`)];
+const rutasDe = (carpeta) => [
+  ...carpeta.ia.filter((f) => EXT_IMAGEN.test(f)).map((f) => `${carpeta.nombre}/ia/${f}`),
+  ...carpeta.real.filter((f) => EXT_IMAGEN.test(f)).map((f) => `${carpeta.nombre}/real/${f}`)
+];
 
 async function main() {
   const args = analizarArgumentos(process.argv.slice(2));
@@ -131,10 +138,20 @@ async function main() {
   }
 
   // 3. Calendario
-  let calendario = { version: 2, lanzamiento: LANZAMIENTO, dias: [] };
+  let calendario = { version: 3, lanzamiento: LANZAMIENTO, dias: [] };
   if (existsSync(RUTA_CALENDARIO)) {
     const c = JSON.parse(readFileSync(RUTA_CALENDARIO, 'utf8'));
-    if (c.version !== 2 || c.lanzamiento !== LANZAMIENTO || !validarCalendario(c)) {
+    if (reimportar) {
+      if (!calendarioAnteriorValido(c)) {
+        salir(
+          'data/calendario.json no es un calendario definitivo (¿datos de prueba de D-46?). Bórralo junto con las imágenes de casos/ antes de importar.'
+        );
+      }
+    } else if (c?.version === 2 && c.lanzamiento === LANZAMIENTO) {
+      salir(
+        'data/calendario.json es de la versión 2 (sin fichas). Regenera todos los días con npm run importar -- --reimportar --confirmar (solo antes del lanzamiento).'
+      );
+    } else if (c?.version !== 3 || c.lanzamiento !== LANZAMIENTO || !validarCalendario(c)) {
       salir(
         'data/calendario.json no es un calendario definitivo (¿datos de prueba de D-46?). Bórralo junto con las imágenes de casos/ antes de importar.'
       );
@@ -210,6 +227,61 @@ async function main() {
     avisos.push(...a.avisos);
   }
 
+  // 5 ter. Fichas (solo en memoria: los prompts nunca se escriben ni se muestran)
+  const textosFicha = new Map();
+  const resumenFichas = new Map();
+  {
+    const { autentica, sin_prompt: sinPrompt } = TEXTOS?.fichas ?? {};
+    const bytes = (t) => new TextEncoder().encode(t).length;
+    const textoOk = (t) => typeof t === 'string' && t.trim() !== '' && bytes(t) <= FICHA_MAX_BYTES;
+    if (!textoOk(autentica) || !textoOk(sinPrompt) || autentica === sinPrompt) {
+      errores.push('TEXTOS.fichas (js/textos.js) no es válido: autentica y sin_prompt deben existir, no estar vacías, ser distintas y caber en 510 bytes.');
+    } else {
+      const decodificador = new TextDecoder('utf-8', { fatal: true });
+      for (const dia of plan.nuevos) {
+        const r = { con: 0, sin: 0, recortadas: 0 };
+        for (const img of dia.imagenes) {
+          if (img.tipo === 'autentica') {
+            textosFicha.set(img.ruta, autentica);
+            continue;
+          }
+          if (!img.ficha) {
+            textosFicha.set(img.ruta, sinPrompt);
+            r.sin++;
+            continue;
+          }
+          let texto;
+          try {
+            texto = decodificador.decode(readFileSync(join(RUTA_TEMAS, img.ficha)));
+          } catch {
+            errores.push(`${img.ficha} no es UTF-8 válido; guárdalo como UTF-8.`);
+            continue;
+          }
+          const n = normalizarFicha(texto, FICHA_MAX_BYTES);
+          if (n.vacia) {
+            avisos.push(`${img.ficha} está vacío; se usará la ficha «sin confesión».`);
+            textosFicha.set(img.ruta, sinPrompt);
+            r.sin++;
+            continue;
+          }
+          if (n.truncada) {
+            avisos.push(`${img.ficha} ocupa ${n.bytesOriginales} bytes; se recorta a ${FICHA_MAX_BYTES} (máximo de una ficha).`);
+            r.recortadas++;
+          }
+          if (n.texto === autentica || n.texto === sinPrompt) {
+            errores.push(`${img.ficha} coincide exactamente con un texto reservado de las fichas; cámbialo.`);
+            continue;
+          }
+          textosFicha.set(img.ruta, n.texto);
+          r.con++;
+        }
+        resumenFichas.set(dia.n, r);
+      }
+    }
+  }
+  const sumaFichas = (campo) => [...resumenFichas.values()].reduce((s, r) => s + r[campo], 0);
+  const frase = (r) => `${r.con} con prompt, ${r.sin} sin prompt, ${r.recortadas} recortada${r.recortadas === 1 ? '' : 's'}`;
+
   // 6. Imágenes nuevas
   const hashes = banco.imagenes.map((i) => ({ ruta: i.original, dhash: i.dhash }));
   if (errores.length === 0) {
@@ -256,7 +328,7 @@ async function main() {
     for (const d of plan.nuevos) {
       const g = d.imagenes.filter((i) => i.tipo === 'generada').length;
       const fuentes = [...new Set(d.imagenes.map((i) => i.fuente))].join(', ');
-      console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema} · ia: ${g}, real: ${5 - g} · ${fuentes}`);
+      console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema} · ia: ${g}, real: ${5 - g} · ${fuentes} · fichas: ${frase(resumenFichas.get(d.n))}`);
     }
     if (manuales.length > 0) {
       console.log('  Recortes manuales (lote.json):');
@@ -295,7 +367,9 @@ async function main() {
       return id;
     });
     const verdades = orden.map((i) => (i.tipo === 'generada' ? 1 : 0));
-    diasNuevos.push({ n: d.n, fecha: d.fecha, tema: d.tema, pruebas: ids, clave: ofuscar(verdades, d.n) });
+    const clave = ofuscar(verdades, d.n);
+    const fichas = orden.map((img, i) => ofuscarFicha(textosFicha.get(img.ruta), clave, d.n, i, aleatorio));
+    diasNuevos.push({ n: d.n, fecha: d.fecha, tema: d.tema, pruebas: ids, clave, fichas });
     orden.forEach((img, i) => {
       const recorte = recortes[img.ruta] ?? 'atencion';
       trabajos.push({ id: ids[i], origen: join(RUTA_TEMAS, img.ruta), recorte });
@@ -326,7 +400,7 @@ async function main() {
   }
 
   const nuevoBanco = { version: 2, imagenes: [...banco.imagenes, ...entradasBanco] };
-  const nuevoCalendario = { ...calendario, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
+  const nuevoCalendario = { version: 3, lanzamiento: calendario.lanzamiento, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
   if (!validarCalendario(nuevoCalendario)) salir('El calendario resultante no es válido; no se escribe.');
   writeFileSync(RUTA_BANCO, json(nuevoBanco), 'utf8');
   writeFileSync(RUTA_CALENDARIO, json(nuevoCalendario), 'utf8');
@@ -346,6 +420,7 @@ async function main() {
   console.log(reimportar ? 'Días reimportados:' : 'Días añadidos:');
   for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema}`);
   console.log(`Recortes manuales (lote.json): ${manuales.length}. El resto usa el recorte por atención.`);
+  console.log(`Fichas: ${frase({ con: sumaFichas('con'), sin: sumaFichas('sin'), recortadas: sumaFichas('recortadas') })}.`);
   for (const a of avisos) console.log(`AVISO: ${a}`);
   const gen = nuevoCalendario.dias.map((d) => d.pruebas.reduce((s, _, i) => s + desofuscar(d.clave, d.n, i), 0));
   for (const a of avisosMezcla(gen)) console.log(a);
@@ -353,7 +428,7 @@ async function main() {
   for (const d of nuevoCalendario.dias) for (const id of d.pruebas) tamanos.set(id, statSync(join(RUTA_CASOS, `${id}.webp`)).size);
   const peso = mensajePeso(analizarPesos({ dias: nuevoCalendario.dias, tamanos, desofuscar }));
   if (peso) console.log(peso);
-  console.log('Los originales siguen en entrada/temas/; el importador no los mueve ni los borra. Puedes archivarlos a mano.');
+  console.log('Los originales y los .txt siguen en entrada/temas/; el importador no los mueve ni los borra. Puedes archivarlos a mano.');
   if (reimportar) {
     console.log(
       `Reimportados ${diasNuevos.length} días; borradas ${borradas} imágenes antiguas de casos/. Copia del banco anterior en herramientas/banco.anterior.json.`

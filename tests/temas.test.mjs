@@ -4,7 +4,7 @@ import {
   analizarCarpeta, temaDeCarpeta, contienePalabraProhibida, fuenteDeArchivo, planificar,
   barajar, nuevoId, distanciaHamming, compararPesos, avisosMezcla, analizarPesos,
   POSICIONES_RECORTE, analizarLote, analizarArgumentos, comprobarReimportacion, mensajeReimportacion,
-  analizarPruebasAbiertas
+  analizarPruebasAbiertas, normalizarFicha, calendarioAnteriorValido
 } from '../herramientas/temas.mjs';
 
 const nombres = ['01-fuegos-artificiales', '02-perros', '03-gente-comiendo', '04-gente-bebiendo', '05-mesa-con-comida', '06-discoteca', '07-gente-peleando'];
@@ -242,4 +242,95 @@ test('118. analizarPruebasAbiertas', () => {
     'export const PRUEBAS_ABIERTAS = true;', '// const PRUEBAS_ABIERTAS = true;',
     'const PRUEBAS_ABIERTAS = true;\nconst PRUEBAS_ABIERTAS = false;'
   ]) assert.equal(analizarPruebasAbiertas(t), null, t);
+});
+
+// ---------- Fichas [1.3] ----------
+
+const bytes = (t) => new TextEncoder().encode(t).length;
+
+test('143 normalizarFicha: limpieza', () => {
+  assert.equal(normalizarFicha('﻿hola\r\nmundo\r!', 510).texto, 'hola\nmundo\n!');
+  assert.equal(normalizarFicha('a\tb', 510).texto, 'a b');
+  assert.equal(normalizarFicha('  \n hola  \n ', 510).texto, 'hola');
+  assert.equal(normalizarFicha('a\n\n\n\nb', 510).texto, 'a\n\nb');
+  assert.equal(normalizarFicha('mañana', 510).texto, 'mañana');
+  assert.equal(normalizarFicha('a\u0000b\u007fc', 510).texto, 'a b c');
+  const v = normalizarFicha('   \n\t ', 510);
+  assert.equal(v.vacia, true);
+  assert.equal(v.texto, '');
+  assert.equal(normalizarFicha('hola', 510).vacia, false);
+  assert.equal(normalizarFicha('hola', 510).truncada, false);
+});
+
+test('143 normalizarFicha: recorte a maxBytes', () => {
+  const largo = normalizarFicha('x'.repeat(600), 510);
+  assert.equal(largo.truncada, true);
+  assert.equal(largo.bytesOriginales, 600);
+  assert.ok(largo.texto.endsWith('…'));
+  assert.ok(bytes(largo.texto) <= 510);
+  const justo = 'y'.repeat(510);
+  assert.deepEqual(normalizarFicha(justo, 510), { texto: justo, vacia: false, truncada: false, bytesOriginales: 510 });
+  const emojis = normalizarFicha('😀'.repeat(200), 510);
+  assert.equal(emojis.truncada, true);
+  assert.ok(bytes(emojis.texto) <= 510);
+  assert.doesNotThrow(() => new TextDecoder('utf-8', { fatal: true }).decode(new TextEncoder().encode(emojis.texto)));
+  assert.ok(!emojis.texto.includes('�'));
+  const espacios = normalizarFicha('a'.repeat(505) + '      zzzzzzzz', 510);
+  assert.ok(!/ …$/.test(espacios.texto));
+  for (const raro of [undefined, null, 5, {}]) assert.doesNotThrow(() => normalizarFicha(raro, 510));
+});
+
+test('144 planificar con fichas', () => {
+  const conIa = (ia, real = ['a-unsplash.jpg', 'b-unsplash.jpg', 'c-unsplash.jpg', 'd-unsplash.jpg']) => {
+    const c = carpetas();
+    c[0] = { nombre: '01-fuegos-artificiales', subcarpetas: ['ia', 'real'], sueltos: [], ia, real: real.slice(0, 5 - ia.filter((f) => !/\.txt$/i.test(f)).length) };
+    return planificar({ ...base, carpetas: c });
+  };
+  let r = conIa(['Gemini_x.jpg', 'Gemini_x.txt']);
+  assert.deepEqual(r.errores, []);
+  const g = r.nuevos[0].imagenes.find((i) => i.tipo === 'generada');
+  assert.equal(g.ficha, '01-fuegos-artificiales/ia/Gemini_x.txt');
+  assert.ok(r.nuevos[0].imagenes.filter((i) => i.tipo === 'autentica').every((i) => i.ficha === null));
+  assert.equal(r.nuevos[0].imagenes.length, 5);
+
+  r = conIa(['Gemini_x.jpg']);
+  assert.deepEqual(r.errores, []);
+  assert.equal(r.nuevos[0].imagenes.find((i) => i.tipo === 'generada').ficha, null);
+  assert.ok(r.avisos.some((a) => a.includes('01-fuegos-artificiales/ia/Gemini_x.jpg') && a.includes('Gemini_x.txt')));
+
+  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_y.txt']);
+  assert.deepEqual(r.errores, []);
+  assert.ok(r.avisos.some((a) => a.includes('Gemini_y.txt')));
+
+  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.png']);
+  assert.ok(r.errores.some((e) => e.includes('mismo nombre base')));
+
+  r = conIa(['Gemini_X.TXT', 'Gemini_X.jpg']);
+  assert.deepEqual(r.errores, []);
+  assert.equal(r.nuevos[0].imagenes.find((i) => i.tipo === 'generada').ficha, '01-fuegos-artificiales/ia/Gemini_X.TXT');
+
+  r = conIa(['Gemini_x.jpg', 'notas.md']);
+  assert.ok(r.errores.some((e) => e.includes('notas.md')));
+
+  const c = carpetas();
+  c[0] = { nombre: '01-fuegos-artificiales', subcarpetas: ['ia', 'real'], sueltos: [], ia: ['Gemini_x.jpg', 'Gemini_x.txt'], real: ['a-unsplash.jpg', 'b-unsplash.jpg', 'c-unsplash.jpg', 'd-unsplash.jpg', 'notas.txt'] };
+  r = planificar({ ...base, carpetas: c });
+  assert.deepEqual(r.errores, []);
+  assert.ok(r.avisos.some((a) => a.includes('real/notas.txt')));
+  assert.ok(r.nuevos[0].imagenes.every((i) => !/\.txt$/.test(i.ruta)));
+});
+
+test('145 calendarioAnteriorValido', () => {
+  const dia = (n) => ({ n, fecha: `2026-11-0${n}`, pruebas: ['a', 'b', 'c', 'd', 'e'] });
+  const cal = (version) => ({ version, lanzamiento: '2026-11-01', dias: [dia(1), dia(2)] });
+  assert.equal(calendarioAnteriorValido(cal(2)), true);
+  assert.equal(calendarioAnteriorValido(cal(3)), true);
+  assert.equal(calendarioAnteriorValido({ version: 3, lanzamiento: '2026-11-01', dias: [] }), true);
+  assert.equal(calendarioAnteriorValido(cal(1)), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(2), lanzamiento: '2026-10-19' }), false);
+  assert.equal(calendarioAnteriorValido(null), false);
+  assert.equal(calendarioAnteriorValido({}), false);
+  assert.equal(calendarioAnteriorValido([]), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(2), dias: [{ ...dia(1), pruebas: ['a', 'b', 'c', 'd'] }] }), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(2), dias: [{ ...dia(0) }] }), false);
 });

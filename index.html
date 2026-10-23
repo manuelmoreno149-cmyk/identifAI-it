@@ -11,7 +11,7 @@
 <script type="module" src="js/main.js"></script>
 </head>
 <body data-pagina="juego">
-<main id="app" data-pantalla="portada" data-modo="medio">
+<main id="app" data-pantalla="portada" data-modo="normal">
 
   <!-- Portada -->
   <section class="pantalla" id="pantalla-portada" hidden>
@@ -24,49 +24,43 @@
     </header>
     <fieldset id="portada-modos">
       <legend data-texto="portada.elige_modo">[[portada.elige_modo]]</legend>
-      <div class="fichas">
-        <div class="ficha">
-          <input type="radio" name="modo" id="modo-facil" value="facil">
-          <label for="modo-facil">
-            <span class="ficha-nombre" data-texto="portada.modo_facil">[[portada.modo_facil]]</span>
-            <span class="ficha-desc" data-texto="portada.desc_facil">[[portada.desc_facil]]</span>
+      <div class="modos">
+        <div class="modo">
+          <input type="radio" name="modo" id="modo-investigador" value="investigador">
+          <label for="modo-investigador">
+            <span class="modo-nombre" data-texto="portada.modo_investigador">[[portada.modo_investigador]]</span>
+            <span class="modo-desc" data-texto="portada.desc_investigador">[[portada.desc_investigador]]</span>
           </label>
         </div>
-        <div class="ficha">
-          <input type="radio" name="modo" id="modo-medio" value="medio">
-          <label for="modo-medio">
-            <span class="ficha-nombre" data-texto="portada.modo_medio">[[portada.modo_medio]]</span>
-            <span class="ficha-desc" data-texto="portada.desc_medio">[[portada.desc_medio]]</span>
+        <div class="modo">
+          <input type="radio" name="modo" id="modo-normal" value="normal">
+          <label for="modo-normal">
+            <span class="modo-nombre" data-texto="portada.modo_normal">[[portada.modo_normal]]</span>
+            <span class="modo-desc" data-texto="portada.desc_normal">[[portada.desc_normal]]</span>
           </label>
         </div>
-        <div class="ficha">
-          <input type="radio" name="modo" id="modo-dificil" value="dificil">
-          <label for="modo-dificil">
-            <span class="ficha-nombre" data-texto="portada.modo_dificil">[[portada.modo_dificil]]</span>
-            <span class="ficha-desc" data-texto="portada.desc_dificil">[[portada.desc_dificil]]</span>
+        <div class="modo">
+          <input type="radio" name="modo" id="modo-perro" value="perro">
+          <label for="modo-perro">
+            <span class="modo-nombre" data-texto="portada.modo_perro">[[portada.modo_perro]]</span>
+            <span class="modo-desc" data-texto="portada.desc_perro">[[portada.desc_perro]]</span>
           </label>
         </div>
       </div>
     </fieldset>
     <p id="portada-racha" hidden></p>
     <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="empezar" data-foco data-texto="portada.boton_empezar">[[portada.boton_empezar]]</button>
-      <button type="button" class="boton boton-secundario" data-accion="como-jugar" data-texto="portada.boton_como_jugar">[[portada.boton_como_jugar]]</button>
+      <button type="button" class="boton boton-primario" data-accion="empezar" data-foco><span class="boton-texto" data-texto="portada.boton_empezar">[[portada.boton_empezar]]</span></button>
     </div>
+    <details id="como-jugar">
+      <summary id="como-jugar-resumen"><span data-texto="como_jugar.titulo">[[como_jugar.titulo]]</span></summary>
+      <div id="como-jugar-panel" tabindex="0" role="region" aria-labelledby="como-jugar-resumen">
+        <ol id="como-jugar-pasos"></ol>
+      </div>
+    </details>
     <footer id="portada-pie">
       <a id="portada-creditos" href="creditos.html" data-texto="portada.enlace_creditos">[[portada.enlace_creditos]]</a>
     </footer>
-  </section>
-
-  <!-- Como jugar -->
-  <section class="pantalla" id="pantalla-como-jugar" hidden>
-    <div class="tarjeta">
-      <h2 tabindex="-1" data-texto="como_jugar.titulo">[[como_jugar.titulo]]</h2>
-      <ol id="como-jugar-pasos"></ol>
-    </div>
-    <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="entendido" data-texto="como_jugar.boton_entendido">[[como_jugar.boton_entendido]]</button>
-    </div>
   </section>
 
   <!-- Cargando -->
@@ -86,7 +80,7 @@
   </section>
 
   <!-- Caso -->
-  <section class="pantalla" id="pantalla-caso" data-fase="pregunta" hidden>
+  <section class="pantalla" id="pantalla-caso" data-fase="pregunta" data-tapada="no" hidden>
     <header id="caso-cabecera">
       <p id="caso-tema"></p>
       <p id="caso-etiqueta" tabindex="-1" data-foco></p>
@@ -94,11 +88,21 @@
     </header>
     <div id="caso-escena">
       <figure id="prueba-marco"></figure>
+      <div id="prueba-sobre" hidden aria-hidden="true">
+        <p id="prueba-sobre-texto" data-texto="partida.sobre_texto">[[partida.sobre_texto]]</p>
+      </div>
       <div id="veredicto" role="status" aria-live="polite" hidden>
         <p id="veredicto-sello"></p>
         <div id="veredicto-pie">
           <span id="veredicto-icono" aria-hidden="true"></span>
           <p id="veredicto-texto"></p>
+        </div>
+        <div id="veredicto-confesion">
+          <p id="veredicto-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</p>
+          <p id="veredicto-confesion-texto"></p>
+          <button type="button" class="boton" data-accion="leer-confesion" aria-haspopup="dialog" hidden>
+            <span class="boton-texto" data-texto="confesion.leer_entera">[[confesion.leer_entera]]</span>
+          </button>
         </div>
       </div>
     </div>
@@ -115,7 +119,7 @@
         <span class="boton-texto" data-texto="partida.boton_generada">[[partida.boton_generada]]</span>
         <kbd aria-hidden="true">I</kbd>
       </button>
-      <button type="button" class="boton boton-primario" data-accion="siguiente" data-texto="partida.boton_siguiente">[[partida.boton_siguiente]]</button>
+      <button type="button" class="boton boton-primario" data-accion="siguiente"><span class="boton-texto" data-texto="partida.boton_siguiente">[[partida.boton_siguiente]]</span></button>
     </div>
   </section>
 
@@ -125,13 +129,11 @@
     <div class="tarjeta">
       <p id="resultado-aciertos" tabindex="-1" data-foco></p>
       <p id="resultado-mensaje"></p>
-      <p id="resultado-cuadros" role="img"></p>
-      <p id="resultado-racha"></p>
-      <p id="resultado-mejor-racha"></p>
     </div>
     <ol id="resultado-revision"></ol>
+    <p id="resultado-rachas"><span id="resultado-racha"></span> <span id="resultado-mejor-racha"></span></p>
     <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="compartir" data-texto="compartir.boton">[[compartir.boton]]</button>
+      <button type="button" class="boton boton-primario" data-accion="compartir"><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
     </div>
   </section>
 
@@ -147,7 +149,7 @@
       <p id="ya-jugado-cuenta-atras" aria-live="off"></p>
     </div>
     <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="compartir" data-texto="compartir.boton">[[compartir.boton]]</button>
+      <button type="button" class="boton boton-primario" data-accion="compartir"><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
     </div>
   </section>
 
@@ -164,7 +166,7 @@
     <div class="centrado">
       <p id="error-texto" role="alert" tabindex="-1" data-foco></p>
       <div class="acciones">
-        <button type="button" class="boton boton-primario" data-accion="reintentar" data-texto="errores.boton_reintentar">[[errores.boton_reintentar]]</button>
+        <button type="button" class="boton boton-primario" data-accion="reintentar"><span class="boton-texto" data-texto="errores.boton_reintentar">[[errores.boton_reintentar]]</span></button>
       </div>
     </div>
   </section>
@@ -175,6 +177,17 @@
   <label for="compartir-manual" class="solo-lectores" data-texto="compartir.manual">[[compartir.manual]]</label>
   <p id="aviso-almacen" role="status" hidden data-texto="avisos.sin_guardar">[[avisos.sin_guardar]]</p>
   <p id="aviso-previsualizacion" role="status" hidden></p>
+
+  <dialog id="ficha" aria-labelledby="ficha-titulo">
+    <h2 id="ficha-titulo"></h2>
+    <img id="ficha-img" alt="" width="1080" height="1350" hidden>
+    <p id="ficha-era"></p>
+    <h3 id="ficha-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</h3>
+    <p id="ficha-texto"></p>
+    <button type="button" id="ficha-cerrar" class="boton" data-accion="cerrar-ficha">
+      <span class="boton-texto" data-texto="ficha.cerrar">[[ficha.cerrar]]</span>
+    </button>
+  </dialog>
 
 </main>
 <noscript>identifAI-it necesita JavaScript para funcionar. Actívalo en tu navegador para examinar las pruebas del día.</noscript>

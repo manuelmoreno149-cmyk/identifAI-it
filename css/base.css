@@ -24,11 +24,14 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background: var(--color-fondo);
+  margin: 0;
+  height: 100%;
 }
 
 body,
 h1,
 h2,
+h3,
 p,
 ul,
 ol,
@@ -74,8 +77,7 @@ fieldset {
 
 /* Tipografia */
 body {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
   font-family: var(--fuente-cuerpo);
   font-size: var(--texto-base);
   line-height: 1.5;
@@ -84,7 +86,6 @@ body {
   background-image: var(--luz-flexo);
   background-repeat: no-repeat;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
 }
 
 h1,
@@ -137,33 +138,37 @@ a {
   border: 0;
 }
 
-/* Layout movil primero */
+/* Layout movil primero: la ventana entera, sin deslizar (2.6, R1 a R4) */
 #app {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.pantalla {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--espacio-4);
-  width: 100%;
-  max-width: var(--ancho-contenido);
-  min-height: 100vh;
-  min-height: 100dvh;
-  margin-inline: auto;
-  padding: var(--espacio-4);
-  padding-left: max(var(--espacio-4), env(safe-area-inset-left));
-  padding-right: max(var(--espacio-4), env(safe-area-inset-right));
+  height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
-@media (min-width: 768px) {
-  .pantalla {
-    padding: var(--espacio-6) var(--espacio-5);
-    gap: var(--espacio-5);
+/* La seccion visible llena el alto. El overflow es solo una reserva (R3, R13) */
+.pantalla:not([hidden]) {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 1.5dvh, var(--espacio-4));
+  width: 100%;
+  min-height: 0;
+  max-width: var(--ancho-contenido);
+  margin-inline: auto;
+  padding: clamp(8px, 2dvh, var(--espacio-5)) clamp(12px, 4vw, var(--espacio-5));
+  overflow: auto;
+}
+
+@media (orientation: landscape) {
+  .pantalla:not([hidden]) {
+    max-width: 72rem;
   }
 }
 

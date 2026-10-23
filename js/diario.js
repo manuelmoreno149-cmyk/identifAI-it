@@ -2,6 +2,10 @@
 
 const DIA_MS = 86400000;
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+const RE_FICHA = /^[A-Za-z0-9+/]{683}=$/;
+
+export const FICHA_BLOQUE = 512;
+export const FICHA_MAX_BYTES = 510;
 
 function dos(n) {
   return String(n).padStart(2, '0');
@@ -100,19 +104,24 @@ export function temaValido(tema) {
 export function validarCalendario(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
   if (!mismasClaves(obj, ['version', 'lanzamiento', 'dias'])) return false;
-  if (obj.version !== 2) return false;
+  if (obj.version !== 3) return false;
   if (typeof obj.lanzamiento !== 'string' || !RE_FECHA.test(obj.lanzamiento)) return false;
   if (!Array.isArray(obj.dias)) return false;
   return obj.dias.every((dia, k) => {
     if (!dia || typeof dia !== 'object' || Array.isArray(dia)) return false;
-    if (!mismasClaves(dia, ['n', 'fecha', 'tema', 'pruebas', 'clave'])) return false;
+    if (!mismasClaves(dia, ['n', 'fecha', 'tema', 'pruebas', 'clave', 'fichas'])) return false;
     if (dia.n !== k + 1) return false;
     if (typeof dia.fecha !== 'string' || !RE_FECHA.test(dia.fecha)) return false;
     if (!temaValido(dia.tema)) return false;
     if (!Array.isArray(dia.pruebas) || dia.pruebas.length !== 5) return false;
     if (!dia.pruebas.every((id) => typeof id === 'string' && id.length > 0)) return false;
     if (new Set(dia.pruebas).size !== 5) return false;
-    return claveValida(dia.clave);
+    if (!claveValida(dia.clave)) return false;
+    return (
+      Array.isArray(dia.fichas) &&
+      dia.fichas.length === 5 &&
+      dia.fichas.every((f) => typeof f === 'string' && RE_FICHA.test(f))
+    );
   });
 }
 
@@ -121,7 +130,7 @@ export function casoDelDia(calendario, fechaISO) {
   if (n < 1) return null;
   const dia = calendario.dias[n - 1];
   if (!dia || dia.n !== n || dia.fecha !== fechaISO) return null;
-  return { n: dia.n, fecha: dia.fecha, tema: dia.tema, pruebas: dia.pruebas, clave: dia.clave };
+  return { n: dia.n, fecha: dia.fecha, tema: dia.tema, pruebas: dia.pruebas, clave: dia.clave, fichas: dia.fichas };
 }
 
 export function rutaPrueba(id) {
@@ -144,6 +153,69 @@ export function ofuscar(verdades, n, aleatorio = Math.random) {
 
 export function desofuscar(clave, n, indice) {
   return (atob(clave).charCodeAt(indice) ^ mascara(n, indice)) & 1;
+}
+
+// FNV-1a de 32 bits sobre los códigos UTF-16 de la cadena (todos ASCII).
+function fnv1a32(texto) {
+  let h = 0x811c9dc5;
+  for (let k = 0; k < texto.length; k++) {
+    h ^= texto.charCodeAt(k);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+function mulberry32(semilla) {
+  let a = semilla;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Flujo de 512 bytes, determinista, para cifrar la ficha de una prueba [D-86].
+export function flujoFicha(clave, n, indice) {
+  const azar = mulberry32(fnv1a32(`${clave}|${n}|${indice}`));
+  const flujo = new Uint8Array(FICHA_BLOQUE);
+  for (let k = 0; k < FICHA_BLOQUE; k++) flujo[k] = Math.floor(azar() * 256);
+  return flujo;
+}
+
+export function ofuscarFicha(texto, clave, n, indice, aleatorio = Math.random) {
+  if (typeof texto !== 'string') throw new TypeError('La ficha debe ser una cadena');
+  const bytes = new TextEncoder().encode(texto);
+  const largo = bytes.length;
+  if (largo > FICHA_MAX_BYTES) {
+    throw new RangeError(`La ficha ocupa ${largo} bytes (máximo ${FICHA_MAX_BYTES})`);
+  }
+  const bloque = new Uint8Array(FICHA_BLOQUE);
+  bloque[0] = largo >> 8;
+  bloque[1] = largo & 0xff;
+  bloque.set(bytes, 2);
+  for (let k = 2 + largo; k < FICHA_BLOQUE; k++) bloque[k] = Math.floor(aleatorio() * 256);
+  const flujo = flujoFicha(clave, n, indice);
+  let binario = '';
+  for (let k = 0; k < FICHA_BLOQUE; k++) binario += String.fromCharCode(bloque[k] ^ flujo[k]);
+  return btoa(binario);
+}
+
+// Nunca lanza: devuelve null si la ficha no se puede descifrar.
+export function desofuscarFicha(ficha, clave, n, indice) {
+  try {
+    if (typeof ficha !== 'string' || !RE_FICHA.test(ficha)) return null;
+    const binario = atob(ficha);
+    if (binario.length !== FICHA_BLOQUE) return null;
+    const flujo = flujoFicha(clave, n, indice);
+    const bloque = new Uint8Array(FICHA_BLOQUE);
+    for (let k = 0; k < FICHA_BLOQUE; k++) bloque[k] = binario.charCodeAt(k) ^ flujo[k];
+    const largo = (bloque[0] << 8) | bloque[1];
+    if (largo > FICHA_MAX_BYTES) return null;
+    return new TextDecoder('utf-8', { fatal: true }).decode(bloque.subarray(2, 2 + largo));
+  } catch {
+    return null;
+  }
 }
 
 export async function cargarCalendario(url = 'data/calendario.json', pedir = fetch) {

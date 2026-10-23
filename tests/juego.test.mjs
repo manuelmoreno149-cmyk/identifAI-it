@@ -4,23 +4,29 @@ import {
   MODOS,
   MODO_POR_DEFECTO,
   VOTOS,
+  modoValido,
   corregir,
   contarAciertos,
   estadoDeCodigo,
   elegirVariante,
   mensajeFinal,
+  recortarFicha,
   estadoInicial,
   transicion
 } from '../js/juego.js';
-import { ofuscar } from '../js/diario.js';
+import { ofuscar, ofuscarFicha } from '../js/diario.js';
 
 const VERDADES = [0, 1, 1, 0, 1];
+const CLAVE = ofuscar(VERDADES, 3, () => 0.3);
+const TEXTOS_FICHA = ['Fotografía real', 'Un perro astronauta', 'Un gato en la niebla', 'Fotografía real', 'ñandú 🐕'];
+const FICHAS = TEXTOS_FICHA.map((t, i) => ofuscarFicha(t, CLAVE, 3, i, () => 0.25));
 const CASO = {
   n: 3,
   fecha: '2026-11-03',
   tema: 'Gente comiendo',
   pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'],
-  clave: ofuscar(VERDADES, 3, () => 0.3)
+  clave: CLAVE,
+  fichas: FICHAS
 };
 
 function congelar(o) {
@@ -33,9 +39,9 @@ function ir(estado, ...eventos) {
   return eventos.reduce((e, ev) => transicion(e, typeof ev === 'string' ? { tipo: ev } : ev), estado);
 }
 
-function enPregunta(indice = 0, visto = true) {
-  let e = estadoInicial({ modo: 'medio', vistoComoJugar: visto });
-  e = ir(e, { tipo: 'CARGADO', caso: CASO, partidaHoy: null }, 'EMPEZAR');
+function enPregunta(indice = 0, modo = 'normal', caso = CASO) {
+  let e = estadoInicial({ modo });
+  e = ir(e, { tipo: 'CARGADO', caso, partidaHoy: null }, 'EMPEZAR');
   e = ir(e, 'PRECARGA_OK', { tipo: 'FIN_CUENTA', fecha: CASO.fecha });
   for (let i = 0; i < indice; i++) {
     e = ir(e, 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
@@ -43,16 +49,41 @@ function enPregunta(indice = 0, visto = true) {
   return e;
 }
 
-test('constantes', () => {
-  assert.deepEqual(MODOS, { facil: 7000, medio: 3000, dificil: 1000 });
-  assert.equal(MODO_POR_DEFECTO, 'medio');
+test('141. constantes y modos', () => {
+  assert.deepEqual(MODOS, { investigador: null, normal: 3000, perro: 1000 });
+  assert.equal(Object.isFrozen(MODOS), true);
+  assert.equal(MODO_POR_DEFECTO, 'normal');
   assert.deepEqual(VOTOS, { autentica: 0, generada: 1 });
+  assert.equal(modoValido('perro'), true);
+  assert.equal(modoValido('investigador'), true);
+  for (const malo of ['medio', 'facil', 'dificil', 'toString', '__proto__', undefined, null, 3]) {
+    assert.equal(modoValido(malo), false, String(malo));
+  }
+  assert.equal(estadoInicial({ modo: 'facil' }).modo, 'normal');
+  assert.equal(estadoInicial({}).modo, 'normal');
+  assert.equal(estadoInicial().modo, 'normal');
+  assert.equal(estadoInicial({ modo: 'perro' }).modo, 'perro');
+  const portada = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
+  assert.equal(transicion(portada, { tipo: 'ELEGIR_MODO', modo: 'dificil' }), portada);
+  assert.equal(transicion(portada, { tipo: 'ELEGIR_MODO', modo: 'toString' }), portada);
+  assert.equal(ir(portada, { tipo: 'ELEGIR_MODO', modo: 'investigador' }).modo, 'investigador');
+});
+
+test('estado inicial: campos de la 1.3', () => {
+  const e = estadoInicial({});
+  assert.equal(e.pantalla, 'iniciando');
+  assert.equal(e.tema, null);
+  assert.equal(e.fichas, null);
+  assert.equal(e.tapada, false);
+  assert.equal(e.ficha, null);
+  assert.equal('volverA' in e, false);
+  assert.equal('vistoComoJugar' in e, false);
 });
 
 test('11. transicion no muta el estado (estado y evento congelados)', () => {
   const eventos = [
     { tipo: 'CARGADO', caso: CASO, partidaHoy: null },
-    { tipo: 'ELEGIR_MODO', modo: 'facil' },
+    { tipo: 'ELEGIR_MODO', modo: 'perro' },
     { tipo: 'EMPEZAR' },
     { tipo: 'PINTADA' },
     { tipo: 'VOTO', voto: 'generada' },
@@ -62,7 +93,13 @@ test('11. transicion no muta el estado (estado y evento congelados)', () => {
     { tipo: 'MEDIANOCHE' },
     { tipo: 'OTRA_PESTANA' }
   ];
-  const estados = [estadoInicial({}), enPregunta(), ir(enPregunta(), 'PINTADA'), ir(enPregunta(), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' })];
+  const estados = [
+    estadoInicial({}),
+    enPregunta(),
+    ir(enPregunta(), 'PINTADA'),
+    ir(enPregunta(), 'PINTADA', 'AGOTADO'),
+    ir(enPregunta(), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' })
+  ];
   for (const e of estados) {
     const copia = JSON.stringify(e);
     congelar(e);
@@ -73,22 +110,14 @@ test('11. transicion no muta el estado (estado y evento congelados)', () => {
   }
 });
 
-test('12. EMPEZAR pasa por como-jugar la primera vez y no las siguientes', () => {
-  let e = ir(estadoInicial({ vistoComoJugar: false }), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
-  assert.equal(e.pantalla, 'portada');
-  e = ir(e, 'EMPEZAR');
-  assert.equal(e.pantalla, 'como-jugar');
-  assert.equal(e.volverA, 'cargando');
-  e = ir(e, 'ENTENDIDO');
-  assert.equal(e.pantalla, 'cargando');
-  assert.equal(e.vistoComoJugar, true);
-
-  let v = ir(estadoInicial({ vistoComoJugar: true }), { tipo: 'CARGADO', caso: CASO, partidaHoy: null }, 'EMPEZAR');
-  assert.equal(v.pantalla, 'cargando');
-
-  let c = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null }, 'VER_COMO_JUGAR');
-  assert.equal(c.pantalla, 'como-jugar');
-  assert.equal(ir(c, 'ENTENDIDO').pantalla, 'portada');
+test('12. EMPEZAR lleva siempre a cargando y no existen VER_COMO_JUGAR ni ENTENDIDO', () => {
+  const portada = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
+  assert.equal(portada.pantalla, 'portada');
+  assert.equal(ir(portada, 'EMPEZAR').pantalla, 'cargando');
+  assert.equal(transicion(portada, { tipo: 'VER_COMO_JUGAR' }), portada);
+  assert.equal(transicion(portada, { tipo: 'ENTENDIDO' }), portada);
+  const cargando = ir(portada, 'EMPEZAR');
+  assert.equal(transicion(cargando, { tipo: 'EMPEZAR' }), cargando);
 });
 
 test('13. VOTO con activo false devuelve el mismo objeto', () => {
@@ -97,35 +126,86 @@ test('13. VOTO con activo false devuelve el mismo objeto', () => {
   assert.equal(transicion(e, { tipo: 'VOTO', voto: 'autentica' }), e);
 });
 
-test('14. VOTO, AGOTADO y OCULTA corrigen y revelan la verdad', () => {
+test('14. VOTO corrige, revela la verdad y descifra la ficha, con tapada o sin ella', () => {
   for (let i = 0; i < 5; i++) {
     const base = ir(enPregunta(i), 'PINTADA');
     assert.equal(base.activo, true);
     const bien = VERDADES[i] === 1 ? 'generada' : 'autentica';
     const mal = VERDADES[i] === 1 ? 'autentica' : 'generada';
-    const a = transicion(base, { tipo: 'VOTO', voto: bien });
-    assert.equal(a.resultados[i], 'A');
-    const f = transicion(base, { tipo: 'VOTO', voto: mal });
-    assert.equal(f.resultados[i], 'F');
-    const t = transicion(base, { tipo: 'AGOTADO' });
-    assert.equal(t.resultados[i], 'T');
-    const o = transicion(base, { tipo: 'OCULTA' });
-    assert.equal(o.resultados[i], 'O');
-    for (const r of [a, f, t, o]) {
-      assert.equal(r.fase, 'veredicto');
-      assert.equal(r.revelada, VERDADES[i]);
-      assert.equal(r.activo, false);
+    for (const tapada of [false, true]) {
+      const origen = tapada ? transicion(base, { tipo: 'AGOTADO' }) : base;
+      assert.equal(origen.tapada, tapada);
+      const a = transicion(origen, { tipo: 'VOTO', voto: bien });
+      const f = transicion(origen, { tipo: 'VOTO', voto: mal });
+      assert.equal(a.resultados[i], 'A');
+      assert.equal(f.resultados[i], 'F');
+      for (const r of [a, f]) {
+        assert.equal(r.fase, 'veredicto');
+        assert.equal(r.revelada, VERDADES[i]);
+        assert.equal(r.activo, false);
+        assert.equal(r.tapada, false);
+        assert.equal(r.ficha, TEXTOS_FICHA[i]);
+      }
     }
   }
 });
 
-test('OCULTA antes de PINTADA también es fallo O', () => {
-  const e = transicion(enPregunta(), { tipo: 'OCULTA' });
-  assert.equal(e.resultados[0], 'O');
-  assert.equal(e.fase, 'veredicto');
+test('14. VOTO con fichas null deja ficha null; con ficha corrupta también', () => {
+  const sin = ir(enPregunta(0, 'normal', { ...CASO, fichas: undefined }), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' });
+  assert.equal(sin.fichas, null);
+  assert.equal(sin.ficha, null);
+  assert.equal(sin.fase, 'veredicto');
+  const rota = ir(enPregunta(0, 'normal', { ...CASO, fichas: ['x', 'x', 'x', 'x', 'x'] }), 'PINTADA', {
+    tipo: 'VOTO',
+    voto: 'autentica'
+  });
+  assert.equal(rota.ficha, null);
+  assert.equal(rota.fase, 'veredicto');
 });
 
-test('15. segundo VOTO o AGOTADO en veredicto no cambian el estado', () => {
+test('19. AGOTADO sella la prueba sin cambiar de fase ni corregir', () => {
+  for (const modo of ['normal', 'perro']) {
+    const base = ir(enPregunta(2, modo), 'PINTADA');
+    const s = transicion(base, { tipo: 'AGOTADO' });
+    assert.equal(s.tapada, true);
+    assert.equal(s.fase, 'pregunta');
+    assert.equal(s.activo, true);
+    assert.equal(s.resultados, base.resultados);
+    assert.equal(s.indice, base.indice);
+    assert.equal(s.revelada, null);
+    assert.equal(s.ficha, null);
+    assert.equal(transicion(s, { tipo: 'AGOTADO' }), s);
+  }
+  // sin pintar
+  const sinPintar = enPregunta();
+  assert.equal(transicion(sinPintar, { tipo: 'AGOTADO' }), sinPintar);
+  // investigador
+  const inv = ir(enPregunta(0, 'investigador'), 'PINTADA');
+  assert.equal(transicion(inv, { tipo: 'AGOTADO' }), inv);
+  // otras pantallas
+  const portada = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
+  assert.equal(transicion(portada, { tipo: 'AGOTADO' }), portada);
+  const veredicto = ir(enPregunta(), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' });
+  assert.equal(transicion(veredicto, { tipo: 'AGOTADO' }), veredicto);
+  // tras sellar, el voto corrige normalmente
+  const sellada = ir(enPregunta(), 'PINTADA', 'AGOTADO', { tipo: 'VOTO', voto: 'autentica' });
+  assert.equal(sellada.resultados[0], 'A');
+});
+
+test('OCULTA no tiene efecto en ningún estado', () => {
+  const estados = [
+    estadoInicial({}),
+    ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null }),
+    enPregunta(),
+    ir(enPregunta(), 'PINTADA'),
+    ir(enPregunta(), 'PINTADA', 'AGOTADO'),
+    ir(enPregunta(), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }),
+    ir(enPregunta(4), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE')
+  ];
+  for (const e of estados) assert.equal(transicion(e, { tipo: 'OCULTA' }), e);
+});
+
+test('15. un segundo VOTO o un AGOTADO en veredicto no cambian el estado', () => {
   const v = transicion(ir(enPregunta(), 'PINTADA'), { tipo: 'VOTO', voto: 'autentica' });
   assert.equal(transicion(v, { tipo: 'VOTO', voto: 'generada' }), v);
   assert.equal(transicion(v, { tipo: 'AGOTADO' }), v);
@@ -133,41 +213,49 @@ test('15. segundo VOTO o AGOTADO en veredicto no cambian el estado', () => {
 });
 
 test('16. SIGUIENTE avanza y en la prueba 5 lleva a resultado', () => {
-  let e = ir(enPregunta(), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
+  const e = ir(enPregunta(), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
   assert.equal(e.pantalla, 'caso');
   assert.equal(e.fase, 'pregunta');
   assert.equal(e.indice, 1);
   assert.equal(e.revelada, null);
+  assert.equal(e.ficha, null);
   assert.equal(e.activo, false);
+  assert.equal(e.tapada, false);
 
-  let u = ir(enPregunta(4), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
+  const sellado = ir(enPregunta(), 'PINTADA', 'AGOTADO', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
+  assert.equal(sellado.tapada, false);
+
+  const u = ir(enPregunta(4), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
   assert.equal(u.pantalla, 'resultado');
+  assert.equal(u.fase, null);
+  assert.equal(u.revelada, null);
+  assert.equal(u.ficha, null);
   assert.equal(u.resultados.length, 5);
   assert.equal(u.resultados.includes('-'), false);
 });
 
-test('17. CARGADO: partida terminada, sin casos y portada', () => {
-  const terminada = { estado: 'terminada', modo: 'facil', resultados: 'AAAAA' };
-  const e = ir(estadoInicial({ modo: 'dificil' }), { tipo: 'CARGADO', caso: CASO, partidaHoy: terminada });
-  assert.equal(e.pantalla, 'ya-jugado');
-  assert.equal(
-    ir(estadoInicial({}), { tipo: 'CARGADO', caso: null, partidaHoy: null }).pantalla,
-    'sin-casos'
-  );
+test('17. CARGADO: partida terminada, sin casos y portada con fichas', () => {
+  for (const modo of ['investigador', 'normal', 'perro']) {
+    const terminada = { estado: 'terminada', modo, resultados: 'AAAAA' };
+    const e = ir(estadoInicial({ modo: 'perro' }), { tipo: 'CARGADO', caso: CASO, partidaHoy: terminada });
+    assert.equal(e.pantalla, 'ya-jugado');
+  }
+  const sin = ir(estadoInicial({}), { tipo: 'CARGADO', caso: null, partidaHoy: null });
+  assert.equal(sin.pantalla, 'sin-casos');
+  assert.equal(sin.tema, null);
   const p = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
   assert.equal(p.pantalla, 'portada');
   assert.equal(p.n, 3);
   assert.equal(p.tema, 'Gente comiendo');
-  assert.equal(estadoInicial({}).tema, null);
-  assert.equal(
-    ir(estadoInicial({}), { tipo: 'CARGADO', caso: null, partidaHoy: null }).tema,
-    null
-  );
   assert.deepEqual(p.pruebas, CASO.pruebas);
+  assert.deepEqual(p.fichas, FICHAS);
+  const jugada = enPregunta(2);
+  assert.deepEqual(jugada.fichas, FICHAS);
+  assert.deepEqual(ir(jugada, 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE').fichas, FICHAS);
 });
 
 test('18. contarAciertos, mensajeFinal y utilidades', () => {
-  assert.equal(contarAciertos('AFTOA'), 2);
+  assert.equal(contarAciertos('AFFAA'), 3);
   assert.equal(contarAciertos('-----'), 0);
   const mensajes = ['m0', 'm1', 'm2', 'm3', 'm4', 'm5'];
   for (let k = 0; k <= 5; k++) assert.equal(mensajeFinal(k, mensajes), mensajes[k]);
@@ -178,54 +266,73 @@ test('18. contarAciertos, mensajeFinal y utilidades', () => {
   assert.equal(corregir('generada', 1), 'A');
   assert.equal(estadoDeCodigo('A'), 'acierto');
   assert.equal(estadoDeCodigo('F'), 'fallo');
-  assert.equal(estadoDeCodigo('T'), 'tiempo');
-  assert.equal(estadoDeCodigo('O'), 'oculta');
-  assert.equal(estadoDeCodigo('-'), null);
+  for (const c of ['-', 'T', 'O', 'toString', undefined, null]) assert.equal(estadoDeCodigo(c), null, String(c));
   assert.equal(elegirVariante(['a', 'b', 'c'], () => 0.99), 'c');
   assert.equal(elegirVariante(['a', 'b', 'c'], () => 0), 'a');
 });
 
-test('19. OCULTA fuera de caso/pregunta no cambia nada', () => {
-  const portada = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
-  assert.equal(transicion(portada, { tipo: 'OCULTA' }), portada);
-  const cuenta = ir(portada, 'EMPEZAR', 'ENTENDIDO', 'PRECARGA_OK');
-  assert.equal(cuenta.pantalla, 'cuenta-atras');
-  assert.equal(transicion(cuenta, { tipo: 'OCULTA' }), cuenta);
-  const veredicto = transicion(ir(enPregunta(), 'PINTADA'), { tipo: 'VOTO', voto: 'autentica' });
-  assert.equal(transicion(veredicto, { tipo: 'OCULTA' }), veredicto);
-  const resultado = ir(enPregunta(4), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
-  assert.equal(transicion(resultado, { tipo: 'OCULTA' }), resultado);
-});
-
 test('errores, reintentos, otra pestaña y medianoche', () => {
-  let e = ir(estadoInicial({}), 'ERROR_CALENDARIO');
+  const e = ir(estadoInicial({}), 'ERROR_CALENDARIO');
   assert.equal(e.pantalla, 'error');
   assert.equal(e.error, 'calendario');
   assert.equal(ir(e, 'REINTENTAR').pantalla, 'iniciando');
 
-  let c = ir(estadoInicial({ vistoComoJugar: true }), { tipo: 'CARGADO', caso: CASO, partidaHoy: null }, 'EMPEZAR', 'PRECARGA_ERROR');
+  let c = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null }, 'EMPEZAR', 'PRECARGA_ERROR');
   assert.equal(c.pantalla, 'error');
   assert.equal(c.error, 'imagenes');
   c = ir(c, 'REINTENTAR');
   assert.equal(c.pantalla, 'cargando');
   assert.equal(c.error, null);
 
-  assert.equal(ir(enPregunta(), 'OTRA_PESTANA').pantalla, 'ya-jugado');
+  const sellada = ir(enPregunta(), 'PINTADA', 'AGOTADO', 'OTRA_PESTANA');
+  assert.equal(sellada.pantalla, 'ya-jugado');
+  assert.equal(sellada.tapada, false);
+  assert.equal(sellada.ficha, null);
   const portada = ir(estadoInicial({}), { tipo: 'CARGADO', caso: CASO, partidaHoy: null });
   assert.equal(ir(portada, 'OTRA_PESTANA').pantalla, 'ya-jugado');
   assert.equal(ir(portada, 'MEDIANOCHE').pantalla, 'iniciando');
   assert.equal(ir(enPregunta(), 'MEDIANOCHE').pantalla, 'caso');
-  assert.equal(ir(portada, { tipo: 'ELEGIR_MODO', modo: 'dificil' }).modo, 'dificil');
-  const raro = transicion(portada, { tipo: 'NO_EXISTE' });
-  assert.equal(raro, portada);
+  assert.equal(ir(portada, { tipo: 'ELEGIR_MODO', modo: 'perro' }).modo, 'perro');
+  assert.equal(transicion(portada, { tipo: 'NO_EXISTE' }), portada);
 });
 
-test('FIN_CUENTA fija la fecha y deja la prueba 1 sin activar', () => {
+test('FIN_CUENTA fija la fecha y deja la prueba 1 sin activar ni tapar', () => {
   const e = enPregunta();
   assert.equal(e.pantalla, 'caso');
   assert.equal(e.fase, 'pregunta');
   assert.equal(e.fecha, '2026-11-03');
   assert.equal(e.indice, 0);
   assert.equal(e.activo, false);
+  assert.equal(e.tapada, false);
   assert.equal(e.resultados, '-----');
+});
+
+test('140. recortarFicha', () => {
+  assert.deepEqual(recortarFicha('Un perro en la playa'), { texto: 'Un perro en la playa', recortada: false });
+  assert.deepEqual(recortarFicha('  a\n\nb  '), { texto: 'a b', recortada: false });
+
+  const x = recortarFicha('x'.repeat(100));
+  assert.equal(x.texto, 'x'.repeat(89) + '…');
+  assert.equal([...x.texto].length, 90);
+  assert.equal(x.recortada, true);
+
+  const largo = recortarFicha('palabra '.repeat(15));
+  assert.equal(largo.recortada, true);
+  assert.ok(largo.texto.endsWith('…'));
+  assert.ok([...largo.texto].length <= 90);
+  assert.equal(largo.texto.endsWith(' …'), false);
+  assert.equal(largo.texto, 'palabra '.repeat(10) + 'palabra…');
+
+  const emojis = recortarFicha('🐕'.repeat(100));
+  assert.equal(emojis.texto, '🐕'.repeat(89) + '…');
+  assert.equal(emojis.recortada, true);
+
+  assert.deepEqual(recortarFicha(null), { texto: '', recortada: false });
+  assert.deepEqual(recortarFicha(undefined), { texto: '', recortada: false });
+  assert.deepEqual(recortarFicha(5), { texto: '', recortada: false });
+
+  const exacto = recortarFicha('y'.repeat(90));
+  assert.equal(exacto.recortada, false);
+  assert.equal(recortarFicha('y'.repeat(91)).recortada, true);
+  assert.equal(recortarFicha('abcdefghij klmnopqrst', 10).texto, 'abcdefghij'.slice(0, 9) + '…');
 });

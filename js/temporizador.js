@@ -20,6 +20,9 @@ export function crearTemporizador({
   pedirFrame = (f) => requestAnimationFrame(f),
   cancelarFrame = (id) => cancelAnimationFrame(id)
 }) {
+  if (typeof duracionMs !== 'number' || !Number.isFinite(duracionMs) || duracionMs <= 0) {
+    throw new TypeError('duracionMs debe ser un número finito mayor que 0');
+  }
   let t0 = 0;
   let idFrame = null;
   let activo = false;
@@ -58,6 +61,15 @@ export function crearTemporizador({
         idFrame = null;
       }
       return transcurridoFinal;
+    },
+    // Hace en el acto lo mismo que un frame (p. ej. al volver la pestaña a visible).
+    comprobar() {
+      if (!activo || reloj() - t0 < duracionMs) return;
+      if (idFrame !== null) {
+        cancelarFrame(idFrame);
+        idFrame = null;
+      }
+      frame();
     },
     activo() {
       return activo;

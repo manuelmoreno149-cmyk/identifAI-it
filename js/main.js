@@ -7,6 +7,7 @@ import {
   casoDelDia,
   rutaPrueba,
   desofuscar,
+  desofuscarFicha,
   cargarCalendario,
   precargar,
   fechaPrevisualizada,
@@ -21,7 +22,8 @@ import {
   contarAciertos,
   estadoDeCodigo,
   elegirVariante,
-  mensajeFinal
+  mensajeFinal,
+  recortarFicha
 } from './juego.js';
 import {
   CLAVE,
@@ -79,6 +81,7 @@ let cuentaAtras = null;
 let bucleMedianoche = null;
 let avisoCopiado = null;
 let testigoPrueba = 0;
+let botonDeFicha = null; // botón que abrió el diálogo, para devolverle el foco
 
 // Para el foco al cambiar de pantalla, fase o prueba.
 let ultima = { pantalla: null, fase: null, indice: -1 };
@@ -112,6 +115,10 @@ function despachar(evento) {
   if (nuevo === previo) return;
   estado = nuevo;
   antesDeRender(previo, nuevo, evento);
+  // Si cambia el contexto con la ficha abierta (p. ej. OTRA_PESTANA), se cierra antes de pintar.
+  if (fichaAbierta() && !(nuevo.pantalla === previo.pantalla && nuevo.fase === previo.fase)) {
+    cerrarFicha(false);
+  }
   render(nuevo);
   despuesDeRender(previo, nuevo, evento);
 }
@@ -121,8 +128,8 @@ function antesDeRender(previo, nuevo, evento) {
   if (evento.tipo === 'ELEGIR_MODO') {
     aplicar((d) => conAjustes(d, { modo: nuevo.modo }));
   }
-  if (evento.tipo === 'ENTENDIDO') {
-    aplicar((d) => conAjustes(d, { vistoComoJugar: true }));
+  if (evento.tipo === 'EMPEZAR') {
+    $('como-jugar').open = false;
   }
   if (previo.fase !== 'veredicto' && nuevo.fase === 'veredicto') {
     const codigo = nuevo.resultados[nuevo.indice];
@@ -215,6 +222,7 @@ function crearSelectorPrueba(dias, elegido) {
   boton.dataset.accion = 'abrir-prueba';
   boton.textContent = TEXTOS.prueba.boton;
   caja.append(etiqueta, select, boton);
+  // Dentro de .portada-cabecera, justo después de #portada-tema.
   $('portada-tema').after(caja);
 }
 
@@ -276,6 +284,7 @@ async function iniciarPrueba() {
   const mio = ++testigoPrueba;
   const indice = estado.indice;
   if (temporizador) temporizador.detener();
+  temporizador = null;
   restablecerTemporizadorVisual();
 
   const img = imagenes[indice];
@@ -283,6 +292,7 @@ async function iniciarPrueba() {
   img.alt = rellenar(TEXTOS.partida.alt_prueba, { i: indice + 1 });
   img.width = 1080;
   img.height = 1350;
+  img.hidden = false;
   $('prueba-marco').replaceChildren(img);
 
   await esperarPintado();
@@ -292,10 +302,14 @@ async function iniciarPrueba() {
   despachar({ tipo: 'PINTADA' });
   if (!estado.activo) return;
 
-  const anunciar = estado.modo !== 'dificil';
+  // Investigador: sin temporizador, sin cinta y sin anuncios.
+  const duracion = MODOS[estado.modo];
+  if (duracion === null) return;
+
+  const anunciar = estado.modo === 'normal'; // en perro no se anuncia nada durante la observación
   let ultimoSegundo = null;
   temporizador = crearTemporizador({
-    duracionMs: MODOS[estado.modo],
+    duracionMs: duracion,
     alTick: (restante, fraccion) => {
       const cinta = $('temporizador');
       cinta.style.setProperty('--restante', String(fraccion));
@@ -309,7 +323,13 @@ async function iniciarPrueba() {
         }
       }
     },
-    alAgotar: () => despachar({ tipo: 'AGOTADO' })
+    alAgotar: () => {
+      despachar({ tipo: 'AGOTADO' });
+      // Sellado: se anuncia en normal y perro (en investigador no hay temporizador).
+      if (estado.tapada && estado.pantalla === 'caso' && estado.indice === indice) {
+        $('temporizador-anuncio').textContent = TEXTOS.partida.sobre_anuncio;
+      }
+    }
   });
   temporizador.iniciar();
 }
@@ -359,15 +379,24 @@ function renderPortada(e) {
 
 function renderCaso(e) {
   const seccion = $('pantalla-caso');
+  const sellada = e.fase === 'pregunta' && e.tapada;
   seccion.dataset.fase = e.fase ?? 'pregunta';
+  seccion.dataset.tapada = sellada ? 'si' : 'no';
+  // Sellado [D-90]: la imagen se oculta tras el sobre; en el veredicto vuelve a verse.
+  const img = $('prueba-marco').querySelector('.prueba-img');
+  if (img) img.hidden = sellada;
+  $('prueba-sobre').hidden = !sellada;
+
   $('caso-tema').textContent = e.tema ? rellenar(TEXTOS.partida.caso_del_dia, { tema: e.tema }) : '';
   $('caso-etiqueta').textContent = rellenar(TEXTOS.partida.etiqueta_prueba, { i: e.indice + 1 });
   $('caso-marcador').textContent = rellenar(TEXTOS.partida.marcador, {
     aciertos: contarAciertos(e.resultados)
   });
   const veredicto = $('veredicto');
-  const boton = app.querySelector('[data-accion="siguiente"]');
-  boton.textContent = e.indice === 4 ? TEXTOS.partida.boton_ver_resultado : TEXTOS.partida.boton_siguiente;
+  const textoBoton = app.querySelector('[data-accion="siguiente"] .boton-texto');
+  textoBoton.textContent = e.indice === 4 ? TEXTOS.partida.boton_ver_resultado : TEXTOS.partida.boton_siguiente;
+  const confesion = $('veredicto-confesion-texto');
+  const leerEntera = app.querySelector('[data-accion="leer-confesion"]');
   if (e.fase === 'veredicto') {
     const estadoPrueba = estadoDeCodigo(e.resultados[e.indice]);
     veredicto.hidden = false;
@@ -375,24 +404,42 @@ function renderCaso(e) {
     $('veredicto-sello').textContent =
       e.revelada === 1 ? TEXTOS.partida.sello_generada : TEXTOS.partida.sello_autentica;
     $('veredicto-texto').textContent = textoVeredicto;
+    // La ficha solo existe en el DOM a partir de aquí (ya respondida).
+    if (typeof e.ficha === 'string') {
+      const corte = recortarFicha(e.ficha);
+      confesion.textContent = corte.texto;
+      leerEntera.hidden = !corte.recortada;
+    } else {
+      confesion.textContent = TEXTOS.confesion.no_disponible;
+      leerEntera.hidden = true;
+    }
   } else {
     veredicto.hidden = true;
     veredicto.removeAttribute('data-estado');
     $('veredicto-sello').textContent = '';
     $('veredicto-texto').textContent = '';
+    confesion.textContent = '';
+    leerEntera.hidden = true;
   }
 }
 
-function crearRevision(e) {
+// Cinco miniaturas que abren la ficha. Se crean solo al llegar a resultado [D-89].
+function crearMiniaturas(e) {
   const lista = $('resultado-revision');
   lista.replaceChildren();
   for (let i = 0; i < 5; i++) {
     const estadoPrueba = estadoDeCodigo(e.resultados[i]);
     const li = document.createElement('li');
-    li.dataset.estado = estadoPrueba;
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = 'miniatura';
+    boton.dataset.accion = 'ver-ficha';
+    boton.dataset.prueba = String(i + 1);
+    boton.dataset.estado = estadoPrueba;
+    boton.setAttribute('aria-haspopup', 'dialog');
     const img = document.createElement('img');
     img.src = rutaPrueba(e.pruebas[i]);
-    img.alt = rellenar(TEXTOS.final.alt_prueba, { n: i + 1 });
+    img.alt = '';
     img.width = 1080;
     img.height = 1350;
     const lector = document.createElement('span');
@@ -401,12 +448,8 @@ function crearRevision(e) {
       i: i + 1,
       estado: TEXTOS.final.estados[estadoPrueba]
     });
-    const era = document.createElement('span');
-    era.className = 'revision-era';
-    const sello =
-      desofuscar(e.clave, e.n, i) === 1 ? TEXTOS.partida.sello_generada : TEXTOS.partida.sello_autentica;
-    era.textContent = rellenar(TEXTOS.final.era, { sello });
-    li.append(img, lector, era);
+    boton.append(img, lector);
+    li.append(boton);
     lista.append(li);
   }
 }
@@ -415,10 +458,9 @@ function renderResultado(e) {
   const aciertos = contarAciertos(e.resultados);
   $('resultado-aciertos').textContent = rellenar(TEXTOS.final.aciertos, { aciertos });
   $('resultado-mensaje').textContent = mensajeFinal(aciertos, TEXTOS.final.mensajes);
-  renderCuadros($('resultado-cuadros'), e.resultados, aciertos);
   $('resultado-racha').textContent = rellenar(TEXTOS.final.racha, { racha: datos.racha });
   $('resultado-mejor-racha').textContent = rellenar(TEXTOS.final.mejor_racha, { racha: datos.mejorRacha });
-  crearRevision(e);
+  crearMiniaturas(e);
 }
 
 function renderYaJugado() {
@@ -464,6 +506,71 @@ function render(e) {
   }
   ultima = { pantalla: e.pantalla, fase: e.fase, indice: e.indice };
 }
+
+// ---- Ficha (diálogo modal) [D-88, D-89] ----
+function fichaAbierta() {
+  return $('ficha').open;
+}
+
+// i: índice 0..4. Solo en caso/veredicto (prueba actual) o en resultado.
+function abrirFicha(i, conImagen, opener) {
+  const enVeredicto = estado.pantalla === 'caso' && estado.fase === 'veredicto';
+  const enResultado = estado.pantalla === 'resultado';
+  if (!enVeredicto && !enResultado) return;
+  if (fichaAbierta()) return;
+  if (enVeredicto) i = estado.indice;
+  if (!Number.isInteger(i) || i < 0 || i > 4) return;
+
+  let textoFicha;
+  let verdad;
+  if (enVeredicto) {
+    textoFicha = estado.ficha;
+    verdad = estado.revelada;
+  } else {
+    // Se descifra ahora y no se guarda en ningún sitio.
+    textoFicha = Array.isArray(estado.fichas)
+      ? desofuscarFicha(estado.fichas[i], estado.clave, estado.n, i)
+      : null;
+    verdad = desofuscar(estado.clave, estado.n, i);
+  }
+  const sello = verdad === 1 ? TEXTOS.partida.sello_generada : TEXTOS.partida.sello_autentica;
+  $('ficha-titulo').textContent = rellenar(TEXTOS.final.estado_prueba, {
+    i: i + 1,
+    estado: TEXTOS.final.estados[estadoDeCodigo(estado.resultados[i])]
+  });
+  $('ficha-era').textContent = rellenar(TEXTOS.final.era, { sello });
+  $('ficha-texto').textContent = typeof textoFicha === 'string' ? textoFicha : TEXTOS.confesion.no_disponible;
+  const img = $('ficha-img');
+  if (conImagen) {
+    img.alt = rellenar(TEXTOS.final.alt_prueba, { n: i + 1 });
+    img.src = rutaPrueba(estado.pruebas[i]);
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+  }
+  botonDeFicha = opener ?? null;
+  $('ficha').showModal();
+  ponerFoco($('ficha-cerrar'));
+}
+
+// conFoco: devolver el foco al botón que lo abrió.
+function cerrarFicha(conFoco = true) {
+  if (!conFoco) botonDeFicha = null;
+  if (fichaAbierta()) $('ficha').close();
+}
+
+$('ficha').addEventListener('close', () => {
+  $('ficha-titulo').textContent = '';
+  $('ficha-era').textContent = '';
+  $('ficha-texto').textContent = '';
+  const img = $('ficha-img');
+  img.removeAttribute('src');
+  img.alt = '';
+  img.hidden = true;
+  const boton = botonDeFicha;
+  botonDeFicha = null;
+  if (boton && boton.isConnected && !boton.closest('[hidden]')) ponerFoco(boton);
+});
 
 // ---- Ya jugado: cuenta atrás hasta medianoche ----
 function iniciarBucleMedianoche() {
@@ -535,8 +642,6 @@ async function accionCompartir() {
 // ---- Entrada ----
 const EVENTOS_ACCION = {
   empezar: 'EMPEZAR',
-  'como-jugar': 'VER_COMO_JUGAR',
-  entendido: 'ENTENDIDO',
   siguiente: 'SIGUIENTE',
   compartir: 'COMPARTIR',
   reintentar: 'REINTENTAR'
@@ -545,16 +650,29 @@ const EVENTOS_ACCION = {
 app.addEventListener('click', (e) => {
   const boton = e.target.closest('[data-voto], [data-accion]');
   if (!boton || !app.contains(boton)) return;
-  if (boton.dataset.accion === 'abrir-prueba') {
+  const accion = boton.dataset.accion;
+  if (accion === 'abrir-prueba') {
     const select = $('selector-prueba-dia');
     if (modoPrueba && select) location.assign(`?prueba=1&dia=${select.value}`);
+    return;
+  }
+  if (accion === 'leer-confesion') {
+    abrirFicha(estado.indice, false, boton);
+    return;
+  }
+  if (accion === 'ver-ficha') {
+    abrirFicha(Number(boton.dataset.prueba) - 1, true, boton);
+    return;
+  }
+  if (accion === 'cerrar-ficha') {
+    cerrarFicha(true);
     return;
   }
   if (boton.dataset.voto) {
     despachar({ tipo: 'VOTO', voto: boton.dataset.voto });
     return;
   }
-  const tipo = EVENTOS_ACCION[boton.dataset.accion];
+  const tipo = EVENTOS_ACCION[accion];
   if (!tipo) return;
   despachar({ tipo });
   if (tipo === 'COMPARTIR' && (estado.pantalla === 'resultado' || estado.pantalla === 'ya-jugado')) {
@@ -568,13 +686,14 @@ app.addEventListener('change', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+  if (fichaAbierta()) return; // con el diálogo abierto no hay atajos (Escape lo cierra de forma nativa)
   const tecla = e.key.toLowerCase();
   if (estado.pantalla === 'caso' && estado.fase === 'pregunta') {
     if (tecla === 'r') despachar({ tipo: 'VOTO', voto: 'autentica' });
     else if (tecla === 'i') despachar({ tipo: 'VOTO', voto: 'generada' });
   } else if (estado.pantalla === 'caso' && estado.fase === 'veredicto' && e.key === 'Enter') {
     const foco = document.activeElement;
-    if (foco && foco.closest('button, a')) return;
+    if (foco && foco.closest('button, a, summary')) return;
     e.preventDefault();
     despachar({ tipo: 'SIGUIENTE' });
   }
@@ -590,7 +709,7 @@ function sincronizar() {
     renderYaJugado();
     return;
   }
-  if (!['cuenta-atras', 'caso', 'portada', 'como-jugar'].includes(p) || !caso) return;
+  if (!['cuenta-atras', 'caso', 'portada'].includes(p) || !caso) return;
   const registro = partidaDe(datos, p === 'caso' ? estado.fecha : caso.fecha);
   if (!registro) return;
   if (p === 'caso') {
@@ -602,10 +721,10 @@ function sincronizar() {
   }
 }
 
+// Ocultar la pestaña no penaliza [D-78]: no se despacha nada y el temporizador sigue por reloj.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     if (estado.pantalla === 'cuenta-atras') detenerCuentaAtras();
-    despachar({ tipo: 'OCULTA' });
     return;
   }
   if (['portada', 'ya-jugado', 'sin-casos'].includes(estado.pantalla) && hoy() !== fechaCarga) {
@@ -613,7 +732,11 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   sincronizar();
-  if (estado.pantalla === 'cuenta-atras') iniciarCuentaAtras();
+  if (estado.pantalla === 'cuenta-atras') {
+    iniciarCuentaAtras(); // se reinicia desde 3 [D-07, DP-29]
+  } else if (temporizador && temporizador.activo()) {
+    temporizador.comprobar(); // si el tiempo ya se agotó, sella en el acto
+  }
 });
 
 if (!enMemoria) {
@@ -643,10 +766,8 @@ function arrancar() {
   const lectura = leerConRespaldo(almacenLocal, almacenSesion);
   datos = lectura.datos;
   marcarAlmacen(lectura.disponible);
-  estado = estadoInicial({
-    modo: datos.ajustes.modo,
-    vistoComoJugar: datos.ajustes.vistoComoJugar
-  });
+  // estadoInicial valida el modo (modoValido) y usa el de por defecto si no vale.
+  estado = estadoInicial({ modo: datos.ajustes.modo });
   rellenarTextos();
   if (fechaFija) {
     const aviso = $('aviso-previsualizacion');

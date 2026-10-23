@@ -4,7 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join, posix } from 'node:path';
 import sharp from 'sharp';
-import { desofuscar, diasEntre, fechaLocal, sumarDias, validarCalendario } from '../js/diario.js';
+import { desofuscar, desofuscarFicha, diasEntre, fechaLocal, sumarDias, validarCalendario } from '../js/diario.js';
+import { TEXTOS } from '../js/textos.js';
 import {
   contienePalabraProhibida,
   contieneSubcadenaProhibida,
@@ -49,10 +50,14 @@ if (!existsSync(p('data', 'calendario.json'))) {
 
 const dias = [];
 if (calendario) {
-  if (calendario.version !== 2) error(`data/calendario.json: version debe ser 2 (es ${calendario.version}).`);
+  if (calendario.version === 2) {
+    error('data/calendario.json es de la versión 2 (sin fichas): reimporta con npm run importar -- --reimportar --confirmar.');
+  } else if (calendario.version !== 3) {
+    error(`data/calendario.json: version debe ser 3 (es ${calendario.version}).`);
+  }
   if (calendario.lanzamiento !== '2026-11-01') error(`data/calendario.json: lanzamiento debe ser "2026-11-01" (es "${calendario.lanzamiento}").`);
-  if (!validarCalendario(calendario)) {
-    error('data/calendario.json no cumple la estructura de la versión 2 (campos, tema, 5 ids distintos, clave de 5 bytes).');
+  if (calendario.version !== 2 && !validarCalendario(calendario)) {
+    error('data/calendario.json no cumple la estructura de la versión 3 (campos, tema, 5 ids distintos, clave de 5 bytes, 5 fichas).');
   }
   if (Array.isArray(calendario.dias)) dias.push(...calendario.dias);
 }
@@ -79,6 +84,41 @@ for (const d of dias) {
     }
   });
   if (g < 1 || g > 4) error(`${etiqueta}: tiene ${g} generadas; debe tener entre 1 y 4.`);
+}
+
+// ---------- Fichas [D-86, D-87] ----------
+
+const sinPromptPorDia = new Map();
+{
+  const { autentica, sin_prompt: sinPrompt } = TEXTOS?.fichas ?? {};
+  const textoOk = (t) => typeof t === 'string' && t.trim() !== '';
+  if (!textoOk(autentica) || !textoOk(sinPrompt) || autentica === sinPrompt) {
+    error('TEXTOS.fichas (js/textos.js) no es válido: autentica y sin_prompt deben existir, no estar vacías y ser distintas.');
+  } else if (calendario && calendario.version === 3) {
+    for (const d of dias) {
+      if (!d || !Array.isArray(d.pruebas) || !Array.isArray(d.fichas)) continue;
+      let descifrables = true;
+      let descuadre = false;
+      d.pruebas.forEach((_, i) => {
+        const texto = desofuscarFicha(d.fichas[i], d.clave, d.n, i);
+        if (texto === null) {
+          descifrables = false;
+          error(`La ficha ${i + 1} del día ${d.n} no se puede descifrar.`);
+          return;
+        }
+        let generada;
+        try {
+          generada = desofuscar(d.clave, d.n, i) === 1;
+        } catch {
+          return;
+        }
+        if (!generada && texto !== autentica) descuadre = true;
+        if (generada && texto === autentica) descuadre = true;
+        if (generada && texto === sinPrompt) sinPromptPorDia.set(d.n, (sinPromptPorDia.get(d.n) ?? 0) + 1);
+      });
+      if (descifrables && descuadre) error(`El día ${d.n} tiene fichas que no cuadran con su clave.`);
+    }
+  }
 }
 
 // ---------- Imágenes ----------
@@ -238,6 +278,12 @@ try {
   }
   const entrada = execFileSync('git', ['ls-files', 'entrada'], { cwd: RAIZ, stdio: 'pipe' }).toString().trim();
   if (entrada) error('Hay archivos de entrada/ rastreados por git.');
+  const txt = execFileSync('git', ['ls-files', '*.txt'], { cwd: RAIZ, stdio: 'pipe' })
+    .toString()
+    .split(/\r?\n/)
+    .map((x) => x.trim())
+    .filter((x) => x && !x.startsWith('fonts/'));
+  if (txt.length > 0) error(`Hay ${txt.length} archivo(s) .txt rastreados por git fuera de fonts/ (podrían ser prompts o fichas).`);
 } catch {
   aviso('No se pudo consultar git; se omiten las comprobaciones de archivos rastreados.');
 }
@@ -259,6 +305,13 @@ if (futuros < 7) aviso(`Quedan menos de 7 días de calendario a partir de hoy ($
   } else if (abiertas) {
     aviso('el modo prueba está abierto (PRUEBAS_ABIERTAS = true en js/main.js). Ponlo a false antes del lanzamiento (2026-11-01).');
   }
+}
+
+if (sinPromptPorDia.size > 0) {
+  const total = [...sinPromptPorDia.values()].reduce((a, b) => a + b, 0);
+  const lista = [...sinPromptPorDia.keys()].map(String);
+  const textoDias = lista.length === 1 ? `día ${lista[0]}` : `días ${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}`;
+  aviso(`${total} ${total === 1 ? 'prueba generada no tiene prompt' : 'pruebas generadas no tienen prompt'} (${textoDias}).`);
 }
 
 const generadasPorDia = dias.map((d) => d.pruebas.reduce((s, _, i) => s + desofuscar(d.clave, d.n, i), 0));

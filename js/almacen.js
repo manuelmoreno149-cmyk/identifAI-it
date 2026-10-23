@@ -1,7 +1,8 @@
 // Almacenamiento local con clave versionada. Ninguna función lanza.
 import { sumarDias } from './diario.js';
 
-export const CLAVE = 'identifaiit.v1';
+export const CLAVE = 'identifaiit.v2';
+export const VERSION = 2;
 const CLAVE_PRUEBA = 'identifaiit.prueba';
 
 function almacenGlobal() {
@@ -36,8 +37,8 @@ export function crearAlmacenMemoria() {
 
 export function datosIniciales() {
   return {
-    version: 1,
-    ajustes: { modo: 'medio', vistoComoJugar: false },
+    version: VERSION,
+    ajustes: { modo: 'normal' },
     partidas: {},
     racha: 0,
     mejorRacha: 0
@@ -49,10 +50,10 @@ function esObjeto(x) {
 }
 
 function normalizar(crudo) {
-  if (!esObjeto(crudo) || crudo.version !== 1 || !esObjeto(crudo.partidas)) return datosIniciales();
+  if (!esObjeto(crudo) || crudo.version !== VERSION || !esObjeto(crudo.partidas)) return datosIniciales();
   const base = datosIniciales();
   return {
-    version: 1,
+    version: VERSION,
     ajustes: { ...base.ajustes, ...(esObjeto(crudo.ajustes) ? crudo.ajustes : {}) },
     partidas: crudo.partidas,
     racha: Number.isInteger(crudo.racha) ? crudo.racha : 0,
@@ -93,7 +94,7 @@ function leerClave(almacen) {
     const texto = almacen.getItem(CLAVE);
     if (texto === null || texto === undefined) return null;
     const crudo = JSON.parse(texto);
-    if (!esObjeto(crudo) || crudo.version !== 1 || !esObjeto(crudo.partidas)) return null;
+    if (!esObjeto(crudo) || crudo.version !== VERSION || !esObjeto(crudo.partidas)) return null;
     return normalizar(crudo);
   } catch {
     return null;
@@ -196,7 +197,7 @@ export function cerrarAbandonada(datos, fecha, hoyISO) {
   if (!editable(partida)) return datos;
   const cerrada = {
     ...datos,
-    partidas: { ...datos.partidas, [fecha]: { ...partida, resultados: partida.resultados.replaceAll('-', 'O') } }
+    partidas: { ...datos.partidas, [fecha]: { ...partida, resultados: partida.resultados.replaceAll('-', 'F') } }
   };
   return registrarFin(cerrada, fecha, hoyISO);
 }

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <filter id="grano" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="11" result="ruido"/>
+      <feColorMatrix in="ruido" type="matrix" values="0 0 0 0 0.25  0 0 0 0 0.15  0 0 0 0 0.05  0 0 0 0.35 0" result="manchas"/>
+      <feComposite in="manchas" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <linearGradient id="kraft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c79a62"/>
+      <stop offset="1" stop-color="#a97a46"/>
+    </linearGradient>
+    <linearGradient id="solapa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b98a52"/>
+      <stop offset="1" stop-color="#9a6c3a"/>
+    </linearGradient>
+    <radialGradient id="lacre" cx="0.38" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#d04a3f"/>
+      <stop offset="0.55" stop-color="#9b1c1c"/>
+      <stop offset="1" stop-color="#5e0f10"/>
+    </radialGradient>
+    <pattern id="precinto" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+      <rect width="28" height="28" fill="#f5c518"/>
+      <rect width="14" height="28" fill="#15120a"/>
+    </pattern>
+  </defs>
+
+  <!-- Cuerpo del sobre -->
+  <rect width="400" height="500" fill="url(#kraft)"/>
+  <rect width="400" height="500" fill="#7a5128" filter="url(#grano)"/>
+
+  <!-- Pliegues laterales e inferior -->
+  <path d="M0 500 L200 262 L400 500" fill="none" stroke="#7d5628" stroke-opacity="0.55" stroke-width="3"/>
+  <path d="M0 0 L200 262 L0 500 Z" fill="#8a6030" fill-opacity="0.12"/>
+  <path d="M400 0 L200 262 L400 500 Z" fill="#8a6030" fill-opacity="0.12"/>
+
+  <!-- Solapa superior -->
+  <path d="M0 0 H400 L200 262 Z" fill="url(#solapa)"/>
+  <path d="M0 0 L200 262 L400 0" fill="none" stroke="#5e3f1c" stroke-opacity="0.7" stroke-width="3"/>
+  <path d="M0 8 L200 270 L400 8" fill="none" stroke="#000" stroke-opacity="0.18" stroke-width="6"/>
+
+  <!-- Costura interior -->
+  <rect x="14" y="14" width="372" height="472" rx="4" fill="none" stroke="#5e3f1c" stroke-opacity="0.45" stroke-width="2" stroke-dasharray="10 7"/>
+
+  <!-- Precinto de prueba, cruzado sobre el cierre -->
+  <g transform="rotate(-8 200 262)">
+    <rect x="-30" y="226" width="460" height="52" fill="url(#precinto)"/>
+    <rect x="-30" y="226" width="460" height="52" fill="none" stroke="#15120a" stroke-width="3"/>
+  </g>
+
+  <!-- Lacre de cera -->
+  <g>
+    <circle cx="200" cy="262" r="54" fill="#000" fill-opacity="0.35" transform="translate(4 6)"/>
+    <path d="M200 206 C226 204 252 222 256 252 C262 282 244 314 214 318 C184 324 150 306 146 274 C142 240 168 208 200 206 Z" fill="url(#lacre)"/>
+    <circle cx="200" cy="263" r="36" fill="none" stroke="#5e0f10" stroke-width="3"/>
+    <!-- Huella grabada en la cera -->
+    <g fill="none" stroke="#5e0f10" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.85">
+      <path d="M182 280 C176 262 184 246 200 246 C216 246 224 262 218 280"/>
+      <path d="M190 284 C186 266 192 254 200 254 C208 254 214 266 210 284"/>
+      <path d="M198 288 C196 272 200 262 204 270"/>
+    </g>
+    <path d="M168 228 C176 214 192 210 204 212" fill="none" stroke="#f0645a" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Etiqueta en blanco (el rotulo lo pone el CSS) -->
+  <g>
+    <rect x="70" y="398" width="260" height="60" fill="#000" fill-opacity="0.25" transform="translate(3 4)"/>
+    <rect x="70" y="398" width="260" height="60" fill="#e8dcc0"/>
+    <rect x="76" y="404" width="248" height="48" fill="none" stroke="#4a3f2a" stroke-width="1.5" stroke-dasharray="5 4"/>
+  </g>
+
+  <!-- Hilo y ojal -->
+  <circle cx="200" cy="364" r="7" fill="#e8dcc0" stroke="#4a3f2a" stroke-width="2"/>
+</svg>

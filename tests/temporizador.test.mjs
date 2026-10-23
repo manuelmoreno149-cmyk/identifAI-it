@@ -130,3 +130,73 @@ test('esperarPintado resuelve en el segundo frame', async () => {
   await p;
   assert.equal(resuelto, true);
 });
+
+function crear(sim, duracionMs, extra = {}) {
+  return crearTemporizador({
+    duracionMs,
+    reloj: sim.reloj,
+    pedirFrame: sim.pedirFrame,
+    cancelarFrame: sim.cancelarFrame,
+    ...extra
+  });
+}
+
+test('141. duracionMs no válida lanza TypeError', () => {
+  const sim = simulador();
+  for (const malo of [null, undefined, Infinity, -Infinity, 0, -1, NaN, '1000']) {
+    assert.throws(() => crear(sim, malo), TypeError, String(malo));
+  }
+  assert.doesNotThrow(() => crear(sim, 1));
+});
+
+test('142. con la pestaña oculta el reloj salta y alAgotar se llama una vez en ese frame', () => {
+  const sim = simulador();
+  let agotado = 0;
+  const t = crear(sim, 1000, { alAgotar: () => agotado++ });
+  t.iniciar();
+  sim.frame();
+  sim.avanzar(4900);
+  assert.equal(agotado, 0);
+  sim.frame();
+  assert.equal(agotado, 1);
+  assert.equal(t.activo(), false);
+  for (let i = 0; i < 20; i++) sim.frame();
+  assert.equal(agotado, 1);
+});
+
+test('142. comprobar() agota en el acto, una sola vez, y no hace nada antes de tiempo ni tras detener', () => {
+  const sim = simulador();
+  let agotado = 0;
+  const t = crear(sim, 1000, { alAgotar: () => agotado++ });
+  t.comprobar();
+  assert.equal(agotado, 0);
+  t.iniciar();
+  sim.avanzar(500);
+  t.comprobar();
+  assert.equal(agotado, 0);
+  assert.equal(t.activo(), true);
+  sim.avanzar(600);
+  t.comprobar();
+  assert.equal(agotado, 1);
+  assert.equal(t.activo(), false);
+  assert.equal(sim.hayPendiente(), false);
+  t.comprobar();
+  for (let i = 0; i < 20; i++) sim.frame();
+  assert.equal(agotado, 1);
+
+  const t2 = crear(sim, 1000, { alAgotar: () => agotado++ });
+  t2.iniciar();
+  t2.detener();
+  sim.avanzar(5000);
+  t2.comprobar();
+  assert.equal(agotado, 1);
+});
+
+test('precisión en el modo de 1 s (±50 ms) con frames de 16,7 ms', () => {
+  const sim = simulador();
+  let exceso = null;
+  const t = crear(sim, 1000, { alAgotar: () => (exceso = sim.reloj() - 1000 - 1000) });
+  t.iniciar();
+  for (let i = 0; i < 100; i++) sim.frame();
+  assert.ok(exceso >= 0 && exceso <= 50, String(exceso));
+});

@@ -1,6 +1,6 @@
 // Texto para compartir y envío (share, portapapeles o manual).
 
-export const CUADROS = { A: '🟩', F: '🟥', T: '⬛', O: '⬛' };
+export const CUADROS = { A: '🟩', F: '🟥' };
 
 export function rellenar(plantilla, valores) {
   return plantilla.replace(/\{(\w+)\}/g, (marca, clave) =>
@@ -9,7 +9,7 @@ export function rellenar(plantilla, valores) {
 }
 
 export function cuadros(resultados) {
-  return [...resultados].map((c) => CUADROS[c] ?? '⬛').join('');
+  return [...resultados].map((c) => CUADROS[c] ?? CUADROS.F).join('');
 }
 
 // Los aciertos se calculan siempre a partir de `resultados`.
