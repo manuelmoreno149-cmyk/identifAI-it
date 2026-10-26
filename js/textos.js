@@ -5,6 +5,15 @@ export const TEXTOS = {
   portada: {
     titulo: 'identifAI-it',
     lema: 'Five pieces of evidence. One shot. Real or AI?',
+    elige_reto: 'Choose your case file',
+    reto_imagenes: 'Images',
+    reto_titulares: 'Headlines',
+    estado_pendiente: 'Open case',
+    estado_jugado: 'Filed · {aciertos}/5',
+    estado_en_curso: 'In another tab',
+    estado_sin_caso: 'No case today',
+    boton_ver_informe: 'View report',
+    regla_titulares: 'No timer. Leave for more than a few seconds and it\'s a miss.',
     elige_modo: 'Choose your investigation mode',
     modo_investigador: 'Investigator',
     modo_normal: 'Normal',
@@ -26,6 +35,12 @@ export const TEXTOS = {
       'Study each image and call it: REAL or AI.',
       'Time runs out? The evidence gets sealed. Answer at your leisure.',
       'One attempt a day, whatever the mode. Choose wisely.'
+    ],
+    pasos_titulares: [
+      'Two challenges a day, one try each. This one is Headlines.',
+      'Read the headline and the lede, then call it: REAL or AI. No timer.',
+      'Leave the page for more than a few seconds and it counts as a miss.',
+      'After you answer, you get the source or the suspect\'s confession.'
     ]
   },
 
@@ -83,8 +98,29 @@ export const TEXTOS = {
     sin_prompt: 'The suspect refuses to confess. Make of that what you will.'
   },
 
+  titulares: {
+    etiqueta_prueba: 'Story {i}/5',
+    sello_autentica: 'REAL · PUBLISHED STORY',
+    sello_generada: 'AI-GENERATED · NOT A REAL STORY',
+    marca: 'identifAI-it · Real or AI?',
+    oculta: [
+      'You were away from the file for more than a few seconds. That\'s a miss.',
+      'The suspect slipped out while you were gone. More than a few seconds: miss.',
+      'Too long off the case. Gone more than a few seconds means a miss.'
+    ],
+    aviso_oculta: 'Leaving the page for more than a few seconds counts as a miss.',
+    fuente_titulo: 'The source',
+    fuente_enlace: 'Read it at {medio}',
+    nueva_pestana: '(opens in a new tab)',
+    fuente_no_disponible: 'The source is no longer on file.',
+    no_disponible: 'This clipping can\'t be read. Try reloading the page.',
+    estado_prueba: 'Story {i}: {estado}'
+  },
+
   final: {
     alt_prueba: 'Evidence {n}',
+    reto: '{reto} · Case #{n}',
+    boton_volver: 'Back',
     mensajes: [
       'The AI has you beat. Zero hits. The case goes cold in the archive.',
       'One hit. Too many shadows for one detective. Come back tomorrow with sharper eyes.',
@@ -113,7 +149,8 @@ export const TEXTOS = {
   },
 
   sin_casos: {
-    texto: 'No case today. Come back when the file has evidence.'
+    texto: 'No case today. Come back when the file has evidence.',
+    sin_lanzamiento: 'The precinct opens soon. No cases on file yet.'
   },
 
   errores: {
@@ -125,7 +162,8 @@ export const TEXTOS = {
   avisos: {
     sin_guardar: 'This device\'s file is sealed. Today\'s attempt won\'t be recorded.',
     otra_pestana: 'This case is open in another tab. Finish the examination there.',
-    previsualizacion: 'Preview of {fecha}: nothing gets saved.'
+    previsualizacion: 'Preview of {fecha}: nothing gets saved.',
+    prueba: 'Test mode · Day {n}: nothing gets saved.'
   },
 
   prueba: {
@@ -138,7 +176,8 @@ export const TEXTOS = {
     boton: 'Share',
     copiado: 'Copied to clipboard',
     manual: 'Copy this text:',
-    plantilla: 'identifAI-it · Case #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
+    plantilla: 'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}',
+    plantilla_titulares: 'identifAI-it Headlines #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
   },
 
   creditos: {
@@ -149,6 +188,10 @@ export const TEXTOS = {
     imagenes: 'Images',
     imagenes_intro: 'The evidence comes from these sources. The list doesn\'t say which image came from where.',
     sin_imagenes: 'No images published yet.',
+    noticias: 'News',
+    noticias_intro: 'Headlines adapted from the original publishers; summaries written for this game. Links go to the original stories.',
+    sin_noticias: 'No news sources credited yet.',
+    ficcion: 'Stories marked AI are fiction written for this game.',
     ver_licencia: 'license',
     volver: 'Back to the front page'
   }
