@@ -55,7 +55,7 @@ if (calendario) {
   } else if (calendario.version !== 3) {
     error(`data/calendario.json: version debe ser 3 (es ${calendario.version}).`);
   }
-  if (calendario.lanzamiento !== '2026-11-01') error(`data/calendario.json: lanzamiento debe ser "2026-11-01" (es "${calendario.lanzamiento}").`);
+  if (typeof calendario.lanzamiento !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(calendario.lanzamiento) || Number.isNaN(Date.parse(calendario.lanzamiento))) error(`data/calendario.json: lanzamiento debe ser una fecha ISO válida (es "${calendario.lanzamiento}").`);
   if (calendario.version !== 2 && !validarCalendario(calendario)) {
     error('data/calendario.json no cumple la estructura de la versión 3 (campos, tema, 5 ids distintos, clave de 5 bytes, 5 fichas).');
   }
@@ -303,7 +303,7 @@ if (futuros < 7) aviso(`Quedan menos de 7 días de calendario a partir de hoy ($
   } else if (abiertas && (estricto || lanzado)) {
     error('El modo prueba sigue abierto: pon const PRUEBAS_ABIERTAS = false; en js/main.js antes de publicar (D-71).');
   } else if (abiertas) {
-    aviso('el modo prueba está abierto (PRUEBAS_ABIERTAS = true en js/main.js). Ponlo a false antes del lanzamiento (2026-11-01).');
+    aviso(`el modo prueba está abierto (PRUEBAS_ABIERTAS = true en js/main.js). Ponlo a false antes del lanzamiento (${calendario?.lanzamiento ?? 'sin calendario'}).`);
   }
 }
 

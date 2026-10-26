@@ -1,10 +1,10 @@
 {
   "version": 3,
-  "lanzamiento": "2026-11-01",
+  "lanzamiento": "2099-01-01",
   "dias": [
     {
       "n": 1,
-      "fecha": "2026-11-01",
+      "fecha": "2099-01-01",
       "tema": "Fireworks",
       "pruebas": [
         "sh2tsw8afr",
@@ -24,7 +24,7 @@
     },
     {
       "n": 2,
-      "fecha": "2026-11-02",
+      "fecha": "2099-01-02",
       "tema": "Dogs",
       "pruebas": [
         "me61t4emrb",
@@ -44,7 +44,7 @@
     },
     {
       "n": 3,
-      "fecha": "2026-11-03",
+      "fecha": "2099-01-03",
       "tema": "People eating",
       "pruebas": [
         "e1zquzivo9",
@@ -64,7 +64,7 @@
     },
     {
       "n": 4,
-      "fecha": "2026-11-04",
+      "fecha": "2099-01-04",
       "tema": "People drinking",
       "pruebas": [
         "rzcmuupqe3",
@@ -84,7 +84,7 @@
     },
     {
       "n": 5,
-      "fecha": "2026-11-05",
+      "fecha": "2099-01-05",
       "tema": "Table with food",
       "pruebas": [
         "o9c976j09r",
@@ -104,7 +104,7 @@
     },
     {
       "n": 6,
-      "fecha": "2026-11-06",
+      "fecha": "2099-01-06",
       "tema": "Nightclub",
       "pruebas": [
         "ho3vor1zv9",
@@ -124,7 +124,7 @@
     },
     {
       "n": 7,
-      "fecha": "2026-11-07",
+      "fecha": "2099-01-07",
       "tema": "People fighting",
       "pruebas": [
         "u3vw1j5n6a",
