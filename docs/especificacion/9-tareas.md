@@ -1,97 +1,109 @@
-# identifAI-it: especificación técnica, versión 1.3 · 9. Plan de tareas
+# identifAI-it: especificación técnica, versión 2.0 · 9. Plan de tareas, riesgos y cambios fuera de docs/
 
-Parte de la especificación 1.3 (índice en `docs/ESPECIFICACION.md`) [D-91].
+Parte de la especificación 2.0 (índice en `docs/ESPECIFICACION.md`) [D-91, D-114]. Incluye los ajustes D-115 (ausencia de más de 3 s) y D-116 (titulares por mes), repartidos en las tareas que ya existían; no hay tareas nuevas por ellos.
 
 Una tarea = un commit con mensaje en español (`tipo: descripción`). Ninguna empieza hasta que sus dependencias estén revisadas, y se delegan de una en una.
 
-## 9.1 Tareas anteriores (1 a 43)
+## 9.1 Tareas anteriores (1 a 59)
 
-Las tareas 1 a 24 (versión 1.0/1.1), 25 a 29 (temas por día, 1.2), 30 a 37 (recorte, reimportación y previsualización) y 38 a 43 (modo prueba) tienen la descripción de la versión 1.2 (historial de git, commit `225c28a`). Según el registro, están hechas salvo:
-- la **23**, revisión de asuntos internos, que pasa a hacerse sobre la 1.3 en la tarea 59;
-- la **24**, correcciones;
-- la **44**, apagado del modo prueba.
+Las tareas 1 a 43 tienen la descripción de la 1.2 (commit `225c28a`) y las 45 a 59, la de la 1.3 (commit `e9abacf`). Según el registro (commits `7323117` y `5f8a9b1`), la 1.3 está implementada y los datos reimportados. Quedan:
+- la **59** (revisión de asuntos internos de la 1.3) y la **24** (correcciones), que se funden con la revisión de la 2.0 (tareas 79 y 80);
+- la **44** (apagado del modo prueba), que cambia de fecha (9.3).
 
-## 9.2 Tarea 44: apagado del modo prueba (se mantiene) [D-71]
+## 9.2 Tarea urgente: aplazamiento provisional del juego publicado [D-97]
 
-| # | Tarea | Agente | Depende de | Commit |
-|---|---|---|---|---|
-| 44 | **Antes del lanzamiento (2026-11-01): poner `PRUEBAS_ABIERTAS = false` en `js/main.js` (una línea), probar y publicar.** Pasos: (1) cambiar solo esa línea; (2) `npm test`; (3) `npm run validar -- --estricto`; (4) criterios 121 y 54–60 con `npx serve`; (5) commit y publicación; (6) criterio 124 en Pages. Hacerlo el 2026-10-31 como tarde. | agente-de-campo (cambio y pruebas) y usuario (publicación) | 59 y pruebas con amigos | `feat: cerrar el modo prueba para el lanzamiento` |
-
-## 9.3 Requisito previo de la versión 1.3
-
-- **P1 (usuario)**: actualizar `CLAUDE.md` con los cambios de 9.5 y confirmar en persona las nuevas reglas (DP-33). Hasta entonces, las reglas de `CLAUDE.md` prevalecen y nadie implementa las tareas 45 a 59.
-- **P2 (usuario)**: escribir los `.txt` de prompt junto a cada imagen generada de los 7 días en `entrada/temas/NN-…/ia/` (UTF-8, mismo nombre base). Hace falta antes de la tarea 53.
-
-## 9.4 Tareas de la versión 1.3 [D-76 a D-91]
-
-Orden recomendado y razonamiento [D-91]:
-- El reparto del usuario (cronista → agente-de-campo → archivero → perito-visual) se mantiene, con un ajuste: **la tarea del agente-de-campo se parte en dos**.
-  - Primero, los **módulos puros y sus tests** (no dependen del HTML).
-  - **`main.js` va después del perito-visual**, porque solo se puede probar en el navegador con el `index.html` nuevo (ids de 2.3, `details`, `dialog` y sobre) y con el calendario versión 3 del archivero.
-- El archivero va después de los módulos puros porque `importar.mjs` usa `ofuscarFicha`, `FICHA_MAX_BYTES` y `validarCalendario` (versión 3) de `js/diario.js` y `TEXTOS.fichas` del cronista.
-- El perito-visual maqueta contra el contrato de la sección 2 sin esperar a `main.js`, y hace un último ajuste con el juego funcionando.
-
-**Dependencias cruzadas**:
-- `js/main.js` es solo del agente-de-campo; `index.html`, CSS y SVG son solo del perito-visual.
-- El único punto de encuentro es el contrato de la sección 2 (ids, `data-*`, clases `.pantalla`, `.prueba-img`, `.boton-texto` y `.miniatura`, y el marcado exacto de las miniaturas, el sobre, la confesión y el diálogo). Cualquier cambio en él pasa por el inspector-jefe y DECISIONES.
-- Los tests de `textos.js` los escribe el agente-de-campo (tarea 49) contra las claves de 3.1, no contra los valores que proponga el cronista.
-
-**Entre la tarea 46 y la 57, el juego no funciona** (el `main.js` viejo con módulos nuevos, o el calendario versión 2 con `validarCalendario` versión 3): **no publicar en GitHub Pages hasta terminar la 58**. Los amigos que estén probando seguirán viendo la versión publicada.
+El juego publicado (1.3) tiene `lanzamiento: "2026-11-01"`: si no se hace nada, **el 2026-11-01 se abre al público** con solo Images, aunque el usuario ha aplazado el lanzamiento. La 2.0 no estará publicada para entonces (riesgo R1). La tarea 60 no cambia con D-115 ni D-116 (no toca Headlines).
 
 | # | Tarea | Agente | Depende de | Commit |
 |---|---|---|---|---|
-| 45 | `js/textos.js` según 3.1 (1.3): modos nuevos (nombres exactos y descripciones), `como_jugar.titulo` y 4 pasos de 80 caracteres como máximo sin "Entendido", `partida.sobre_texto` y `sobre_anuncio`, grupo `confesion` (título exacto), `ficha.cerrar`, grupo `fichas` (`autentica` exacto y `sin_prompt`), `final.estados` con solo acierto y fallo, sin `veredictos.tiempo`/`oculta` ni claves antiguas, y la plantilla de compartir de la sección 7. Mostrar al usuario los textos nuevos para que los apruebe. | cronista | P1 | `feat: textos de la versión 1.3` |
-| 46 | `js/diario.js`: `FICHA_BLOQUE`, `FICHA_MAX_BYTES`, `flujoFicha`, `ofuscarFicha`, `desofuscarFicha`, `validarCalendario` versión 3 y `casoDelDia` con `fichas` (3.2, 4.3.1) + `tests/diario.test.mjs` (criterios 8, 9, 115 y 139, con el vector de regresión fijado y copiado en DECISIONES). Actualizar los calendarios de ejemplo de todos los tests a la versión 3. | agente-de-campo | P1 | `feat: fichas ofuscadas y calendario versión 3` |
-| 47 | `js/juego.js`: `MODOS`, `MODO_POR_DEFECTO`, `modoValido`, estado de 1.2 (`fichas`, `tapada`, `ficha`; sin `volverA` ni `vistoComoJugar`), tabla 1.3 (`AGOTADO` sella, sin `OCULTA`, `VER_COMO_JUGAR` ni `ENTENDIDO`), `estadoDeCodigo` y `recortarFicha` + `tests/juego.test.mjs` (criterios 11–19, 140 y 141). | agente-de-campo | 46 | `feat: modos nuevos, sellado y ficha en el estado` |
-| 48 | `js/temporizador.js` (`TypeError` con duración no válida y `comprobar()`) + `tests/temporizador.test.mjs` (20–23, 141 y 142). `js/almacen.js` (`identifaiit.v2`, `VERSION`, `datosIniciales` sin `vistoComoJugar`, `cerrarAbandonada` con `F`) + `tests/almacen.test.mjs` (26–32 y 105). | agente-de-campo | 46 | `feat: temporizador de reloj y almacén v2` |
-| 49 | `js/compartir.js` (`CUADROS` sin `⬛`) + `tests/compartir.test.mjs` (33–37) y `tests/textos.test.mjs` (38–40). | agente-de-campo | 45 | `feat: compartir con el modo y sin tiempo agotado` |
-| 50 | `herramientas/temas.mjs`: `normalizarFicha`, `calendarioAnteriorValido` y `planificar` con `.txt` (4.6) + `tests/temas.test.mjs` (86 ampliado, 143–145). | archivero | P1 | `feat: fichas en la planificación del importador` |
-| 51 | `herramientas/importar.mjs`: paso 3 (versión 2 → mensaje; con `--reimportar`, `calendarioAnteriorValido`), paso 5 ter (lectura UTF-8, normalización y avisos), `ofuscarFicha` en el paso 8, calendario versión 3, plan e informe sin mostrar prompts (4.4.2, 4.4.4). Criterios 69, 71, 92 y 100 con datos de prueba fuera de `entrada/` real. | archivero | 45, 46, 50 | `feat: importar fichas y calendario versión 3` |
-| 52 | `herramientas/validar.mjs`: versión 3, descifrado y coherencia de fichas, `.txt` rastreados y aviso de generadas sin prompt (4.4.3). Criterios 66, 68 y 147. | archivero | 46, 50 | `feat: validar fichas del calendario` |
-| 53 | Reimportación con permiso explícito del usuario (DP-18) y **antes del 2026-11-01**: (1) comprobar que el usuario ha escrito los `.txt` (P2); (2) `npm run importar -- --reimportar` y revisar con él el plan (avisos de fichas que faltan o se recortan, marcas de Gemini [D-66]); (3) `npm run importar -- --reimportar --confirmar`; (4) `npm run validar` y revisar los avisos de peso, mezcla y prompts; (5) criterio 146; (6) recordar la copia privada de `banco.json`. El commit incluye `casos/`, `data/` y `creditos.html` (idéntico si no cambian las fuentes); **nunca** `banco.json`, `banco.anterior.json`, `lote.json` ni nada de `entrada/`. | archivero | 51, 52, P2 | `datos: calendario versión 3 con fichas` |
-| 54 | `img/ui/sobre.svg` (sobre de pruebas kraft con precinto y lacre, en el estilo forense del juego, 4:5, sin texto ni metadatos) y eliminar `img/ui/icono-tiempo.svg` (criterio 148). | perito-visual | P1 | `estilo: sobre de pruebas sellado` |
-| 55 | `index.html` según 2.3 (1.3): `details#como-jugar`, sin `#pantalla-como-jugar` ni botones Cómo jugar y Entendido, radios `investigador|normal|perro`, `#prueba-sobre`, `#veredicto-confesion`, `#resultado-rachas` sin `#resultado-cuadros`, y `dialog#ficha` (criterio 41). | perito-visual | 45 | `feat: marcado de la versión 1.3` |
-| 56 | CSS: composición sin deslizar según 2.6 (R1–R13: `100dvh`, avisos en el flujo, unidades de contenedor para la imagen 4:5, dos columnas en horizontal en portada, caso y resultado) y componentes nuevos (fichas de modo en una fila, `details`, sobre, confesión, miniaturas con icono en `::after`, diálogo y `::backdrop`, reduced motion). Maqueta probada con el marcado de 2.3 y textos de ejemplo. | perito-visual | 54, 55 | `estilo: pantallas sin deslizar y componentes nuevos` |
-| 57 | `js/main.js` según 3.7 (1.3): desplegable (pasos y cierre al empezar), modo validado, temporizador solo si `MODOS[modo] !== null`, sellado (`data-tapada`, `hidden` de la imagen y del sobre, anuncio), anuncios por modo, `visibilitychange` sin `OCULTA` y con `comprobar()`, confesión recortada y Leer entera, miniaturas, diálogo (abrir, cerrar, foco y atajos bloqueados) y `cerrarAbandonada` con `F`. Sin tocar `PRUEBAS_ABIERTAS`. Probar con `npx serve` los criterios 24, 54–65, 106, 119–123, 129–138 y repetir 104–113. | agente-de-campo | 47, 48, 49, 53, 55 | `feat: partida de la versión 1.3` |
-| 58 | Ajuste visual final con el juego funcionando: medir el criterio 126 en todos los estados y tamaños (también en modo prueba y con `#aviso-almacen`), 127, 128, 137 (diálogo con un prompt de 510 bytes), 138, contraste, foco y reduced motion. | perito-visual | 56, 57 | `estilo: ajustes de la versión 1.3` |
-| 59 | Revisión completa de la versión 1.3 contra la sección 8 (informe BLOQUEANTE / IMPORTANTE / MENOR), con especial atención a los criterios 47, 136 y 146 (anti-trampas de las fichas) y al 126. Sustituye a la tarea 23. Después, correcciones (tarea 24), cada una por su agente. | asuntos-internos | 58 | — (no edita) |
+| 60 | **Antes del 2026-10-31**, con permiso del usuario: (1) en `data/calendario.json` (versión 3, código 1.3), cambiar `lanzamiento` a `"2099-01-01"` y las 7 `fecha` a `2099-01-01` … `2099-01-07`, y lo mismo en las `fecha` de `herramientas/banco.json` (local); (2) en `herramientas/validar.mjs`, sustituir la comprobación `lanzamiento !== '2026-11-01'` por "fecha ISO válida" y el texto "(2026-11-01)" del aviso por la fecha del calendario; (3) `npm test`, `npm run validar`; (4) con `npx serve`: sin parámetros, `sin-casos`; con `?prueba=1`, los 7 días jugables; (5) commit y publicación. Sin cambios de código del juego. La tarea 72 sustituye después `2099-01-01` por `null`. | archivero (datos y `validar.mjs`) y usuario (publicación) | permiso del usuario | `datos: aplazar el lanzamiento (provisional)` |
 
-Orden: P1 → 45 → 46 → 47 → 48 → 49 → 50 → 51 → 52 → (P2) → 53 → 54 → 55 → 56 → 57 → 58 → 59 → 24 → publicar → pruebas con amigos → 44.
+## 9.3 Requisitos previos y tareas del usuario
 
-**Calendario.** Hoy es el 2026-10-23 y el lanzamiento es el 2026-11-01:
-- la **53** (reimportar) tiene que estar hecha antes del 2026-11-01, porque después ningún día del calendario se puede regenerar y los 7 primeros días se quedarían sin fichas (el juego no podría cargarlos: `validarCalendario` exige la versión 3);
-- la **44** cierra el plan el 2026-10-31 como tarde.
+- **P3 (usuario)**: actualizar `CLAUDE.md` y `.claude/` con 9.6 y confirmar en persona la 2.0, con D-115 y D-116 (DP-36). Hasta entonces nadie implementa las tareas 61 a 81.
+- **P4 (usuario)**: escribir `entrada/titulares/NN-tema/noticias.txt` (formato de 4.9) y revisar la norma de contenido (4.13). Hace falta antes de la tarea 74 con contenido (sin contenido, la 74 no publica ningún archivo de titulares).
+- **P5 (usuario)**: decidir la fecha de lanzamiento (DP-37). Hace falta antes de la tarea 81.
 
-Si no da tiempo, la alternativa es aplazar el lanzamiento (cambiar D-20, decisión del usuario).
+## 9.4 Tareas de la versión 2.0 [D-94 a D-116]
 
-Las tareas 50, 51 y 52 pueden empezar en paralelo con la 47 en cuanto la 46 esté revisada; la 54 y la 55, en cuanto la 45 esté revisada. Se mantiene la norma de delegar de uno en uno.
+Flujo habitual: inspector-jefe (esta especificación) → cronista → agente-de-campo (módulos puros) → archivero → perito-visual → agente-de-campo (`main.js`) → perito-visual (ajuste) → asuntos-internos. Razones:
+- el archivero necesita las funciones de ofuscación, `validarCalendario` versión 4, `validarTitulares`, `mesDeNumero` y `cargarTitulares` de `js/diario.js`, y los textos del cronista (créditos);
+- [D-116] `lanzamiento.mjs` reparte los titulares por mes, así que necesita `unirMeses`, `repartirPorMes` y las funciones de archivo de `herramientas/titulares.mjs` (tarea 69): por eso la 69 pasa antes que la 67;
+- el perito-visual maqueta contra el contrato de la sección 2 sin esperar a `main.js`;
+- `main.js` solo se puede probar con el `index.html` nuevo, el calendario versión 4 y archivos mensuales de titulares (reales o de prueba).
 
-## 9.5 Cambios fuera de docs/ (los hace el usuario)
+**Entre la tarea 62 y la 78 el juego no funciona** (`validarCalendario` versión 4 con datos de la versión 3, o `main.js` viejo con módulos nuevos): **no publicar hasta terminar la 78**. Lo publicado será el resultado de la tarea 60.
 
-En `CLAUDE.md` (no lo toca ningún agente) [D-76]:
+| # | Tarea | Agente | Depende de | Commit |
+|---|---|---|---|---|
+| 61 | `js/textos.js` según 3.1 (2.0): `portada.*` de retos, estados y regla (con "more than a few seconds", D-115); `como_jugar.pasos_titulares` (igual); grupo `titulares` (sello de IA exacto, `oculta` con el matiz de los segundos y **`aviso_oculta` exacto**, D-115); `final.reto` y `final.boton_volver`; `sin_casos.sin_lanzamiento`; `avisos.prueba`; las dos plantillas de compartir exactas; `creditos.*` de noticias. Mostrar los textos al usuario para que los apruebe. | cronista | P3 | `feat: textos de la versión 2.0` |
+| 62 | `js/diario.js`, bloques: `flujoBytes`, `ofuscarBloque`, `desofuscarBloque`; `ofuscarFicha`/`desofuscarFicha` sobre ellos; `TEXTO_*`, `ofuscarTexto`, `desofuscarTexto`, `NOTICIA_*`, `ofuscarNoticia`, `desofuscarNoticia`, `urlFuenteValida`, `medioDeUrl` + tests (167–171, con los vectores de 4.8 fijados y copiados en DECISIONES). | agente-de-campo | P3 | `feat: bloques ofuscados de titulares` |
+| 63 | `js/diario.js`, calendario y titulares: `FECHA_BASE_PRUEBA`, `numeroDelDia`, `fechaDelDia`, `validarCalendario` versión 4, `casoDelDia`, `casoDeNumero`; [D-116] `MES_PATRON`, `TITULARES_CARPETA`, `mesDeFecha`, `mesDeNumero`, `rutaTitulares`, `titularesVacios`, `validarTitulares(obj, mes)`, `titularesDelDia` y `titularesDeNumero` por mes, `cargarTitulares(fecha, pedir)`; `diaPedido`, `diasDePrueba`, `diaDePrueba` + tests (8, 9, 115, 149, 150, 172, 173, 211, 212). Pasar todos los calendarios de ejemplo de los tests a la versión 4. | agente-de-campo | 62 | `feat: calendario versión 4 y titulares por mes` |
+| 64 | `js/juego.js`: `RETOS`, `RETO_POR_DEFECTO`, `retoValido`, `retoDePrueba`, [D-115] `OCULTA_MAX_MS`, `ocultacionEsFallo`, `medirOculta`, estado 1.2 (2.0), tabla 1.3 (2.0, con `VOLVIO` y sin `OCULTA`) + `tests/juego.test.mjs` (11–19, 157–166, 206–208). | agente-de-campo | 63 | `feat: dos retos en la máquina de estados` |
+| 65 | `js/almacen.js` versión 3 por reto + `tests/almacen.test.mjs` (26–32, 174–176). | agente-de-campo | 64 | `feat: almacén v3 con progreso por reto` |
+| 66 | `js/compartir.js` (`nombreModo` opcional) + `tests/compartir.test.mjs` (33–37, 177, 179) y `tests/textos.test.mjs` (38–40, 180). | agente-de-campo | 61 | `test: compartir y textos de la versión 2.0` |
+| 69 | `herramientas/titulares.mjs` (4.11), con [D-116] `ARCHIVO_MES`, `unirMeses`, `repartirPorMes`, `leerTitularesMensuales` y `escribirTitularesMensuales` + `tests/titulares.test.mjs` (197–199, 213; las funciones de archivo, con carpetas temporales). | archivero | 63 | `feat: análisis de noticias y archivos mensuales` |
+| 67 | `herramientas/temas.mjs` (`planificar` y `comprobarReimportacion` con lanzamiento `null`, `calendarioAnteriorValido` 2–4, `analizarArgumentosLanzamiento`, `comprobarCambioLanzamiento`, `migrarCalendario`, `migrarBanco`) y `herramientas/lanzamiento.mjs` con [D-116] el reparto de `data/titulares/` por mes (4.2.1) + script en `package.json` + `tests/lanzamiento.test.mjs` y `tests/temas.test.mjs` (145, 151, 152; el 215 se prueba en la 73 con datos de prueba). | archivero | 63, 69 | `feat: fecha de lanzamiento configurable` |
+| 68 | `herramientas/importar.mjs`: sin `LANZAMIENTO`, banco versión 3, calendario versión 4, mensajes de 4.4.2 (69, 92 y 100 con datos de prueba). | archivero | 67 | `feat: importar con calendario versión 4` |
+| 70 | `herramientas/creditos.mjs`: `mediosDeTitulares` sobre la unión de todos los meses, sección de noticias (2.7, 4.5) + tests (203, 221). | archivero | 61, 63, 69 | `feat: créditos de noticias` |
+| 71 | `herramientas/validar.mjs`: versión 4, banco versión 3, lanzamiento sin fecha fija, `PRUEBAS_ABIERTAS` (4.4.3), calendario corto por reto y titulares por mes (4.12) (66, 68, 154, 156, 202, 203, 216). Quitar `2026-11-01` de todo `herramientas/` y del comentario de `js/main.js` (este último, en la 77). | archivero | 67, 69, 70 | `feat: validar la versión 2.0` |
+| 72 | Datos, con permiso del usuario: `npm run lanzamiento -- --sin-fecha` (calendario versión 4 con `lanzamiento: null`, banco versión 3; `data/titulares/` aún sin archivos), `npm run validar` y criterio 153. El commit incluye solo `data/calendario.json`. | archivero | 68, 71 | `datos: calendario versión 4 sin fecha de lanzamiento` |
+| 73 | `herramientas/importar-titulares.mjs` (4.10, con escritura solo de los meses afectados) + script `titulares` en `package.json` (200, 201, 214 y 215 con datos de prueba fuera de la `entrada/` real y en una copia de `data/`). | archivero | 69, 70, 71 | `feat: importador de titulares` |
+| 74 | Datos: si P4 está listo, `npm run titulares -- --simular`, revisión con el usuario de la lista de 4.13, `npm run titulares -- --revisado` (crea `data/titulares/2000-MM.json` mientras no haya lanzamiento), `npm run validar` (avisos de longitud y mezcla), criterios 204 y 220. Commit: `data/titulares/` y `creditos.html`. Sin P4, no se crea ningún archivo y la tarea queda pendiente (la 77 se prueba con datos de prueba locales, sin commit). | archivero | 73 (y P4 si hay contenido) | `datos: titulares` |
+| 75 | `index.html` según 2.3 (2.0): selector de reto, `#portada-regla`, `#portada-empezar-texto`, [D-115] `#caso-aviso`, `#recorte`, `#veredicto-fuente`, botones Back, `#resultado-reto`, `#ya-jugado-reto`, `#sin-casos-texto`, ampliación de `dialog#ficha` (41, 181). | perito-visual | 61 | `feat: marcado de la versión 2.0` |
+| 76 | CSS: R8 (portada con retos), R14–R18 (recorte, [D-115] `#caso-aviso` en la cabecera, veredicto de Headlines con sello de IA, resultado numerado, textos largos), bloqueo de selección en `#recorte`, `data-reto`, reduced motion. Maqueta con textos de ejemplo de 110 y 280 caracteres, con y sin el aviso. | perito-visual | 75 | `estilo: pantallas de Headlines` |
+| 77 | `js/main.js` según 3.7 (2.0): [D-116] carga del calendario y del archivo de titulares del mes de la fecha efectiva (en paralelo en el juego normal; en serie y con `diaPedido` en modo prueba), recarga en `MEDIANOCHE`; `CARGADO` con `retos`, portada (estados, Start, modos o regla, pasos), Headlines (recorte, `PINTADA`, [D-115] medida de la ausencia y `VOLVIO`, `#caso-aviso` y su anuncio, veredicto con fuente o confesión, resultado y diálogo), bloqueo de copia, Back, almacén v3 por reto, otras pestañas por reto, compartir por reto, modo prueba con `&reto=` y `avisos.prueba`. Sin tocar el valor de `PRUEBAS_ABIERTAS`. Probar 54–65, 106, 119, 120, 155, 184–196, 209, 210, 217–219. | agente-de-campo | 64, 65, 66, 72, 74, 75 | `feat: segundo reto Headlines` |
+| 78 | Ajuste visual final con el juego funcionando: 126 y 182 en todos los estados y tamaños (también la prueba 1 con `#caso-aviso`), 183, 186, 187, contraste, foco y reduced motion. | perito-visual | 76, 77 | `estilo: ajustes de la versión 2.0` |
+| 79 | Revisión completa contra la sección 8 (informe BLOQUEANTE / IMPORTANTE / MENOR), con atención a 47, 136, 163, 190–192, 204 y 209 (anti-trampas), a 182 (layout), a 212–219 (archivos mensuales) y a la norma de contenido. Sustituye a la 59. | asuntos-internos | 78 | — (no edita) |
+| 80 | Correcciones del informe, cada una por su agente (incluye la 24). Después, publicar. | varios | 79 | según el caso |
+| 81 | Con la fecha decidida (P5): `npm run lanzamiento -- AAAA-MM-DD` (reparte `data/titulares/` en los meses reales, 4.2.1), `npm run validar`, comprobar que el juego normal sigue en `sin-casos` hasta esa fecha y que `?fecha=` (local) la respeta y carga el mes correcto; commit (con `data/calendario.json` y los archivos añadidos y borrados de `data/titulares/`) y publicación. | archivero y usuario | 80, P5 | `datos: fecha de lanzamiento` |
+| 44 | **Antes de la fecha de lanzamiento (el día anterior como tarde):** `PRUEBAS_ABIERTAS = false` en `js/main.js` (una línea), `npm test`, `npm run validar -- --estricto`, criterios 121, 54–60 y 188–196 con `npx serve`, commit y publicación, criterio 124 en Pages. | agente-de-campo y usuario | 81 | `feat: cerrar el modo prueba para el lanzamiento` |
+
+Orden: 60 (ya) → P3 → 61 → 62 → 63 → 64 → 65 → 66 → 69 → 67 → 68 → 70 → 71 → 72 → 73 → 74 → 75 → 76 → 77 → 78 → 79 → 80 → publicar → pruebas con amigos → P5 → 81 → 44.
+
+Paralelismo posible (manteniendo la delegación de uno en uno): la 69 tras la 63; la 75 y la 76 tras la 61.
+
+## 9.5 Riesgos
+
+- **R1. Lanzamiento automático del 2026-11-01** con la 1.3 publicada. Mitigación: tarea 60 antes del 2026-10-31. A 2026-10-26, `data/calendario.json` sigue en la versión 3 con `lanzamiento: "2026-11-01"`: la tarea 60 sigue pendiente.
+- **R2. Spoilers del modo prueba**: con el lanzamiento aplazado, `?prueba=1` estará abierto más tiempo y ahora enseña también las respuestas, fuentes y prompts de Headlines (D-70). Quien pruebe conocerá esos días.
+- **R3. Titulares auténticos buscables**: cualquiera puede teclear el titular en un buscador (en otro dispositivo o ventana). El bloqueo de copia y la penalización por ausencia son frenos casuales, no seguridad; es una debilidad inherente al reto. Mitigación editorial: elegir titulares poco citados y redactar los de IA con el mismo estilo.
+- **R4. Falsos fallos por ausencia** [D-115]: con el margen de 3 s, un vistazo a una notificación, una llamada rechazada o un bloqueo breve ya no penalizan; siguen contando como fallo las ausencias largas involuntarias (bloqueo automático de pantalla por inactividad mientras se lee, una llamada atendida). Se avisa en Cómo jugar, en `#portada-regla` y en la prueba 1 (`#caso-aviso`). Mejora posterior posible: `navigator.wakeLock` durante la pregunta (DP-41, no adoptada).
+- **R5. Desinformación por capturas**: una noticia de IA en fase pregunta no lleva el sello. Mitigación: `#recorte-marca` fija en la tarjeta (DP-44) y la norma de contenido (4.13).
+- **R6. Legal**: citar titulares y entradillas de terceros y enlazarlos (DP-43, resuelta con su recomendación: consultar antes del lanzamiento si hay dudas).
+- **R7. Peso de los datos** [D-116]: Headlines descarga como mucho un mes (unos 320 KB, 4.7.3) por visita. El calendario de Images sigue siendo un archivo único (1,25 MB al año, creciendo); si molesta, partirlo también por meses en una versión futura (DP-26).
+- **R8. Enlaces rotos**: las fuentes pueden desaparecer. Se aceptan URL de archivos web (`https://web.archive.org/...`), que cumplen `urlFuenteValida`.
+- **R9. Delatores de longitud y estilo**: además de la longitud media (avisos al 25 %), el estilo (comillas tipográficas, mayúsculas de titular, cifras exactas) puede delatar a los de IA. Revisión humana.
+- **R10. Migración de datos**: la tarea 72 debe hacerse antes de publicar la 2.0; publicar código 2.0 con el calendario versión 3 deja el juego en `error`.
+- **R11. Portada más cargada**: el selector de reto y el modo prueba ajustan el espacio a 360 x 640; R8 da al perito un orden de compresión (lema primero).
+- **R12. Ausencias cortas repetidas** [D-115]: como las ausencias no se acumulan, un jugador puede salir varias veces menos de 3 s (por ejemplo, para pegar el titular en un buscador de otra pestaña, aunque el texto no se puede copiar). Es lo pedido ("más de 3 segundos seguidos"); 3 s apenas dan para teclear y leer un resultado. Si se viera abuso, la alternativa sería acumular las ausencias de una misma noticia.
+- **R13. Reparto por mes y cambio de lanzamiento** [D-116]: cambiar `lanzamiento` mueve los días de Headlines de archivo (añade y borra archivos en `data/titulares/`). Si se edita `lanzamiento` a mano, o se publica el calendario sin los archivos repartidos, Headlines queda sin casos en esos días (no muestra datos equivocados) y `validar` falla. Mitigación: solo `npm run lanzamiento`, y commit conjunto de `data/calendario.json` y `data/titulares/`.
+- **R14. Modo prueba incompleto entre meses** [D-116]: el selector solo conoce los temas de Headlines del mes cargado (DP-51).
+
+## 9.6 Cambios fuera de docs/ (los hace el usuario)
+
+`CLAUDE.md` (no lo toca ningún agente). Siguen pendientes los de la 1.3 (lista de la 1.3, commit `e9abacf`) y D-93 (idioma), y la 2.0 añade:
+- **Descripción**: "Juego web diario (estilo Wordle) con dos retos: Images (5 imágenes al día, REAL o IA) y Headlines (5 noticias al día: titular y entradilla, REAL o IA). Temática policíaca / forense oscura."
 - **Reglas del juego**:
-  - "Modos: fácil 7 s, medio 3 s, difícil 1 s por imagen. Tiempo agotado = fallo." pasa a "Modos: Investigador (sin límite), Normal (3 s) y Perro de presa (1 s) de observación por imagen. Al agotarse el tiempo, la imagen se tapa con un sobre de pruebas sellado y el jugador responde sin límite: no es fallo."
-  - "Si la pestaña se oculta durante un caso, ese caso cuenta como fallo." pasa a "Ocultar la pestaña no penaliza: el tiempo de observación sigue corriendo."
-  - "Al final: aciertos, mensaje policíaco según aciertos (0 a 5), racha y botón Compartir." pasa a añadir "…5 miniaturas que muestran la respuesta y la ficha de cada prueba (prompt o "Fotografía real")…".
-  - "El texto compartido no revela qué imágenes eran IA." pasa a "…incluye el modo y no revela qué imágenes eran IA."
-  - Añadir: "Todas las pantallas caben sin desplazar (100dvh) desde 360 x 640 y 640 x 360."
-- **Stack**: "Móvil primero (360 px)" pasa a "Móvil primero (360 x 640, también en horizontal), sin scroll".
-- **Estructura**:
-  - `index.html` pasa a "portada (con Cómo jugar desplegable), partida, resultado, ya jugado".
-  - `data/calendario.json` pasa a "los 5 casos de cada día, con fichas ofuscadas (versión 3)".
-  - `img/ui/` pasa a incluir `sobre.svg`.
-  - `entrada/`: describir `entrada/temas/NN-tema/{ia,real}/` (sustituye a `entrada/reales/` y `entrada/ia/`), con un `.txt` de prompt junto a cada imagen de `ia/`.
-  - `docs/`: `docs/ESPECIFICACION.md` y `docs/especificacion/*.md` son la fuente de verdad técnica [D-91].
+  - "5 casos al día, los mismos para todos" pasa a "Cada reto tiene 5 casos al día, los mismos para todos; la mezcla real/IA varía cada día (de 1 a 4 de IA)."
+  - Los modos (Investigator, Normal 3 s, Bloodhound 1 s), el sellado y la precarga solo valen para Images.
+  - "Si la pestaña se oculta durante un caso, ese caso cuenta como fallo" pasa a: "Images: ocultar la pestaña no penaliza. Headlines: si la pestaña sigue oculta más de 3 segundos seguidos antes de responder, ese caso cuenta como fallo (las ausencias más cortas no cuentan)." [D-115]
+  - Añadir: "Headlines no tiene modos ni temporizador; el texto no se puede seleccionar ni copiar (freno casual). Tras responder, la noticia real enlaza a su fuente y la de IA muestra el sello AI-GENERATED · NOT A REAL STORY y su prompt."
+  - "Un solo intento al día" pasa a "Un solo intento al día por reto (se pueden jugar los dos). Recargar o cambiar de modo no permite repetir."
+  - "Al final: aciertos, mensaje, racha y Compartir" pasa a "…racha propia de cada reto y Compartir; el texto compartido no revela qué casos eran IA ni incluye titulares."
+  - Añadir: "El lanzamiento de los dos retos es conjunto; la fecha está en data/calendario.json (`lanzamiento`, null mientras no se decida) y solo se cambia con npm run lanzamiento."
+- **Stack**: "Interfaz en español de España" pasa a "Interfaz solo en inglés americano (en-US); todo lo interno, en español" (D-93).
+- **Estructura**: añadir `data/titulares/AAAA-MM.json` (Headlines, ofuscado, un archivo por mes; el juego solo carga el del mes en curso) [D-116], `entrada/titulares/NN-tema/noticias.txt`, `herramientas/titulares.mjs`, `importar-titulares.mjs` y `lanzamiento.mjs`, y `docs/especificacion/4b-titulares.md`.
 - **Anti-trampas**:
-  - "La respuesta de un caso no existe en el DOM hasta que el jugador responde" pasa a "La respuesta y la ficha (prompt) de un caso no existen en el DOM hasta que el jugador responde".
-  - Añadir: "Los prompts (.txt) viven solo en entrada/ y nunca se publican en claro: en el calendario van ofuscados y rellenados a la misma longitud".
-  - Añadir: `herramientas/lote.json` y `herramientas/banco.anterior.json` van en `.gitignore`, como `banco.json` (pendiente desde la 1.2).
-- Opcional: recordar que, hasta el 2026-11-01, `?prueba=1` abre el modo prueba (D-70).
+  - "La respuesta de un caso no existe en el DOM hasta que el jugador responde" pasa a "La respuesta, la ficha, la fuente y el prompt de un caso no existen en el DOM hasta que el jugador responde; en Headlines, solo está en el DOM la noticia actual."
+  - Añadir: "Titulares, entradillas, fuentes y prompts de Headlines solo están en claro en entrada/titulares/ (en .gitignore); en data/titulares/ van ofuscados y rellenados a longitud fija."
+  - Añadir la **norma de contenido** de 4.13 (texto exacto).
+- **Opcional**: "Hasta el lanzamiento, ?prueba=1 abre el modo prueba (D-70, D-110)."
 
 En `.claude/` (con permiso del usuario):
-- `agents/perito-visual.md`: "tres fichas: Fácil 7 s, Medio 3 s, Difícil 1 s" pasa a "Investigador, Normal 3 s y Perro de presa 1 s"; añadir el layout sin scroll, el `details`, el `dialog` y el sobre.
-- `agents/agente-de-campo.md`: quitar "si la pestaña se oculta durante un caso, ese caso es fallo"; poner "ocultar la pestaña no penaliza; el temporizador sigue con el reloj".
-- `agents/asuntos-internos.md`: "tiempo agotado = fallo, pestaña oculta = fallo" pasa a "tiempo agotado = prueba sellada y respuesta sin límite; pestaña oculta sin efecto; ficha ausente del DOM hasta responder"; y "360 px sin scroll horizontal" pasa a "sin scroll en 360 x 640, 640 x 360 y 1280 x 720".
-- `agents/cronista.md`: quitar "3 para tiempo agotado"; añadir confesión, sobre, modos y fichas.
-- `agents/inspector-jefe.md`: el ejemplo "en modo difícil" pasa a "en modo perro".
-- `agents/archivero.md` y `commands/nuevo-lote.md`: lo pendiente de la 1.2 (`entrada/temas/`, `lote.json`, `--reimportar --confirmar`, `creditos.html` en el commit) y, además, los `.txt` de prompt, que nunca se copian, se muestran ni se suben.
+- `agents/archivero.md`: la norma de contenido (4.13, texto exacto), `npm run titulares` con `--simular` y `--revisado`, el formato de `noticias.txt`, `npm run lanzamiento` (que reparte `data/titulares/` por mes), que `data/titulares/` se commitea entero (añadidos y borrados) y que nunca muestra ni sube titulares, URL ni prompts en claro.
+- `agents/cronista.md`: grupo `titulares` (con `aviso_oculta` exacto), estados de la portada, pasos de Cómo jugar por reto y las dos plantillas.
+- `agents/perito-visual.md`: selector de reto, recorte con bloqueo de selección, `#caso-aviso`, sello de IA, resultado numerado.
+- `agents/agente-de-campo.md`: en Headlines, la ausencia se mide al volver y solo cuenta si supera `OCULTA_MAX_MS` (evento `VOLVIO`); carga del mes de titulares; almacén v3 por reto.
+- `agents/asuntos-internos.md`: revisar los criterios 163, 190–192, 204, 209 y 212–219 y la norma de contenido.
+- `commands/nuevo-lote.md`: añadir el flujo de Headlines.
