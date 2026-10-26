@@ -1,10 +1,10 @@
 # identifAI-it: especificación técnica
 
-**Versión 2.0, del 2026-10-25** [D-94], con los ajustes D-115 y D-116 del 2026-10-26 (decisiones del usuario sobre una 2.0 aún no implementada; no cambian el número de versión). Parte de la 1.3 (2026-10-23, con los ajustes D-92 y D-93) y añade un **segundo reto diario** a petición del usuario:
+**Versión 2.0, del 2026-10-25** [D-94], con los ajustes D-115, D-116 y D-117 del 2026-10-26 (decisiones del usuario sobre una 2.0 aún no implementada; no cambian el número de versión). Parte de la 1.3 (2026-10-23, con los ajustes D-92 y D-93) y añade un **segundo reto diario** a petición del usuario:
 - **Dos retos**: **Images** (`imagenes`, el juego de siempre, con sus tres modos) y **Headlines** (`titulares`: 5 noticias, titular + entradilla, sin modos ni temporizador). Cada uno tiene sus 5 casos, su intento, su racha, su `ya-jugado` y su texto de compartir. La portada es el centro: el jugador elige reto y ve el estado de cada uno [D-98, D-99, D-100].
 - **Lanzamiento aplazado y configurable**: `lanzamiento` de `data/calendario.json` puede valer `null` (sin fecha). Sin fecha, el juego normal muestra `sin-casos` y solo funciona el modo prueba. La fecha se cambia solo con `npm run lanzamiento` [D-95, D-97]. Los días ya no guardan `fecha` (se deriva de `n`): calendario **versión 4** y banco **versión 3** [D-96].
-- **Headlines**: ocultar la pestaña antes de responder cuenta como fallo **solo si sigue oculta más de 3 segundos seguidos** (`OCULTA_MAX_MS`, medido al volver) [D-101, D-115]; el texto no se puede seleccionar ni copiar (freno casual) [D-102]; titulares, entradillas, respuestas, fuentes y prompts van ofuscados y rellenados en **un archivo por mes**, `data/titulares/AAAA-MM.json` versión 1, y el juego solo carga el del mes de la fecha efectiva [D-103, D-116]; tras responder, enlace a la fuente original o sello "AI-GENERATED · NOT A REAL STORY" con la confesión [D-104].
-- **Almacén `identifaiit.v3`** con el progreso de cada reto por separado [D-109]. **Modo prueba** ampliado a los dos retos [D-110]. **Créditos** con la lista agregada de medios [D-111].
+- **Headlines**: ocultar la pestaña antes de responder cuenta como fallo **solo si sigue oculta más de 3 segundos seguidos** (`OCULTA_MAX_MS`, medido al volver) [D-101, D-115]; el texto no se puede seleccionar ni copiar (freno casual) [D-102]; titulares, entradillas, respuestas, fuentes y prompts van ofuscados y rellenados en **un archivo por mes**, `data/titulares/AAAA-MM.json` versión 1; el juego normal solo carga el del mes de la fecha efectiva y el modo prueba los carga todos [D-103, D-116, D-117]; tras responder, enlace a la fuente original o sello "AI-GENERATED · NOT A REAL STORY" con la confesión [D-104].
+- **Almacén `identifaiit.v3`** con el progreso de cada reto por separado [D-109]. **Modo prueba** ampliado a los dos retos [D-110] y con los días de Headlines de todos los meses [D-117]. **Créditos** con la lista agregada de medios [D-111].
 - **Idioma** [D-93, sin cambios]: la interfaz está solo en inglés americano (en-US). Todo texto de interfaz que esta especificación cite en español es solo una referencia: el valor vigente es el de `js/textos.js`. Lo interno (spec, claves, ids, mensajes de las herramientas y commits) sigue en español.
 
 La especificación se reparte en varios archivos de `docs/`, que forman un único documento con la misma versión [D-91, D-114]:
@@ -41,11 +41,11 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 | Ficha | Lo que se revela tras responder. Images: prompt o "Real photograph" [D-85]. Headlines: `{tipo: 'fuente', texto: URL}` o `{tipo: 'prompt', texto}` [D-103]. Siempre ofuscada y rellenada. |
 | Recorte | Tarjeta de prensa del DOM (`#recorte`) que muestra titular y entradilla [D-105]. |
 | Fecha ISO | `AAAA-MM-DD` en hora **local**. |
-| Mes de datos | `AAAA-MM`. El de un día `n` es `mesDeNumero(lanzamiento, n)` (los 7 primeros caracteres de `fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); el que carga el juego es `mesDeFecha(fecha efectiva)`. Los datos de Headlines de ese mes están en `data/titulares/{mes}.json` [D-116]. |
+| Mes de datos | `AAAA-MM`. El de un día `n` es `mesDeNumero(lanzamiento, n)` (los 7 primeros caracteres de `fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); el que carga el juego normal (y la previsualización) es `mesDeFecha(fecha efectiva)`, y el modo prueba carga todos [D-117]. Los datos de Headlines de ese mes están en `data/titulares/{mes}.json` [D-116]. |
 | Modo | Solo Images: `investigador` (sin límite), `normal` (3000 ms), `perro` (1000 ms) [D-81]. |
 | Previsualización | Solo en `localhost`, `127.0.0.1` o `[::1]`: `?fecha=` fija la fecha efectiva y no se guarda nada [D-68]. Con `lanzamiento: null` lleva a `sin-casos`. |
-| Modo prueba | Con `?prueba=1` y `PRUEBAS_ABIERTAS = true`: selector de día (común a los dos retos), elección de reto, almacén en memoria [D-70, D-110]. Funciona aunque no haya lanzamiento. Se apaga antes del lanzamiento (tarea 44) [D-97]. |
-| Fecha efectiva | La de la previsualización; si no, la del día elegido en modo prueba (`fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); si no, `fechaLocal(new Date())`. Su mes decide qué archivo de titulares se carga [D-116]. |
+| Modo prueba | Con `?prueba=1` y `PRUEBAS_ABIERTAS = true`: selector de día (común a los dos retos), elección de reto, almacén en memoria [D-70, D-110]; carga todos los meses de titulares para que el selector los conozca [D-117]. Funciona aunque no haya lanzamiento. Se apaga antes del lanzamiento (tarea 44) [D-97]. |
+| Fecha efectiva | La de la previsualización; si no, la del día elegido en modo prueba (`fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); si no, `fechaLocal(new Date())`. Fuera del modo prueba, su mes decide qué archivo de titulares se carga [D-116, D-117]. |
 
 ### 0.1 Convenciones obligatorias
 
@@ -73,7 +73,7 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 | `img/ui/` | sí | Los de la 1.3. Ningún SVG nuevo obligatorio (el sello de Headlines es texto con estilo). |
 | `casos/` | sí | `{id}.webp`, solo Images. |
 | `data/calendario.json` | sí | Images y fecha de lanzamiento: **versión 4** [D-96]. |
-| `data/titulares/AAAA-MM.json` | sí | Headlines, todo ofuscado: **versión 1**, **un archivo por mes de datos** con los días de ese mes [D-103, D-116]. Sin noticias, la carpeta no tiene archivos (o no existe). No hay `data/titulares.json`. |
+| `data/titulares/AAAA-MM.json` | sí | Headlines, todo ofuscado: **versión 1**, **un archivo por mes de datos** con los días de ese mes [D-103, D-116]. Sin noticias, la carpeta no tiene archivos (o no existe). No hay `data/titulares.json` ni índice de meses [D-117]. |
 | `herramientas/*.mjs` | sí (repositorio) | `temas.mjs`, `importar.mjs`, `creditos.mjs`, `validar.mjs` y, nuevos, `lanzamiento.mjs`, `titulares.mjs` (puras, más dos funciones de lectura y escritura de los archivos mensuales) e `importar-titulares.mjs` [D-95, D-106, D-116]. |
 | `herramientas/banco.json` | **no** | Banco de imágenes, **versión 3** (sin `fecha`) [D-96]. No hay banco de noticias [D-108]. |
 | `herramientas/banco.anterior.json`, `herramientas/lote.json` | **no** | Sin cambios. |
@@ -91,7 +91,7 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 
 | Pantalla (`data-pantalla`) | Contenido |
 |---|---|
-| `iniciando` | Transitorio mientras se cargan el almacén, `data/calendario.json` y el archivo de titulares del mes de la fecha efectiva (`data/titulares/{mes}.json`) [D-116]. Sin sección. |
+| `iniciando` | Transitorio mientras se cargan el almacén, `data/calendario.json` y el archivo de titulares del mes de la fecha efectiva (`data/titulares/{mes}.json`) [D-116] o, en modo prueba, todos los meses de titulares, en serie (4.7.2) [D-117]. Sin sección. |
 | `portada` | Título, lema, Case #n, selector de día (modo prueba), **selector de reto** con el estado de cada uno, tema del reto elegido, selector de modo (**solo Images**) o regla de Headlines, racha del reto elegido, botón Start / View report, Cómo jugar (pasos del reto elegido) y pie con Credits [D-98]. |
 | `cargando` | Solo Images: precarga de las 5 imágenes. |
 | `cuenta-atras` | Solo Images: 3, 2, 1. |
@@ -99,7 +99,7 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 | `resultado` | Reto y caso, aciertos x/5, mensaje, 5 miniaturas (imágenes) o 5 botones numerados (Headlines) que abren la ficha, rachas del reto, Share y Back [D-89, D-105]. |
 | `ya-jugado` | Del reto elegido: reto y caso, aciertos, cuadros, modo (solo Images), racha, cuenta atrás a medianoche, Share y Back. |
 | `sin-casos` | Ningún reto tiene caso hoy, o no hay fecha de lanzamiento (texto propio) [D-24, D-95]. |
-| `error` | No se pudo cargar `data/calendario.json`, el archivo de titulares del mes (salvo que no exista: un 404 deja Headlines sin caso, no es error [D-116]) o alguna imagen. Reintentar. |
+| `error` | No se pudo cargar `data/calendario.json`, un archivo de titulares (salvo que no exista: un 404 deja Headlines sin caso o, en modo prueba, cierra la lista de meses; no es error [D-116, D-117]) o alguna imagen. Reintentar. |
 
 - El veredicto es una fase de `caso` [D-05]. `dialog#ficha` es una ventana modal sobre `caso/veredicto` o `resultado`, sin cambio de estado [D-88].
 - Headlines **reutiliza** las pantallas `caso`, `resultado` y `ya-jugado`; no hay pantallas nuevas. `#app[data-reto]` distingue el reto.
@@ -140,7 +140,7 @@ Un único objeto de estado, gestionado por la función pura `transicion(estado, 
 - `jugado` significa "el intento de hoy de ese reto está gastado": partida `terminada` o `en_curso` en otra pestaña. El detalle (aciertos, en curso) lo lee main.js del almacén para la portada.
 - `texto` solo contiene la noticia actual: el estado nunca guarda más de una noticia descifrada [D-103].
 - **El estado no guarda instantes ni duraciones de ausencia**: el inicio de una ausencia lo apunta main.js en una variable propia y la duración llega ya medida en el evento `VOLVIO` [D-115]. Así `transicion` sigue siendo pura y no depende de ningún reloj.
-- La previsualización y el modo prueba no añaden campos.
+- La previsualización y el modo prueba no añaden campos (la lista de meses del modo prueba vive solo en main.js, no en el estado) [D-117].
 
 ### 1.3 Eventos y transiciones
 
@@ -148,7 +148,7 @@ Un único objeto de estado, gestionado por la función pura `transicion(estado, 
 |---|---|---|---|
 | `iniciando` | `CARGADO` `{retos, reto}` | `retos.imagenes.caso` y `retos.titulares.caso` son `null` | `sin-casos` |
 | `iniciando` | `CARGADO` | en otro caso | `portada`. `reto` = el pedido si es válido y tiene caso; si no, el otro. Copia el caso de ese reto [D-98]. Antes, main.js cierra como abandonada (pendientes → `F`) cualquier partida `en_curso` de hoy de cada reto, así que `jugado` = hay partida `terminada` [D-79]. |
-| `iniciando` | `ERROR_CALENDARIO` | falla `calendario.json` o el archivo de titulares del mes (red, respuesta distinta de 2xx y de 404, JSON o estructura no válidos, `mes` que no cuadra) | `error` (`'calendario'`). Un 404 del archivo del mes **no** es error: `cargarTitulares` devuelve el mes sin días y Headlines queda sin caso [D-116]. |
+| `iniciando` | `ERROR_CALENDARIO` | falla `calendario.json` o un archivo de titulares (red, respuesta distinta de 2xx y de 404, JSON o estructura no válidos, `mes` que no cuadra) | `error` (`'calendario'`). Un 404 **no** es error: en el juego normal, `cargarTitulares` devuelve el mes sin días y Headlines queda sin caso [D-116]; en modo prueba, `cargarTitularesPrueba` da por terminada la lista de meses [D-117]. |
 | `portada` | `ELEGIR_RETO` `{reto}` | `retoValido(reto)` y distinto del actual | `portada` con ese reto y su caso copiado (`n`, `tema`, `pruebas`, `textos`, `clave`, `fichas`; `null` si no tiene). main.js guarda `ajustes.reto`. Si no, el mismo objeto. |
 | `portada` | `ELEGIR_MODO` `{modo}` | `modoValido(modo)` | como en la 1.3 (se acepta en cualquier reto; solo se ve en Images). |
 | `portada` | `EMPEZAR` `{fecha}` | `retos[reto].caso === null` | el mismo objeto (el botón está `disabled`). |
@@ -191,7 +191,7 @@ Reglas adicionales:
 - **Veredicto**: avance manual con Next o Enter [D-27].
 - **Ficha y texto**: `texto` solo existe en `caso`; `ficha`, solo en `veredicto`. En `resultado`, main.js descifra lo de cada botón solo al abrirlo. Nada de eso se guarda [D-88, D-103].
 - **Tema**: no se guarda ni se comparte [D-54].
-- **Previsualización y modo prueba**: la tabla no cambia. En modo prueba, el día se elige por `n`, la URL lleva `&reto=` [D-110] y se carga el archivo de titulares del mes del día elegido (4.7.2) [D-116].
+- **Previsualización y modo prueba**: la tabla no cambia. En la previsualización se carga solo el mes de `?fecha=` [D-116]. En modo prueba, el día se elige por `n`, la URL lleva `&reto=` [D-110] y se cargan todos los archivos de titulares existentes (4.7.2) [D-117].
 
 ### 1.4 Diagrama
 
@@ -208,7 +208,7 @@ iniciando ──► portada (reto: imagenes | titulares) ──► sin-casos / e
                                                                                resultado
 resultado / ya-jugado ──VOLVER_PORTADA──► portada
 portada / ya-jugado / sin-casos ──MEDIANOCHE──► iniciando (recarga calendario y mes de titulares)
-portada (modo prueba) ──Open this day──► ?prueba=1&dia=n&reto=r (recarga) ──► iniciando
+portada (modo prueba) ──Open this day──► ?prueba=1&dia=n&reto=r (recarga) ──► iniciando (calendario y todos los meses)
 ```
 
 ---
@@ -247,7 +247,7 @@ Temas, titulares, entradillas y fichas solo como `textContent` en los elementos 
 
 **Portada** (`#pantalla-portada`), en este orden del DOM:
 - `h1 data-texto="portada.titulo"`, `p.portada-lema data-texto="portada.lema"` y `#portada-caso` ("Case #n"; `hidden` si `estado.n` es `null`).
-- `#selector-prueba` (solo en modo prueba; lo crea main.js **justo después de `#portada-caso`**) con el marcado de D-70. Las `option` llevan `value = String(n)` y texto `rellenar(prueba.opcion, {n, tema})`, con `tema` = los temas de los dos retos de ese día unidos por " / " (o el único que se conozca: de Headlines solo se conocen los días del mes cargado, 4.7.2) [D-110, D-116].
+- `#selector-prueba` (solo en modo prueba; lo crea main.js **justo después de `#portada-caso`**) con el marcado de D-70. Las `option` llevan `value = String(n)` y texto `rellenar(prueba.opcion, {n, tema})`, con `tema` = los temas de los dos retos de ese día unidos por " / " (o el del único reto que tenga ese día). En modo prueba se conocen los días de Headlines de todos los meses (4.7.2) [D-110, D-117].
 - Selector de reto [D-98]:
   ```html
   <fieldset id="portada-retos">
@@ -289,7 +289,7 @@ Temas, titulares, entradillas y fichas solo como `textContent` en los elementos 
   ```
   - Texto exacto: "Leaving the page for more than a few seconds counts as a miss.".
   - main.js le quita `hidden` **solo** con `estado.reto === 'titulares'`, `pantalla === 'caso'`, `fase === 'pregunta'` e `indice === 0` (pregunta de la prueba 1), y se lo devuelve en el veredicto de la prueba 1 y en cualquier otro estado. Nunca se ve en Images.
-  - Se elige la prueba 1 y no una pantalla intermedia porque Start lleva directamente a la primera noticia (DP-45, sin estados nuevos) y el aviso queda a la vista justo cuando la regla empieza a contar; en la portada ya lo anticipa `#portada-regla` (DP-52).
+  - Se elige la prueba 1 y no una pantalla intermedia porque Start lleva directamente a la primera noticia (DP-45, sin estados nuevos) y el aviso queda a la vista justo cuando la regla empieza a contar; en la portada ya lo anticipa `#portada-regla` (DP-52, resuelta con esta opción).
   - Lectores de pantalla: además de estar en el DOM antes del recorte, main.js escribe una vez `titulares.aviso_oculta` en `#temporizador-anuncio` (`aria-live="polite"`) tras `PINTADA` de la prueba 1 y lo vacía en `SIGUIENTE`. Es el único uso de `#temporizador-anuncio` en Headlines.
 - `<div id="caso-escena">` con, en orden, `#prueba-marco`, `#prueba-sobre`, **`#recorte`** y `#veredicto`.
 - `#prueba-marco` y `#prueba-sobre`: como en la 1.3. En Headlines, main.js pone `hidden` a `#prueba-marco` (y `#prueba-sobre` sigue con `hidden`).

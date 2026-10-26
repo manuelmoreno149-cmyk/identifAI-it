@@ -1,19 +1,19 @@
 # identifAI-it: especificación técnica, versión 2.0 · 4 (segunda parte). Datos y herramientas de Headlines
 
-Parte de la especificación 2.0 (índice en `docs/ESPECIFICACION.md`) [D-114]. Continúa la sección 4 de `4-datos.md`. Incluye el ajuste D-116 (un archivo por mes).
+Parte de la especificación 2.0 (índice en `docs/ESPECIFICACION.md`) [D-114]. Continúa la sección 4 de `4-datos.md`. Incluye los ajustes D-116 (un archivo por mes), D-117 (el modo prueba carga todos los meses) y D-118 (entradillas de las auténticas escritas por el usuario y texto de créditos, 4.13 y 4.14).
 
-### 4.7 data/titulares/AAAA-MM.json (público; el juego carga solo el del mes) · versión 1 [D-103, D-116]
+### 4.7 data/titulares/AAAA-MM.json (público; el juego normal carga solo el del mes, el modo prueba todos) · versión 1 [D-103, D-116, D-117]
 
 **Por qué un archivo propio** y no un campo de `calendario.json`:
 - cada reto tiene su importador, su número de días y su ritmo de preparación: con un archivo común, los dos importadores escribirían el mismo fichero y un día podría tener un reto y no el otro;
 - `validarCalendario` y el calendario de imágenes no cambian por Headlines (solo pierden `fecha`, D-96);
 - el coste es una petición más al arrancar (mismo origen).
 
-**Por qué un archivo por mes** [D-116]: cada día de Headlines pesa unos 10,4 KB (4.7.3). En un solo archivo, cada visita descargaría todas las noticias publicadas y futuras (unos 3,7 MB al año, sin límite). Por meses, cada visita descarga como mucho un mes (unos 320 KB), y el peso no crece con el tiempo. Además, el archivo de un mes no contiene las noticias de los meses siguientes.
+**Por qué un archivo por mes** [D-116]: cada día de Headlines pesa unos 10,4 KB (4.7.3). En un solo archivo, cada visita descargaría todas las noticias publicadas y futuras (unos 3,7 MB al año, sin límite). Por meses, cada visita del juego normal descarga como mucho un mes (unos 320 KB), y el peso no crece con el tiempo. Además, el archivo de un mes no contiene las noticias de los meses siguientes. El modo prueba, que es temporal, descarga todos los meses publicados (4.7.2) [D-117].
 
 La fecha de lanzamiento **no** se repite aquí: es la de `data/calendario.json` [D-95]. El día `n` de Headlines se juega en `fechaDelDia(lanzamiento, n)`, igual que el día `n` de Images.
 
-**Nombre**: `data/titulares/{mes}.json`, con `mes` = `AAAA-MM` (`MES_PATRON`, `/^\d{4}-(0[1-9]|1[0-2])$/`). La carpeta solo contiene archivos con ese nombre. No existe `data/titulares.json`.
+**Nombre**: `data/titulares/{mes}.json`, con `mes` = `AAAA-MM` (`MES_PATRON`, `/^\d{4}-(0[1-9]|1[0-2])$/`). La carpeta solo contiene archivos con ese nombre. No existe `data/titulares.json` ni ningún índice de meses [D-117].
 
 ```json
 {
@@ -46,8 +46,8 @@ Reglas (`validarTitulares(obj, mes)` la estructura de un archivo; `unirMeses` y 
 - `clave`: 8 caracteres base64 (`ofuscar`, 4.3), con entre 1 y 4 generadas.
 - `textos[i]`: titular y entradilla de la prueba `i`, **ofuscados** en un bloque de 512 bytes (684 caracteres, `/^[A-Za-z0-9+/]{683}=$/`).
 - `fichas[i]`: tipo + fuente (URL) o prompt, ofuscados en un bloque de 1024 bytes (1368 caracteres, `/^[A-Za-z0-9+/]{1366}==$/`).
-- **Conjunto**: todos los archivos juntos forman los días 1..N sin huecos ni repetidos; cada día está en el archivo de su mes (`mesDeNumero(lanzamiento, n)`, 4.7.1) y cada archivo tiene todos los días de su mes que existan, así que los meses son consecutivos y ningún archivo está vacío.
-- Sin noticias, la carpeta no tiene archivos (o no existe): no hay un archivo "vacío" que publicar. El juego trata un mes sin archivo como mes sin casos.
+- **Conjunto**: todos los archivos juntos forman los días 1..N sin huecos ni repetidos; cada día está en el archivo de su mes (`mesDeNumero(lanzamiento, n)`, 4.7.1) y cada archivo tiene todos los días de su mes que existan, así que los meses son consecutivos y ningún archivo está vacío. El modo prueba se apoya en esta regla para descubrir los meses sin listado de directorio (4.7.2) [D-117].
+- Sin noticias, la carpeta no tiene archivos (o no existe): no hay un archivo "vacío" que publicar. El juego trata un mes sin archivo como mes sin casos (y el modo prueba, como el final de los meses).
 
 **Qué va en claro y qué no**: en claro solo `mes`, `n` y `tema`. El titular y la entradilla también van ofuscados, aunque se muestren antes de responder, porque:
 - en claro, cualquiera podría leer de un vistazo todas las noticias **futuras** del mes y buscarlas en internet antes de jugar (con las imágenes ya pasa, D-22, pero buscar un texto es mucho más fácil);
@@ -61,27 +61,41 @@ Es un freno casual, igual que D-22 y D-86: el algoritmo es público, y los archi
 - **Sin lanzamiento** (`null`): el mes se calcula con las fechas ficticias del modo prueba (`FECHA_BASE_PRUEBA = '2000-01-01'` es el día 1). Días 1–31 → `2000-01.json`; 32–60 → `2000-02.json` (2000 es bisiesto); 61–91 → `2000-03.json`; etc. Esos nombres nunca coinciden con un mes real del juego normal, que además muestra `sin-casos` sin lanzamiento.
 - **Con lanzamiento**: el mes real. Con `2026-12-15`: días 1–17 → `2026-12.json`; 18–48 → `2027-01.json`; 49–76 → `2027-02.json`; etc.
 - **Enlace entre meses**: el primer `n` de un archivo es el último `n` del archivo del mes anterior + 1. No hay solapes ni huecos, y "Case #n" es el mismo número en Images y en Headlines aunque el archivo cambie.
-- **Al cambiar el lanzamiento** (solo antes de que llegue), `npm run lanzamiento` vuelve a repartir los días entre archivos sin tocar su contenido (4.2.1). Si alguien cambiara `lanzamiento` a mano sin repartir, `validar` lo detecta y el juego no muestra días de un archivo equivocado (`titularesDelDia` y `titularesDeNumero` exigen que el mes del archivo sea el del día).
+- **Al cambiar el lanzamiento** (solo antes de que llegue), `npm run lanzamiento` vuelve a repartir los días entre archivos sin tocar su contenido (4.2.1). Si alguien cambiara `lanzamiento` a mano sin repartir, `validar` lo detecta y el juego no muestra días de un archivo equivocado (`titularesDelDia` y `titularesDeNumero` exigen que el mes del archivo sea el del día, y `cargarTitularesPrueba` corta la cadena en el primer archivo que no enlaza).
 
-#### 4.7.2 Carga en el juego [D-116]
+#### 4.7.2 Carga en el juego [D-116, D-117]
 
-- **Un solo archivo por carga**: `cargarTitulares(fecha)` pide `data/titulares/{mesDeFecha(fecha)}.json`, y la `fecha` es siempre la **fecha efectiva** (glosario):
+- **Juego normal y previsualización: un solo archivo**. `cargarTitulares(fecha)` pide `data/titulares/{mesDeFecha(fecha)}.json`, y la `fecha` es siempre la **fecha efectiva** (glosario):
   - juego normal: la fecha local de hoy (en paralelo con el calendario);
-  - previsualización (`?fecha=`): la de la URL;
-  - modo prueba: `fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)` del día elegido, así que su mes es `mesDeNumero(lanzamiento, n)`. Como hace falta `lanzamiento`, primero se carga el calendario.
-- **Respuestas**: 2xx con JSON válido y `validarTitulares(obj, mes)` → ese mes. **404** → `titularesVacios(mes)`: Headlines sin caso ese día (no es error; el jugador ve "No case today" en su ficha o `sin-casos` si Images tampoco tiene). Error de red, otro estado, JSON inválido o estructura o `mes` incorrectos → `ERROR_CALENDARIO` (pantalla `error`, con Reintentar).
-- **Modo prueba con días de varios meses**:
-  - `nPedido = diaPedido(search) ?? nHoy ?? 1` decide el mes que se carga (`nHoy` es `null` sin lanzamiento).
-  - El selector de día (`diasDePrueba`) une los días del calendario de imágenes (todos) con los del **mes cargado** de Headlines. De los días de Headlines de otros meses no se conoce el tema: su `option` muestra solo el de Images, y un día que solo existiera en Headlines y en otro mes no aparece en la lista, aunque se puede abrir con `?dia=n` (DP-51).
-  - Elegir un día de otro mes y pulsar Open this day recarga con `?dia=n`: la nueva carga pide el archivo de ese mes. Nunca se cargan dos meses a la vez, salvo la única recarga del punto siguiente.
-  - Si `?dia=n` no existe en ningún reto y `diaDePrueba` cae a otro día de otro mes, main.js pide además el archivo de ese mes (como mucho dos peticiones de titulares por arranque).
-- **Medianoche y cambio de mes**: `MEDIANOCHE` lleva a `iniciando`, que siempre vuelve a cargar el calendario y el archivo del mes de la nueva fecha: el día 1 de cada mes se pide el archivo nuevo. Una partida en curso a medianoche se termina con los datos ya cargados (la partida es de su `fecha`). En `ya-jugado`, la cuenta atrás lleva igual a la portada del día siguiente.
-- **Caché**: no hay service worker ni caché propia. `cargarTitulares` usa `{cache: 'no-cache'}` como `cargarCalendario` (revalida con el servidor; GitHub Pages responde 304 si no ha cambiado). Publicar un mes nuevo no exige invalidar nada.
+  - previsualización (`?fecha=`): la de la URL.
+- **Respuestas** (de cada archivo pedido, en los dos casos): 2xx con JSON válido y `validarTitulares(obj, mes)` → ese mes. **404** → mes sin archivo: en el juego normal, `titularesVacios(mes)`, Headlines sin caso ese día (no es error; el jugador ve "No case today" en su ficha o `sin-casos` si Images tampoco tiene); en el modo prueba, el final de los meses. Error de red, otro estado, JSON inválido o estructura o `mes` incorrectos → `ERROR_CALENDARIO` (pantalla `error`, con Reintentar).
+- **Modo prueba: todos los meses** [D-117]. Primero se carga el calendario (hace falta `lanzamiento`) y después `cargarTitularesPrueba(lanzamiento)` descubre y carga, **en serie**, todos los archivos existentes:
+  ```
+  meses = []; siguiente = 1
+  repetir:
+    mes = mesDeNumero(lanzamiento, siguiente)          // null → rechaza sin pedir nada
+    respuesta = pedir(rutaTitulares(mes), {cache: 'no-cache'})
+    404                                     → fin
+    otro no 2xx, red, JSON, !validarTitulares(obj, mes) → rechaza (ERROR_CALENDARIO)
+    obj.dias[0].n !== siguiente, o algún día con mesDeNumero(lanzamiento, d.n) !== mes
+                                            → fin, sin añadir obj (la cadena no enlaza)
+    meses.push(obj); siguiente = último n de obj + 1
+    si mesDeNumero(lanzamiento, siguiente) === mes → fin   // el archivo no llega a fin de mes: es el último
+  devuelve meses                                         // ordenados por mes; [] si no hay ninguno
+  ```
+  - **Por qué un sondeo y no un índice**: el navegador no puede listar `data/titulares/`. Un índice publicado (`data/titulares/indice.json` con la lista de meses) sería una segunda fuente de verdad que el importador (también con `--reimportar`) y `npm run lanzamiento` tendrían que reescribir y `validar` comprobar; un índice desfasado (por ejemplo, un commit sin él) dejaría el modo prueba incoherente, y además rompería la regla de que la carpeta solo contiene `AAAA-MM.json`. El sondeo usa la regla del conjunto (4.7), que ya garantizan las herramientas y comprueba `validar`, así que no añade archivos ni cambia ninguna herramienta.
+  - **Peticiones**: una por archivo existente, más como mucho un 404 (solo si el último mes está completo; si es parcial, el bucle se detiene sin pedir más). Sin archivos, una sola petición (404) y Headlines sin días. Nunca se pide dos veces el mismo archivo. Ese 404 aparece en la consola del navegador y es normal.
+  - **Selector de día**: `diasDePrueba(calendario, meses)` une los días del calendario de imágenes con los de **todos** los meses cargados, así que cada `option` muestra los dos temas del día (o el del único reto que lo tenga), y un día que solo exista en Headlines también aparece.
+  - **Día elegido**: `dia = diaDePrueba(location.search, dias, nHoy)` (`nHoy` es `null` sin lanzamiento); los titulares de ese día son `titularesDeNumero(titularesDelMes(meses, mesDeNumero(lanzamiento, dia.n)), lanzamiento, dia.n)`. Si `?dia=` no existe y `diaDePrueba` cae en otro día, ese día ya está cargado: no hay ninguna petición más.
+  - **Open this day** sigue recargando la página con `?prueba=1&dia=n&reto=r` (sin estado en memoria entre cargas): la recarga vuelve a pedir el calendario y todos los meses.
+- **Medianoche y cambio de mes**: `MEDIANOCHE` lleva a `iniciando`, que siempre vuelve a cargar el calendario y el archivo del mes de la nueva fecha: el día 1 de cada mes se pide el archivo nuevo. Una partida en curso a medianoche se termina con los datos ya cargados (la partida es de su `fecha`). En `ya-jugado`, la cuenta atrás lleva igual a la portada del día siguiente. En el modo prueba y en la previsualización la fecha efectiva es fija y `MEDIANOCHE` no llega (D-68).
+- **Caché**: no hay service worker ni caché propia. `cargarTitulares` y `cargarTitularesPrueba` usan `{cache: 'no-cache'}` como `cargarCalendario` (revalida con el servidor; GitHub Pages responde 304 si no ha cambiado). Publicar un mes nuevo no exige invalidar nada.
 
-#### 4.7.3 Tamaño [D-116]
+#### 4.7.3 Tamaño [D-116, D-117]
 
 - Por día: (684 + 1368) × 5 = 10 260 caracteres de bloques, unos **10,4 KB** con las claves y la sangría de `JSON.stringify(obj, null, 2)`.
-- Por archivo mensual: 28 a 31 días → unos **290 a 325 KB** (unos 230 a 250 KB transferidos con la compresión de GitHub Pages, porque el base64 de datos aleatorios solo se comprime hasta un 75 % aproximadamente). Es lo máximo que descarga una visita, en lugar de los 3,7 MB al año (y creciendo) de un archivo único.
+- Por archivo mensual: 28 a 31 días → unos **290 a 325 KB** (unos 230 a 250 KB transferidos con la compresión de GitHub Pages, porque el base64 de datos aleatorios solo se comprime hasta un 75 % aproximadamente). Es lo máximo que descarga una visita del juego normal, en lugar de los 3,7 MB al año (y creciendo) de un archivo único.
+- En el modo prueba, cada carga descarga la suma de los meses publicados (unos 320 KB por mes, en serie) [D-117]. Es aceptable porque el modo prueba es temporal y lo usan pocas personas (riesgos R7 y R14).
 - El primer y el último mes de datos pueden ser parciales (más ligeros).
 - El calendario de imágenes no cambia: unos 3,5 KB por día en un solo archivo (1,25 MB al año; riesgo R7).
 
@@ -158,6 +172,7 @@ prompt: Write a short, plausible local news headline and a one-sentence lede abo
 - Cada línea no vacía es `campo: valor`, con `campo` en minúsculas y uno de `type`, `headline`, `lede`, `source`, `prompt`. El valor va en **una sola línea** y se le quitan los espacios de los extremos; los espacios internos repetidos se reducen a uno.
 - `type`: `real` o `ai`. Obligatorios: `type`, `headline`, `lede`; `source` obligatorio y solo en `real`; `prompt` obligatorio y solo en `ai`.
 - Los prompts y las noticias se escriben en inglés (la interfaz es en-US, D-93); las auténticas, preferiblemente de medios en inglés.
+- [D-118] En las auténticas, `headline` es el titular del medio, adaptado si hace falta (sin cambiar su sentido), y `lede` es un **resumen escrito por el usuario con sus palabras**, no la entradilla copiada del medio.
 
 ### 4.10 Flujo de importar-titulares.mjs (`npm run titulares`) [D-106, D-107, D-116]
 
@@ -182,7 +197,7 @@ Argumentos (`analizarArgumentosTitulares`): `--simular`, `--reimportar`, `--conf
 
 **`--reimportar`** (con `--confirmar` y `--revisado` para escribir): regenera desde cero orden, claves y bloques de **todos** los días a partir de sus carpetas (deben existir todas), reescribe todos los archivos mensuales y borra los de meses que se queden sin días (`borrarSobrantes: true`). Solo mientras ningún día haya llegado (sin lanzamiento, siempre). Sin `--confirmar`, muestra el plan. No toca imágenes ni el calendario.
 
-El importador nunca mueve, borra ni modifica `entrada/`, nunca borra un archivo mensual fuera de `--reimportar`, y nunca escribe titulares, URL ni prompts en claro en disco ni en consola.
+El importador nunca mueve, borra ni modifica `entrada/`, nunca borra un archivo mensual fuera de `--reimportar`, y nunca escribe titulares, URL ni prompts en claro en disco ni en consola. No escribe ningún índice de meses: el modo prueba los descubre solo (4.7.2) [D-117].
 
 **¿Hace falta un banco de noticias?** No [D-108]: todo lo que guardaría (tipo, fuente, prompt, tema) ya está en `data/titulares/`, descifrable por las herramientas; los duplicados se comprueban descifrando todos los meses, y los créditos salen de ellos. Si se pierde `entrada/titulares/`, el juego no pierde nada.
 
@@ -209,7 +224,7 @@ El importador nunca mueve, borra ni modifica `entrada/`, nunca borra un archivo 
 
 Errores:
 - Existe `data/titulares.json` ("data/titulares.json ya no se usa: los titulares van en data/titulares/AAAA-MM.json.").
-- Cualquier error de `unirMeses(leerTitularesMensuales('data/titulares'), {lanzamiento, comprobarMes: true})`: nombre que no es `AAAA-MM.json` (o subcarpeta u otro archivo en la carpeta), JSON inválido, estructura de la versión 1 o `mes` que no coincide con el nombre, `n` que no empieza en 1 o tiene huecos, un `n` repetido en dos archivos, un día en un archivo que no es el de su mes, y archivo sin días.
+- Cualquier error de `unirMeses(leerTitularesMensuales('data/titulares'), {lanzamiento, comprobarMes: true})`: nombre que no es `AAAA-MM.json` (o subcarpeta u otro archivo en la carpeta), JSON inválido, estructura de la versión 1 o `mes` que no coincide con el nombre, `n` que no empieza en 1 o tiene huecos, un `n` repetido en dos archivos, un día en un archivo que no es el de su mes, y archivo sin días. Son justo las condiciones que harían que el sondeo del modo prueba (4.7.2) se detuviera antes de tiempo [D-117].
 - Temas con palabras prohibidas.
 - Clave con 0 o 5 generadas.
 - Un texto que no se descifra ("El texto {i+1} del día {n} de Headlines no se puede descifrar."), o cuyo titular o entradilla supera `TITULAR_MAX` o `ENTRADILLA_MAX`.
@@ -234,13 +249,13 @@ Lista de revisión (`LISTA_REVISION`, que el importador muestra en `--simular`, 
 2. Ninguna noticia de IA nombra una empresa, marca, producto, medio u organización real.
 3. Ninguna noticia de IA nombra una institución real (gobiernos, ministerios, partidos, universidades, hospitales, equipos, cuerpos de policía).
 4. Los prompts tampoco contienen nombres reales.
-5. Las noticias auténticas tienen su URL `https` original y el titular y la entradilla copiados sin cambios de sentido.
+5. [D-118] Las noticias auténticas tienen su URL `https` original, el titular adaptado del medio sin cambiar su sentido y una entradilla resumida con palabras propias (no copiada) que no cambia el sentido de la noticia.
 6. Ninguna noticia (auténtica o de IA) revela el medio ni la fecha en el texto.
 
 (DP-49, resuelta con la opción recomendada: la norma se amplía y es obligatoria. Las noticias de IA tampoco atribuyen sucesos graves inventados —muertes, catástrofes, delitos, salud pública— a lugares reales; entra en la lista de comprobación de `--revisado`.)
 
-### 4.14 Créditos de Headlines [D-111]
+### 4.14 Créditos de Headlines [D-111, D-118]
 
-- Las noticias auténticas **se enlazan** a su fuente tras responder; además, `creditos.html` lista los dominios agregados de todos los meses (4.5, 2.7), con `creditos.noticias_intro` (por ejemplo, "News excerpts quoted for the guessing game; links go to the original publishers.") y `creditos.ficcion` ("Stories marked AI are fiction written for this game.").
+- Las noticias auténticas **se enlazan** a su fuente tras responder; además, `creditos.html` lista los dominios agregados de todos los meses (4.5, 2.7), con `creditos.noticias_intro` (exacto [D-118]: "Headlines adapted from the original publishers; summaries written for this game. Links go to the original stories.") y `creditos.ficcion` ("Stories marked AI are fiction written for this game.").
 - La lista no relaciona ningún dominio con un titular, un día, un mes ni una posición.
-- Citar titulares y entradillas de terceros (DP-43, resuelta con la opción por defecto y su recomendación): solo titular y una entradilla breve, enlace siempre a la fuente, retirar cualquier noticia si un medio lo pide y, si hay dudas, consultarlo antes del lanzamiento.
+- Citar titulares de terceros (DP-43, resuelta con la opción por defecto y su recomendación; ajustada por D-118): solo el titular, adaptado sin cambiar su sentido, y una entradilla breve **escrita por el usuario con sus palabras** (no se reproduce la del medio); enlace siempre a la fuente, retirar cualquier noticia si un medio lo pide y, si hay dudas, consultarlo antes del lanzamiento.

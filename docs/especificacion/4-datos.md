@@ -1,6 +1,6 @@
 # identifAI-it: especificación técnica, versión 2.0 · 4 a 7. Datos (Images y lanzamiento), algoritmo diario, almacenamiento y compartir
 
-Parte de la especificación 2.0 (índice en `docs/ESPECIFICACION.md`) [D-91, D-114]. Los datos y herramientas de Headlines están en `4b-titulares.md` (4.7 a 4.14). Los cambios de la 2.0 van marcados con **[2.0]**; el ajuste D-116 (titulares por mes) ya está incorporado.
+Parte de la especificación 2.0 (índice en `docs/ESPECIFICACION.md`) [D-91, D-114]. Los datos y herramientas de Headlines están en `4b-titulares.md` (4.7 a 4.14). Los cambios de la 2.0 van marcados con **[2.0]**; los ajustes D-116 (titulares por mes) y D-117 (el modo prueba carga todos los meses) ya están incorporados.
 
 ## 4. Datos
 
@@ -49,7 +49,7 @@ Reglas (`validarCalendario` comprueba la estructura y `validar.mjs` lo demás):
   - un argumento desconocido o más de uno → error;
   - [D-116] los archivos de `data/titulares/` se leen con `leerTitularesMensuales` y se unen con `unirMeses(archivos, {comprobarMes: false})` (4.11): un archivo que no pasa `validarTitulares`, un nombre que no es `AAAA-MM.json`, días con huecos o un mismo `n` con contenido distinto en dos archivos → error, sin escribir nada.
 - **Migración** (una sola vez, idempotente): si el calendario es de la versión 3, comprueba que cada `fecha` sea `sumarDias(lanzamiento anterior, n - 1)` (si no, error), la quita y escribe la versión 4; si `banco.json` existe y es de la versión 2, quita `fecha` de cada entrada y escribe la versión 3. Sin banco, solo avisa.
-- **Reparto de los titulares por mes** [D-116]: como el mes de cada día depende del lanzamiento (`mesDeNumero`), cada vez que la herramienta escribe una fecha (o `--sin-fecha`) vuelve a repartir los días de Headlines: `repartirPorMes(dias, nuevo)` y `escribirTitularesMensuales(dir, archivos, {borrarSobrantes: true})`. El contenido de cada día (`n`, `tema`, `clave`, `textos`, `fichas`) no cambia; solo cambia en qué archivo está. Ejemplo: sin fecha, los días 1–31 están en `2000-01.json`; con `2026-12-15`, los días 1–17 pasan a `2026-12.json` y los 18–48 a `2027-01.json`, y `2000-01.json` se borra. Con el lanzamiento ya llegado la herramienta no escribe nada, así que el reparto queda fijo para siempre.
+- **Reparto de los titulares por mes** [D-116]: como el mes de cada día depende del lanzamiento (`mesDeNumero`), cada vez que la herramienta escribe una fecha (o `--sin-fecha`) vuelve a repartir los días de Headlines: `repartirPorMes(dias, nuevo)` y `escribirTitularesMensuales(dir, archivos, {borrarSobrantes: true})`. El contenido de cada día (`n`, `tema`, `clave`, `textos`, `fichas`) no cambia; solo cambia en qué archivo está. Ejemplo: sin fecha, los días 1–31 están en `2000-01.json`; con `2026-12-15`, los días 1–17 pasan a `2026-12.json` y los 18–48 a `2027-01.json`, y `2000-01.json` se borra. Con el lanzamiento ya llegado la herramienta no escribe nada, así que el reparto queda fijo para siempre. No hay índice de meses que actualizar: el modo prueba descubre los archivos por sí mismo (4.7.2) [D-117].
 - **Qué implica para los días ya generados**: nada que regenerar ni recifrar. Ids, orden, claves, fichas, imágenes y los bloques de titulares siguen idénticos; solo cambia qué fecha corresponde a cada `n` y el archivo mensual de cada día de Headlines.
 - **Escritura**, en este orden, con `JSON.stringify(obj, null, 2) + '\n'`, UTF-8 y LF: (1) los archivos mensuales de titulares nuevos o cambiados; (2) el borrado de los que ya no corresponden a ningún mes; (3) el calendario; (4) el banco. Si algo falla a mitad, se vuelve a ejecutar la herramienta con el mismo argumento: es idempotente, porque la unión tolera un mismo día repetido con contenido idéntico (resto de una ejecución interrumpida) y el reparto se recalcula siempre desde cero.
 - **Al terminar** recuerda: "Antes del {fecha}: PRUEBAS_ABIERTAS = false en js/main.js (tarea 44), npm run validar -- --estricto y publicar." y, si ha cambiado algún archivo de titulares, "Incluye data/titulares/ en el commit (archivos añadidos y borrados)."
@@ -73,7 +73,7 @@ Sin cambios de formato ni de salida. [2.0] Se implementa sobre los bloques gené
 | `creditos.mjs` | `banco.json`, [D-116] todos los `data/titulares/*.json`, `js/textos.js` | `creditos.html` | Como en la 1.3. |
 | `validar.mjs` | `data/calendario.json`, [2.0] todos los `data/titulares/*.json`, `casos/`, lo publicado, `js/main.js` como texto, `js/textos.js`, `banco.json` si existe | nada | Como en la 1.3. |
 
-`package.json`: scripts nuevos `"lanzamiento": "node herramientas/lanzamiento.mjs"` y `"titulares": "node herramientas/importar-titulares.mjs"`. `.gitignore` no cambia (`entrada/` cubre `entrada/titulares/`; `data/titulares/` se publica).
+`package.json`: scripts nuevos `"lanzamiento": "node herramientas/lanzamiento.mjs"` y `"titulares": "node herramientas/importar-titulares.mjs"`. `.gitignore` no cambia (`entrada/` cubre `entrada/titulares/`; `data/titulares/` se publica). [D-117] Ninguna herramienta genera un índice de meses.
 
 #### 4.4.1 Carpetas de entrada de imágenes
 
@@ -141,7 +141,7 @@ Las funciones de los archivos mensuales de titulares (`unirMeses`, `repartirPorM
 
 1. `hoy` = la fecha efectiva (glosario).
 2. `n = numeroDelDia(hoy, lanzamiento)`; **sin lanzamiento, `null`** y los dos retos sin caso → `sin-casos` con `sin_casos.sin_lanzamiento` [D-95].
-3. Images: `casoDelDia(calendario, hoy)`. Headlines: [D-116] se carga **solo** `data/titulares/{mesDeFecha(hoy)}.json` (`cargarTitulares(hoy)`) y `titularesDelDia(titulares, lanzamiento, hoy)`. En modo prueba, por número: `casoDeNumero` y `titularesDeNumero`, con el archivo del mes del día elegido, `mesDeNumero(lanzamiento, n)` [D-110, D-116].
+3. Images: `casoDelDia(calendario, hoy)`. Headlines: [D-116] se carga **solo** `data/titulares/{mesDeFecha(hoy)}.json` (`cargarTitulares(hoy)`) y `titularesDelDia(titulares, lanzamiento, hoy)`. En modo prueba, por número: se cargan **todos** los meses (`cargarTitularesPrueba(lanzamiento)`) y se usan `casoDeNumero` y `titularesDeNumero` con el archivo del día elegido, `titularesDelMes(meses, mesDeNumero(lanzamiento, n))` [D-110, D-117].
 4. **El número `n` es el mismo para los dos retos** (Case #12 de Images y de Headlines es el mismo día) [D-99, DP-50], y es **global**: no se reinicia al cambiar de mes ni de archivo. El día 31 puede estar en `2000-01.json` y el 32 en `2000-02.json`; los dos son "Case #31" y "Case #32" [D-116].
 5. Un reto sin día `n` no tiene caso hoy ("No case today" en su ficha de la portada); si ninguno tiene, `sin-casos` [D-24]. También no tiene caso Headlines si no existe el archivo del mes (404) o si el archivo existe pero no contiene `n`. No se usa ninguna semilla sobre el banco ni se reciclan días.
 6. **Cambio de día y de mes**: `MEDIANOCHE` (en `portada`, `ya-jugado` y `sin-casos`) vuelve a `iniciando` y recarga el calendario y el archivo del mes de la nueva fecha; el día 1 de cada mes se pide el archivo nuevo. Una partida en curso a medianoche se termina con los datos ya cargados [D-116].
@@ -189,7 +189,7 @@ Una sola clave versionada: **`identifaiit.v3`**.
 - **Varias pestañas** [D-51]: todo guardado relee y aplica solo su cambio; la `sesion` protege cada partida en curso de cada reto. El evento `storage` y la vuelta a visible comparan las partidas de hoy de cada reto y despachan `OTRA_PESTANA {reto}` por reto.
 - **Ausencias** [D-115]: no se guarda nada al ocultar la pestaña; solo se guarda la `F` si la ausencia supera 3 s (al volver). Si la página no vuelve, la regla de partida abandonada da `F` a la prueba.
 - **Previsualización y modo prueba**: almacenes en memoria; no se toca ninguna clave `identifaiit.*`.
-- Ni el almacén ni ninguna caché propia guardan los datos de titulares: no hay service worker; cada `iniciando` los vuelve a pedir con `cache: 'no-cache'` [D-116].
+- Ni el almacén ni ninguna caché propia guardan los datos de titulares (tampoco la lista de meses del modo prueba): no hay service worker; cada `iniciando` los vuelve a pedir con `cache: 'no-cache'` [D-116, D-117].
 
 ---
 
