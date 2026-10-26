@@ -42,20 +42,42 @@ export function pruebaActiva(search, abiertas) {
   return new URLSearchParams(search).get('prueba') === '1';
 }
 
-// Solo n, fecha y tema de cada día: nunca pruebas ni clave.
-export function diasDePrueba(calendario) {
-  if (!calendario || !Array.isArray(calendario.dias)) return [];
-  return calendario.dias.map((d) => ({ n: d.n, fecha: d.fecha, tema: d.tema }));
+// Unión de los días del calendario y de todos los meses de titulares [D-117].
+// Solo n y los dos temas: nunca pruebas, clave, textos ni fichas.
+export function diasDePrueba(calendario, meses) {
+  const porN = new Map();
+  const poner = (n, campo, tema) => {
+    if (!porN.has(n)) porN.set(n, { n, temaImagenes: null, temaTitulares: null });
+    porN.get(n)[campo] = tema;
+  };
+  if (calendario && typeof calendario === 'object' && Array.isArray(calendario.dias)) {
+    for (const d of calendario.dias) {
+      if (d && Number.isInteger(d.n) && d.n >= 1) poner(d.n, 'temaImagenes', d.tema);
+    }
+  }
+  if (Array.isArray(meses)) {
+    const lanzamiento = calendario?.lanzamiento ?? null;
+    const vistos = new Set();
+    for (const el of meses) {
+      if (!validarTitulares(el, el?.mes)) continue;
+      for (const d of el.dias) {
+        if (vistos.has(d.n) || mesDeNumero(lanzamiento, d.n) !== el.mes) continue;
+        vistos.add(d.n);
+        poner(d.n, 'temaTitulares', d.tema);
+      }
+    }
+  }
+  return [...porN.values()].sort((a, b) => a.n - b.n);
 }
 
-export function diaDePrueba(search, dias, hoyISO) {
+export function diaDePrueba(search, dias, nHoy) {
   if (!Array.isArray(dias) || dias.length === 0) return null;
   const valor = new URLSearchParams(search).get('dia');
   if (valor !== null && /^[1-9]\d{0,3}$/.test(valor)) {
     const pedido = dias.find((d) => d.n === Number(valor));
     if (pedido) return pedido;
   }
-  return dias.find((d) => d.fecha === hoyISO) ?? dias[0];
+  return dias.find((d) => d.n === nHoy) ?? dias[0];
 }
 
 export function diasEntre(desdeISO, hastaISO) {
@@ -111,17 +133,36 @@ export function temaValido(tema) {
   return tema[0] === tema[0].toLocaleUpperCase('en-US');
 }
 
+// Lanzamiento y fechas derivadas [D-95, D-96]
+export const FECHA_BASE_PRUEBA = '2000-01-01';
+
+function fechaIsoValida(x) {
+  return typeof x === 'string' && RE_FECHA.test(x) && sumarDias(x, 0) === x;
+}
+
+export function numeroDelDia(fechaISO, lanzamiento) {
+  if (lanzamiento === null || lanzamiento === undefined) return null;
+  if (!fechaIsoValida(fechaISO) || !fechaIsoValida(lanzamiento)) return null;
+  const n = numeroCaso(fechaISO, lanzamiento);
+  return n < 1 ? null : n;
+}
+
+export function fechaDelDia(lanzamiento, n) {
+  if (lanzamiento === null || lanzamiento === undefined) return null;
+  if (!fechaIsoValida(lanzamiento) || !Number.isInteger(n)) return null;
+  return sumarDias(lanzamiento, n - 1);
+}
+
 export function validarCalendario(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
   if (!mismasClaves(obj, ['version', 'lanzamiento', 'dias'])) return false;
-  if (obj.version !== 3) return false;
-  if (typeof obj.lanzamiento !== 'string' || !RE_FECHA.test(obj.lanzamiento)) return false;
+  if (obj.version !== 4) return false;
+  if (obj.lanzamiento !== null && !fechaIsoValida(obj.lanzamiento)) return false;
   if (!Array.isArray(obj.dias)) return false;
   return obj.dias.every((dia, k) => {
     if (!dia || typeof dia !== 'object' || Array.isArray(dia)) return false;
-    if (!mismasClaves(dia, ['n', 'fecha', 'tema', 'pruebas', 'clave', 'fichas'])) return false;
+    if (!mismasClaves(dia, ['n', 'tema', 'pruebas', 'clave', 'fichas'])) return false;
     if (dia.n !== k + 1) return false;
-    if (typeof dia.fecha !== 'string' || !RE_FECHA.test(dia.fecha)) return false;
     if (!temaValido(dia.tema)) return false;
     if (!Array.isArray(dia.pruebas) || dia.pruebas.length !== 5) return false;
     if (!dia.pruebas.every((id) => typeof id === 'string' && id.length > 0)) return false;
@@ -135,12 +176,22 @@ export function validarCalendario(obj) {
   });
 }
 
+function casoDe(dia, n, fecha) {
+  if (!dia || dia.n !== n) return null;
+  return { n: dia.n, fecha, tema: dia.tema, pruebas: dia.pruebas, clave: dia.clave, fichas: dia.fichas };
+}
+
 export function casoDelDia(calendario, fechaISO) {
-  const n = numeroCaso(fechaISO, calendario.lanzamiento);
-  if (n < 1) return null;
-  const dia = calendario.dias[n - 1];
-  if (!dia || dia.n !== n || dia.fecha !== fechaISO) return null;
-  return { n: dia.n, fecha: dia.fecha, tema: dia.tema, pruebas: dia.pruebas, clave: dia.clave, fichas: dia.fichas };
+  const n = numeroDelDia(fechaISO, calendario.lanzamiento);
+  if (n === null) return null;
+  return casoDe(calendario.dias[n - 1], n, fechaISO);
+}
+
+// Modo prueba: el día n aunque no haya lanzamiento.
+export function casoDeNumero(calendario, n) {
+  if (!Number.isInteger(n) || n < 1) return null;
+  const fecha = fechaDelDia(calendario.lanzamiento ?? FECHA_BASE_PRUEBA, n);
+  return casoDe(calendario.dias[n - 1], n, fecha);
 }
 
 export function rutaPrueba(id) {
@@ -343,6 +394,117 @@ export function medioDeUrl(url) {
   } catch {
     return null;
   }
+}
+
+// Archivos mensuales de Headlines [D-116, D-117]
+export const MES_PATRON = /^\d{4}-(0[1-9]|1[0-2])$/;
+export const TITULARES_CARPETA = 'data/titulares/';
+
+export function mesDeFecha(fechaISO) {
+  return fechaIsoValida(fechaISO) ? fechaISO.slice(0, 7) : null;
+}
+
+export function mesDeNumero(lanzamiento, n) {
+  if (!Number.isInteger(n) || n < 1) return null;
+  const base = lanzamiento ?? FECHA_BASE_PRUEBA;
+  if (!fechaIsoValida(base)) return null;
+  return mesDeFecha(fechaDelDia(base, n));
+}
+
+export function rutaTitulares(mes) {
+  return typeof mes === 'string' && MES_PATRON.test(mes) ? `${TITULARES_CARPETA}${mes}.json` : null;
+}
+
+export function titularesVacios(mes) {
+  return { version: 1, mes, dias: [] };
+}
+
+const RE_TEXTO = /^[A-Za-z0-9+/]{683}=$/;
+const RE_NOTICIA = /^[A-Za-z0-9+/]{1366}==$/;
+
+function esObjeto(x) {
+  return x !== null && typeof x === 'object' && !Array.isArray(x);
+}
+
+export function validarTitulares(obj, mes) {
+  if (!esObjeto(obj)) return false;
+  if (!mismasClaves(obj, ['version', 'mes', 'dias'])) return false;
+  if (obj.version !== 1) return false;
+  if (typeof obj.mes !== 'string' || !MES_PATRON.test(obj.mes)) return false;
+  if (mes !== undefined && obj.mes !== mes) return false;
+  if (!Array.isArray(obj.dias) || obj.dias.length < 1) return false;
+  const primero = obj.dias[0]?.n;
+  return obj.dias.every((dia, k) => {
+    if (!esObjeto(dia)) return false;
+    if (!mismasClaves(dia, ['n', 'tema', 'clave', 'textos', 'fichas'])) return false;
+    if (!Number.isInteger(dia.n) || dia.n < 1 || dia.n !== primero + k) return false;
+    if (!temaValido(dia.tema) || !claveValida(dia.clave)) return false;
+    return (
+      Array.isArray(dia.textos) &&
+      dia.textos.length === 5 &&
+      dia.textos.every((t) => typeof t === 'string' && RE_TEXTO.test(t)) &&
+      Array.isArray(dia.fichas) &&
+      dia.fichas.length === 5 &&
+      dia.fichas.every((f) => typeof f === 'string' && RE_NOTICIA.test(f))
+    );
+  });
+}
+
+function titularesDe(dia, fecha) {
+  if (!dia) return null;
+  return { n: dia.n, fecha, tema: dia.tema, clave: dia.clave, textos: dia.textos, fichas: dia.fichas };
+}
+
+export function titularesDelDia(titulares, lanzamiento, fechaISO) {
+  if (!titulares || !Array.isArray(titulares.dias)) return null;
+  const n = numeroDelDia(fechaISO, lanzamiento);
+  if (n === null || titulares.mes !== mesDeFecha(fechaISO)) return null;
+  return titularesDe(titulares.dias.find((d) => d.n === n), fechaISO);
+}
+
+export function titularesDeNumero(titulares, lanzamiento, n) {
+  if (!titulares || !Array.isArray(titulares.dias)) return null;
+  const mes = mesDeNumero(lanzamiento, n);
+  if (mes === null || titulares.mes !== mes) return null;
+  return titularesDe(titulares.dias.find((d) => d.n === n), fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n));
+}
+
+export function titularesDelMes(meses, mes) {
+  if (typeof mes !== 'string' || !MES_PATRON.test(mes)) return null;
+  if (!Array.isArray(meses)) return titularesVacios(mes);
+  return meses.find((m) => m && m.mes === mes) ?? titularesVacios(mes);
+}
+
+// Juego normal y previsualización: solo el archivo del mes de la fecha efectiva.
+export async function cargarTitulares(fechaISO, pedir = fetch) {
+  const mes = mesDeFecha(fechaISO);
+  if (mes === null) throw new Error('Titulares: fecha no válida');
+  const respuesta = await pedir(rutaTitulares(mes), { cache: 'no-cache' });
+  if (respuesta.status === 404) return titularesVacios(mes);
+  if (!respuesta.ok) throw new Error(`Titulares: respuesta ${respuesta.status}`);
+  const obj = await respuesta.json();
+  if (!validarTitulares(obj, mes)) throw new Error('Titulares: estructura no válida');
+  return obj;
+}
+
+// Modo prueba: sondeo en serie de todos los meses existentes (4.7.2).
+export async function cargarTitularesPrueba(lanzamiento, pedir = fetch) {
+  const meses = [];
+  let siguiente = 1;
+  for (;;) {
+    const mes = mesDeNumero(lanzamiento, siguiente);
+    if (mes === null) throw new Error('Titulares: lanzamiento no válido');
+    const respuesta = await pedir(rutaTitulares(mes), { cache: 'no-cache' });
+    if (respuesta.status === 404) break;
+    if (!respuesta.ok) throw new Error(`Titulares: respuesta ${respuesta.status}`);
+    const obj = await respuesta.json();
+    if (!validarTitulares(obj, mes)) throw new Error('Titulares: estructura no válida');
+    if (obj.dias[0].n !== siguiente || obj.dias.some((d) => mesDeNumero(lanzamiento, d.n) !== mes)) break;
+    meses.push(obj);
+    siguiente = obj.dias[obj.dias.length - 1].n + 1;
+    if (mesDeNumero(lanzamiento, siguiente) === mes) break;
+  }
+  return meses;
 }
 
 export async function cargarCalendario(url = 'data/calendario.json', pedir = fetch) {

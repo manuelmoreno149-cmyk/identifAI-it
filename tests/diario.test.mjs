@@ -38,8 +38,26 @@ import {
   fechaPrevisualizada,
   pruebaActiva,
   diasDePrueba,
-  diaDePrueba
+  diaDePrueba,
+  FECHA_BASE_PRUEBA,
+  numeroDelDia,
+  fechaDelDia,
+  casoDeNumero,
+  MES_PATRON,
+  TITULARES_CARPETA,
+  mesDeFecha,
+  mesDeNumero,
+  rutaTitulares,
+  titularesVacios,
+  validarTitulares,
+  titularesDelDia,
+  titularesDeNumero,
+  titularesDelMes,
+  cargarTitulares,
+  cargarTitularesPrueba
 } from '../js/diario.js';
+
+import * as diario from '../js/diario.js';
 
 const clave = ofuscar([0, 1, 1, 0, 1], 1, () => 0);
 
@@ -47,15 +65,15 @@ function fichasDe(n) {
   return [0, 1, 2, 3, 4].map((i) => ofuscarFicha(i % 2 ? `Prompt ${i}` : 'Real photograph', clave, n, i, () => 0.5));
 }
 
-function diaValido(n, fecha) {
-  return { n, fecha, tema: 'Perros', pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'], clave, fichas: fichasDe(n) };
+function diaValido(n) {
+  return { n, tema: 'Perros', pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'], clave, fichas: fichasDe(n) };
 }
 
-function calendarioValido() {
+function calendarioValido(lanzamiento = '2026-11-01') {
   return {
-    version: 3,
-    lanzamiento: '2026-11-01',
-    dias: [diaValido(1, '2026-11-01'), diaValido(2, '2026-11-02')]
+    version: 4,
+    lanzamiento,
+    dias: [diaValido(1), diaValido(2)]
   };
 }
 
@@ -107,9 +125,8 @@ test('8. casoDelDia devuelve null fuera de calendario o con fecha distinta', () 
   const cal = calendarioValido();
   assert.equal(casoDelDia(cal, '2026-10-31'), null);
   assert.equal(casoDelDia(cal, '2026-11-03'), null);
-  const roto = calendarioValido();
-  roto.dias[1].fecha = '2026-11-09';
-  assert.equal(casoDelDia(roto, '2026-11-02'), null);
+  assert.equal(casoDelDia(calendarioValido(null), '2026-11-02'), null);
+  assert.equal(casoDelDia(calendarioValido(null), '2000-01-02'), null);
   const caso = casoDelDia(cal, '2026-11-02');
   assert.equal(caso.n, 2);
   assert.equal(caso.fecha, '2026-11-02');
@@ -158,11 +175,26 @@ test('9. validarCalendario', () => {
 
   assert.equal(validarCalendario(null), false);
 
-  for (const v of [1, 2, 4]) {
+  for (const v of [1, 2, 3, 5]) {
     c = calendarioValido();
     c.version = v;
     assert.equal(validarCalendario(c), false, `version ${v}`);
   }
+
+  assert.equal(validarCalendario(calendarioValido(null)), true);
+
+  c = calendarioValido();
+  c.dias[0].fecha = '2026-11-01';
+  assert.equal(validarCalendario(c), false);
+
+  for (const l of ['', '2026-13-01', '2026-02-30', 20261201, undefined]) {
+    c = calendarioValido();
+    c.lanzamiento = l;
+    assert.equal(validarCalendario(c), false, String(l));
+  }
+  c = calendarioValido();
+  delete c.lanzamiento;
+  assert.equal(validarCalendario(c), false);
 
   c = calendarioValido();
   delete c.dias[0].fichas;
@@ -291,33 +323,280 @@ function congelar(o) {
   return Object.freeze(o);
 }
 
-test('116. diasDePrueba devuelve solo n, fecha y tema', () => {
-  const cal = calendarioValido();
-  cal.dias[0].tema = 'Fuegos artificiales';
-  cal.dias[1].tema = 'Perros';
+// Archivo mensual de ejemplo: días n0..n1 del mes indicado (temas T{n}).
+function mesDeEjemplo(mes, n0, n1) {
+  const dias = [];
+  for (let n = n0; n <= n1; n++) {
+    const textos = [0, 1, 2, 3, 4].map((i) => ofuscarTexto({ titular: `Headline ${i}`, entradilla: 'Lede.' }, clave, n, i, () => 0.5));
+    const fichas = [0, 1, 2, 3, 4].map((i) => ofuscarNoticia({ tipo: i % 2 ? 'prompt' : 'fuente', texto: i % 2 ? 'Prompt' : 'https://example.com/story' }, clave, n, i, () => 0.5));
+    dias.push({ n, tema: `Tema${n}`, clave, textos, fichas });
+  }
+  return { version: 1, mes, dias };
+}
+
+function calendarioDe(n, lanzamiento = null) {
+  return { version: 4, lanzamiento, dias: Array.from({ length: n }, (_, k) => diaValido(k + 1)) };
+}
+
+test('115. diasDePrueba: unión de calendario y todos los meses, solo n y temas', () => {
+  const cal = calendarioDe(35);
+  const meses = [mesDeEjemplo('2000-01', 1, 31), mesDeEjemplo('2000-02', 32, 40)];
   congelar(cal);
-  const r = diasDePrueba(cal);
-  assert.deepStrictEqual(r, [
-    { n: 1, fecha: '2026-11-01', tema: 'Fuegos artificiales' },
-    { n: 2, fecha: '2026-11-02', tema: 'Perros' }
-  ]);
-  for (const d of r) assert.ok(!('pruebas' in d) && !('clave' in d));
-  assert.notEqual(r[0], cal.dias[0]);
-  assert.deepStrictEqual(diasDePrueba(null), []);
-  assert.deepStrictEqual(diasDePrueba(undefined), []);
-  assert.deepStrictEqual(diasDePrueba({}), []);
+  congelar(meses);
+  const r = diasDePrueba(cal, meses);
+  assert.equal(r.length, 40);
+  r.forEach((d, k) => {
+    assert.deepStrictEqual(Object.keys(d), ['n', 'temaImagenes', 'temaTitulares']);
+    assert.equal(d.n, k + 1);
+    assert.equal(d.temaImagenes, k < 35 ? 'Perros' : null);
+    assert.equal(d.temaTitulares, `Tema${k + 1}`);
+  });
+  const soloCal = diasDePrueba(cal, null);
+  assert.equal(soloCal.length, 35);
+  assert.ok(soloCal.every((d) => d.temaTitulares === null && d.temaImagenes === 'Perros'));
+  for (const m of [undefined, {}, [], [titularesVacios('2000-01')]]) {
+    assert.deepStrictEqual(diasDePrueba(cal, m), soloCal);
+    assert.deepStrictEqual(diasDePrueba(null, m), []);
+  }
+  assert.deepStrictEqual(diasDePrueba(null, undefined), []);
+  assert.deepStrictEqual(diasDePrueba({}, null), []);
+  // elemento inválido y días que no son de su mes
+  const roto = mesDeEjemplo('2000-01', 1, 3);
+  roto.extra = 1;
+  assert.deepStrictEqual(diasDePrueba(calendarioDe(0), [roto]), []);
+  const cruzado = mesDeEjemplo('2000-01', 32, 33);
+  assert.deepStrictEqual(diasDePrueba(calendarioDe(0), [cruzado]), []);
+  assert.deepStrictEqual(diasDePrueba(calendarioDe(0), [mesDeEjemplo('2000-01', 30, 32)]).map((d) => d.n), [30, 31]);
+  // con lanzamiento real
+  const l = diasDePrueba(calendarioDe(0, '2026-12-15'), [mesDeEjemplo('2026-12', 1, 17), mesDeEjemplo('2027-01', 18, 20)]);
+  assert.deepStrictEqual(l.map((d) => d.n), Array.from({ length: 20 }, (_, k) => k + 1));
 });
 
 test('117. diaDePrueba', () => {
-  const dias = Array.from({ length: 7 }, (_, i) => ({ n: i + 1, fecha: `2026-11-0${i + 1}`, tema: 'T' }));
-  assert.equal(diaDePrueba('?prueba=1&dia=3', dias, '2026-10-22'), dias[2]);
+  const dias = Array.from({ length: 7 }, (_, i) => ({ n: i + 1, temaImagenes: 'T', temaTitulares: null }));
+  assert.equal(diaDePrueba('?prueba=1&dia=3', dias, null), dias[2]);
   for (const q of ['?prueba=1', '?prueba=1&dia=0', '?prueba=1&dia=08', '?prueba=1&dia=x', '?prueba=1&dia=9', '?prueba=1&dia=']) {
-    assert.equal(diaDePrueba(q, dias, '2026-10-22'), dias[0], q);
+    assert.equal(diaDePrueba(q, dias, null), dias[0], q);
+    assert.equal(diaDePrueba(q, dias, 99), dias[0], q);
   }
-  assert.equal(diaDePrueba('?prueba=1', dias, '2026-11-04'), dias[3]);
-  assert.equal(diaDePrueba('?prueba=1&dia=2', dias, '2026-11-04'), dias[1]);
-  assert.equal(diaDePrueba('?prueba=1&dia=99', dias, '2026-11-04'), dias[3]);
-  assert.equal(diaDePrueba('?prueba=1&dia=1', [], '2026-10-22'), null);
+  assert.equal(diaDePrueba('?prueba=1', dias, 4), dias[3]);
+  assert.equal(diaDePrueba('?prueba=1&dia=2', dias, 4), dias[1]);
+  assert.equal(diaDePrueba('?prueba=1&dia=99', dias, 4), dias[3]);
+  assert.equal(diaDePrueba('?prueba=1&dia=1', [], null), null);
+  assert.equal(diaDePrueba('?prueba=1', null, 1), null);
+});
+
+test('149. numeroDelDia y fechaDelDia', () => {
+  assert.equal(numeroDelDia('2026-11-30', '2026-12-01'), null);
+  assert.equal(numeroDelDia('2026-12-01', '2026-12-01'), 1);
+  assert.equal(numeroDelDia('2026-12-03', '2026-12-01'), 3);
+  assert.equal(numeroDelDia('2026-12-01', null), null);
+  assert.equal(fechaDelDia(null, 3), null);
+  assert.equal(fechaDelDia('2026-12-01', 3), '2026-12-03');
+  assert.equal(FECHA_BASE_PRUEBA, '2000-01-01');
+});
+
+test('150. casoDeNumero', () => {
+  const sin = calendarioValido(null);
+  const c = casoDeNumero(sin, 2);
+  assert.equal(c.n, 2);
+  assert.equal(c.fecha, '2000-01-02');
+  assert.deepEqual(Object.keys(c).sort(), ['clave', 'fecha', 'fichas', 'n', 'pruebas', 'tema']);
+  const con = calendarioValido('2026-12-01');
+  assert.equal(casoDeNumero(con, 2).fecha, fechaDelDia('2026-12-01', 2));
+  assert.ok(casoDeNumero(con, 2).fichas[0] === con.dias[1].fichas[0]);
+  for (const n of [0, 3, -1, 1.5, '1']) assert.equal(casoDeNumero(con, n), null, String(n));
+});
+
+test('211. mesDeFecha, mesDeNumero y rutaTitulares', () => {
+  assert.equal(mesDeFecha('2026-12-15'), '2026-12');
+  for (const x of ['2026-02-30', 'x', null, undefined]) assert.equal(mesDeFecha(x), null);
+  assert.equal(mesDeNumero(null, 1), '2000-01');
+  assert.equal(mesDeNumero(null, 31), '2000-01');
+  assert.equal(mesDeNumero(null, 32), '2000-02');
+  assert.equal(mesDeNumero(null, 60), '2000-02');
+  assert.equal(mesDeNumero(null, 61), '2000-03');
+  assert.equal(mesDeNumero('2026-12-15', 17), '2026-12');
+  assert.equal(mesDeNumero('2026-12-15', 18), '2027-01');
+  assert.equal(mesDeNumero('2026-12-15', 49), '2027-02');
+  for (const n of [0, 1.5, '3']) assert.equal(mesDeNumero(null, n), null);
+  assert.equal(mesDeNumero('2026-13-01', 1), null);
+  assert.equal(rutaTitulares('2026-12'), 'data/titulares/2026-12.json');
+  assert.equal(rutaTitulares('2026-1'), null);
+  assert.equal(rutaTitulares('../x'), null);
+  assert.equal(TITULARES_CARPETA, 'data/titulares/');
+  assert.ok(MES_PATRON.test('2026-12') && !MES_PATRON.test('2026-13'));
+  assert.equal(diario.diaPedido, undefined);
+});
+
+test('172. validarTitulares', () => {
+  const ok = () => mesDeEjemplo('2000-02', 32, 34);
+  assert.equal(validarTitulares(ok(), '2000-02'), true);
+  assert.equal(validarTitulares(ok()), true);
+  const malos = [
+    (o) => { o.version = 2; },
+    (o) => { delete o.mes; },
+    (o) => { o.mes = '2026-13'; },
+    (o) => { o.dias = []; },
+    (o) => { o.extra = 1; },
+    (o) => { o.lanzamiento = '2026-12-01'; },
+    (o) => { o.dias[1].extra = 1; },
+    (o) => { o.dias[1].n = 40; },
+    (o) => { o.dias[0].n = 0; },
+    (o) => { o.dias[0].textos.pop(); },
+    (o) => { o.dias[0].textos.push(o.dias[0].textos[0]); },
+    (o) => { o.dias[0].fichas.pop(); },
+    (o) => { o.dias[0].fichas.push(o.dias[0].fichas[0]); },
+    (o) => { o.dias[0].textos[0] = o.dias[0].textos[0].slice(0, 682) + '='; },
+    (o) => { o.dias[0].textos[0] = o.dias[0].textos[0].slice(0, 683) + 'A='; },
+    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 1365) + '=='; },
+    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 1366) + 'A=='; },
+    (o) => { o.dias[0].tema = 'perros'; },
+    (o) => { o.dias[0].clave = 'AAAA'; }
+  ];
+  malos.forEach((mal, k) => {
+    const o = ok();
+    mal(o);
+    assert.equal(validarTitulares(o, '2000-02'), false, `caso ${k}`);
+  });
+  assert.equal(validarTitulares(ok(), '2000-03'), false);
+  assert.equal(validarTitulares(null, '2000-02'), false);
+  assert.equal(validarTitulares([], '2000-02'), false);
+});
+
+test('173. titularesDelDia y titularesDeNumero', () => {
+  const l = '2026-12-15';
+  const tit = mesDeEjemplo('2027-01', 18, 48);
+  const d = titularesDelDia(tit, l, '2027-01-01');
+  assert.equal(d.n, 18);
+  assert.equal(d.fecha, '2027-01-01');
+  assert.deepEqual(Object.keys(d).sort(), ['clave', 'fecha', 'fichas', 'n', 'tema', 'textos']);
+  assert.ok(d.textos === tit.dias[0].textos);
+  assert.equal(titularesDelDia(tit, l, '2026-12-31'), null);
+  assert.equal(titularesDelDia(tit, null, '2027-01-01'), null);
+  assert.equal(titularesDelDia(null, l, '2027-01-01'), null);
+  const feb = mesDeEjemplo('2000-02', 32, 60);
+  const e = titularesDeNumero(feb, null, 32);
+  assert.equal(e.n, 32);
+  assert.equal(e.fecha, '2000-02-01');
+  assert.equal(titularesDeNumero(feb, null, 31), null);
+  assert.equal(titularesDeNumero(feb, null, 61), null);
+  assert.equal(titularesDeNumero(titularesVacios('2000-02'), null, 32), null);
+  assert.equal(titularesDeNumero(null, null, 32), null);
+});
+
+function respuesta(status, cuerpo) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => {
+      if (cuerpo instanceof Error) throw cuerpo;
+      return cuerpo;
+    }
+  };
+}
+
+function pedirDe(archivos, rutas = [], opciones = []) {
+  return async (url, op) => {
+    rutas.push(url);
+    opciones.push(op);
+    const a = archivos[url];
+    if (a instanceof Error) throw a;
+    return a === undefined ? respuesta(404) : respuesta(200, a);
+  };
+}
+
+test('212. cargarTitulares', async () => {
+  const mes = mesDeEjemplo('2026-12', 1, 17);
+  const rutas = [];
+  const ops = [];
+  const r = await cargarTitulares('2026-12-15', pedirDe({ 'data/titulares/2026-12.json': mes }, rutas, ops));
+  assert.equal(r, mes);
+  assert.deepEqual(rutas, ['data/titulares/2026-12.json']);
+  assert.deepEqual(ops, [{ cache: 'no-cache' }]);
+  assert.deepEqual(await cargarTitulares('2026-12-15', pedirDe({})), titularesVacios('2026-12'));
+  const ruta = 'data/titulares/2026-12.json';
+  await assert.rejects(cargarTitulares('2026-12-15', async () => respuesta(500)));
+  await assert.rejects(cargarTitulares('2026-12-15', pedirDe({ [ruta]: new Error('red') })));
+  await assert.rejects(cargarTitulares('2026-12-15', async () => respuesta(200, new Error('json'))));
+  await assert.rejects(cargarTitulares('2026-12-15', pedirDe({ [ruta]: mesDeEjemplo('2026-11', 1, 3) })));
+  await assert.rejects(cargarTitulares('2026-12-15', pedirDe({ [ruta]: { version: 1 } })));
+  let llamadas = 0;
+  await assert.rejects(cargarTitulares('2026-13-01', async () => { llamadas++; return respuesta(404); }));
+  assert.equal(llamadas, 0);
+});
+
+test('222. cargarTitularesPrueba', async () => {
+  const ene = mesDeEjemplo('2000-01', 1, 31);
+  const feb40 = mesDeEjemplo('2000-02', 32, 40);
+  const feb60 = mesDeEjemplo('2000-02', 32, 60);
+  const A = 'data/titulares/2000-01.json';
+  const B = 'data/titulares/2000-02.json';
+  const C = 'data/titulares/2000-03.json';
+
+  let rutas = [];
+  let ops = [];
+  let r = await cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: feb40 }, rutas, ops));
+  assert.deepEqual(rutas, [A, B]);
+  assert.deepEqual(ops, [{ cache: 'no-cache' }, { cache: 'no-cache' }]);
+  assert.deepEqual(r, [ene, feb40]);
+
+  rutas = [];
+  r = await cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: feb60 }, rutas));
+  assert.deepEqual(rutas, [A, B, C]);
+  assert.equal(r.length, 2);
+
+  rutas = [];
+  assert.deepEqual(await cargarTitularesPrueba(null, pedirDe({}, rutas)), []);
+  assert.deepEqual(rutas, [A]);
+
+  await assert.rejects(cargarTitularesPrueba(null, async (u) => (u === A ? respuesta(200, ene) : respuesta(500))));
+  await assert.rejects(cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: new Error('red') })));
+  await assert.rejects(cargarTitularesPrueba(null, async (u) => (u === A ? respuesta(200, ene) : respuesta(200, new Error('json')))));
+  await assert.rejects(cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: { version: 1 } })));
+
+  assert.deepEqual(await cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: mesDeEjemplo('2000-02', 33, 40) })), [ene]);
+  rutas = [];
+  assert.deepEqual(await cargarTitularesPrueba(null, pedirDe({ [A]: mesDeEjemplo('2000-01', 1, 32) }, rutas)), []);
+  assert.deepEqual(rutas, [A]);
+
+  const dic = mesDeEjemplo('2026-12', 1, 17);
+  const ene27 = mesDeEjemplo('2027-01', 18, 20);
+  rutas = [];
+  r = await cargarTitularesPrueba('2026-12-15', pedirDe({ 'data/titulares/2026-12.json': dic, 'data/titulares/2027-01.json': ene27 }, rutas));
+  assert.deepEqual(rutas, ['data/titulares/2026-12.json', 'data/titulares/2027-01.json']);
+  assert.equal(r.length, 2);
+
+  let llamadas = 0;
+  await assert.rejects(cargarTitularesPrueba('2026-13-01', async () => { llamadas++; return respuesta(404); }));
+  assert.equal(llamadas, 0);
+
+  // en serie: la segunda petición no empieza hasta que termina la primera
+  let activas = 0;
+  let maxActivas = 0;
+  const lento = async (url) => {
+    activas++;
+    maxActivas = Math.max(maxActivas, activas);
+    await new Promise((res) => setTimeout(res, 15));
+    activas--;
+    return url === A ? respuesta(200, ene) : url === B ? respuesta(200, feb40) : respuesta(404);
+  };
+  assert.equal((await cargarTitularesPrueba(null, lento)).length, 2);
+  assert.equal(maxActivas, 1);
+});
+
+test('223. titularesDelMes', () => {
+  const ene = mesDeEjemplo('2000-01', 1, 31);
+  const feb = mesDeEjemplo('2000-02', 32, 60);
+  const meses = [ene, feb];
+  assert.ok(titularesDelMes(meses, '2000-02') === feb);
+  assert.deepEqual(titularesDelMes(meses, '2000-03'), titularesVacios('2000-03'));
+  assert.deepEqual(titularesDelMes(null, '2000-02'), titularesVacios('2000-02'));
+  assert.deepEqual(titularesDelMes({}, '2000-02'), titularesVacios('2000-02'));
+  assert.equal(titularesDelMes(meses, '2000-13'), null);
+  const mes35 = titularesDeNumero(titularesDelMes(meses, mesDeNumero(null, 35)), null, 35);
+  assert.equal(mes35.n, 35);
+  assert.equal(mes35.fecha, '2000-02-04');
 });
 
 const CL = 'Mpb9Ycc=';
