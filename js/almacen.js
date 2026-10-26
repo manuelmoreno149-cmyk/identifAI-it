@@ -1,8 +1,9 @@
 // Almacenamiento local con clave versionada. Ninguna función lanza.
 import { sumarDias } from './diario.js';
 
-export const CLAVE = 'identifaiit.v2';
-export const VERSION = 2;
+export const CLAVE = 'identifaiit.v3';
+export const VERSION = 3;
+export const RETOS = ['imagenes', 'titulares'];
 const CLAVE_PRUEBA = 'identifaiit.prueba';
 
 function almacenGlobal() {
@@ -35,13 +36,15 @@ export function crearAlmacenMemoria() {
   };
 }
 
+function retoInicial() {
+  return { partidas: {}, racha: 0, mejorRacha: 0 };
+}
+
 export function datosIniciales() {
   return {
     version: VERSION,
-    ajustes: { modo: 'normal' },
-    partidas: {},
-    racha: 0,
-    mejorRacha: 0
+    ajustes: { modo: 'normal', reto: 'imagenes' },
+    retos: { imagenes: retoInicial(), titulares: retoInicial() }
   };
 }
 
@@ -49,15 +52,29 @@ function esObjeto(x) {
   return x !== null && typeof x === 'object' && !Array.isArray(x);
 }
 
+function esReto(reto) {
+  return RETOS.includes(reto);
+}
+
+function normalizarReto(crudo) {
+  if (!esObjeto(crudo)) return retoInicial();
+  return {
+    partidas: esObjeto(crudo.partidas) ? crudo.partidas : {},
+    racha: Number.isInteger(crudo.racha) ? crudo.racha : 0,
+    mejorRacha: Number.isInteger(crudo.mejorRacha) ? crudo.mejorRacha : 0
+  };
+}
+
 function normalizar(crudo) {
-  if (!esObjeto(crudo) || crudo.version !== VERSION || !esObjeto(crudo.partidas)) return datosIniciales();
+  if (!esObjeto(crudo) || crudo.version !== VERSION || !esObjeto(crudo.retos)) return datosIniciales();
   const base = datosIniciales();
   return {
     version: VERSION,
     ajustes: { ...base.ajustes, ...(esObjeto(crudo.ajustes) ? crudo.ajustes : {}) },
-    partidas: crudo.partidas,
-    racha: Number.isInteger(crudo.racha) ? crudo.racha : 0,
-    mejorRacha: Number.isInteger(crudo.mejorRacha) ? crudo.mejorRacha : 0
+    retos: {
+      imagenes: normalizarReto(crudo.retos.imagenes),
+      titulares: normalizarReto(crudo.retos.titulares)
+    }
   };
 }
 
@@ -94,7 +111,7 @@ function leerClave(almacen) {
     const texto = almacen.getItem(CLAVE);
     if (texto === null || texto === undefined) return null;
     const crudo = JSON.parse(texto);
-    if (!esObjeto(crudo) || crudo.version !== VERSION || !esObjeto(crudo.partidas)) return null;
+    if (!esObjeto(crudo) || crudo.version !== VERSION || !esObjeto(crudo.retos)) return null;
     return normalizar(crudo);
   } catch {
     return null;
@@ -129,23 +146,35 @@ export function actualizar(cambio, enMemoria, local = almacenGlobal(), sesion = 
   return { datos: nuevos, guardado };
 }
 
-export function partidaDe(datos, fechaISO) {
-  return datos.partidas[fechaISO] ?? null;
+export function partidaDe(datos, reto, fechaISO) {
+  if (!esReto(reto)) return null;
+  return datos.retos?.[reto]?.partidas?.[fechaISO] ?? null;
 }
 
 export function conAjustes(datos, cambios) {
   return { ...datos, ajustes: { ...datos.ajustes, ...cambios } };
 }
 
-export function registrarInicio(datos, { fecha, n, modo, sesion }) {
-  if (partidaDe(datos, fecha)) return datos;
-  return {
-    ...datos,
-    partidas: {
-      ...datos.partidas,
-      [fecha]: { n, modo, estado: 'en_curso', resultados: '-----', aciertos: 0, sesion }
-    }
-  };
+// Devuelve datos con el reto sustituido por `cambios` mezclados sobre el existente.
+function conReto(datos, reto, cambios) {
+  return { ...datos, retos: { ...datos.retos, [reto]: { ...datos.retos[reto], ...cambios } } };
+}
+
+function conPartida(datos, reto, fecha, partida, extra = {}) {
+  const r = datos.retos[reto];
+  return conReto(datos, reto, { ...extra, partidas: { ...r.partidas, [fecha]: partida } });
+}
+
+export function registrarInicio(datos, reto, { fecha, n, modo, sesion }) {
+  if (!esReto(reto) || partidaDe(datos, reto, fecha)) return datos;
+  return conPartida(datos, reto, fecha, {
+    n,
+    modo: modo ?? null,
+    estado: 'en_curso',
+    resultados: '-----',
+    aciertos: 0,
+    sesion
+  });
 }
 
 function contar(resultados) {
@@ -159,14 +188,11 @@ function editable(partida, sesion) {
   return sesion === undefined || partida.sesion === sesion;
 }
 
-export function registrarPrueba(datos, fecha, indice, codigo, sesion) {
-  const partida = partidaDe(datos, fecha);
+export function registrarPrueba(datos, reto, fecha, indice, codigo, sesion) {
+  const partida = partidaDe(datos, reto, fecha);
   if (!editable(partida, sesion)) return datos;
   const resultados = partida.resultados.slice(0, indice) + codigo + partida.resultados.slice(indice + 1);
-  return {
-    ...datos,
-    partidas: { ...datos.partidas, [fecha]: { ...partida, resultados, aciertos: contar(resultados) } }
-  };
+  return conPartida(datos, reto, fecha, { ...partida, resultados, aciertos: contar(resultados) });
 }
 
 export function calcularRacha(partidas, hoyISO) {
@@ -181,23 +207,25 @@ export function calcularRacha(partidas, hoyISO) {
 }
 
 // `hoyISO` es la fecha de la partida (la de su inicio), no la del momento de acabar.
-export function registrarFin(datos, fecha, hoyISO, sesion) {
-  const partida = partidaDe(datos, fecha);
+export function registrarFin(datos, reto, fecha, hoyISO, sesion) {
+  const partida = partidaDe(datos, reto, fecha);
   if (!editable(partida, sesion)) return datos;
-  const partidas = {
-    ...datos.partidas,
-    [fecha]: { ...partida, estado: 'terminada', aciertos: contar(partida.resultados) }
-  };
+  const terminadaP = { ...partida, estado: 'terminada', aciertos: contar(partida.resultados) };
+  const partidas = { ...datos.retos[reto].partidas, [fecha]: terminadaP };
   const racha = calcularRacha(partidas, hoyISO);
-  return { ...datos, partidas, racha, mejorRacha: Math.max(datos.mejorRacha, racha) };
+  return conReto(datos, reto, {
+    partidas,
+    racha,
+    mejorRacha: Math.max(datos.retos[reto].mejorRacha, racha)
+  });
 }
 
-export function cerrarAbandonada(datos, fecha, hoyISO) {
-  const partida = partidaDe(datos, fecha);
+export function cerrarAbandonada(datos, reto, fecha, hoyISO) {
+  const partida = partidaDe(datos, reto, fecha);
   if (!editable(partida)) return datos;
-  const cerrada = {
-    ...datos,
-    partidas: { ...datos.partidas, [fecha]: { ...partida, resultados: partida.resultados.replaceAll('-', 'F') } }
-  };
-  return registrarFin(cerrada, fecha, hoyISO);
+  const cerrada = conPartida(datos, reto, fecha, {
+    ...partida,
+    resultados: partida.resultados.replaceAll('-', 'F')
+  });
+  return registrarFin(cerrada, reto, fecha, hoyISO);
 }

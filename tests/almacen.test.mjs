@@ -6,18 +6,27 @@ import {
   datosIniciales,
   leer,
   guardar,
-  partidaDe,
+  partidaDe as partidaDe_r,
   conAjustes,
-  registrarInicio,
-  registrarPrueba,
-  registrarFin,
-  cerrarAbandonada,
+  registrarInicio as registrarInicio_r,
+  registrarPrueba as registrarPrueba_r,
+  registrarFin as registrarFin_r,
+  cerrarAbandonada as cerrarAbandonada_r,
   calcularRacha,
   leerConRespaldo,
   guardarConRespaldo,
   actualizar,
   crearAlmacenMemoria
 } from '../js/almacen.js';
+
+// Atajos sobre el reto de Images; los tests de v3 usan las funciones con reto explícito.
+const registrarInicio = (d, ...a) => registrarInicio_r(d, 'imagenes', ...a);
+const registrarPrueba = (d, ...a) => registrarPrueba_r(d, 'imagenes', ...a);
+const registrarFin = (d, ...a) => registrarFin_r(d, 'imagenes', ...a);
+const cerrarAbandonada = (d, ...a) => cerrarAbandonada_r(d, 'imagenes', ...a);
+const partidaDe = (d, ...a) => partidaDe_r(d, 'imagenes', ...a);
+const racha = (d, reto = 'imagenes') => d.retos[reto].racha;
+const mejor = (d, reto = 'imagenes') => d.retos[reto].mejorRacha;
 
 function almacenMemoria(inicial = {}) {
   const m = new Map(Object.entries(inicial));
@@ -57,18 +66,19 @@ test('leer y guardar con un almacén que funciona', () => {
   assert.equal(a.getItem('identifaiit.prueba'), null);
   const datos = conAjustes(datosIniciales(), { modo: 'perro' });
   assert.equal(guardar(datos, a), true);
-  assert.equal(CLAVE, 'identifaiit.v2');
-  assert.equal(VERSION, 2);
+  assert.equal(CLAVE, 'identifaiit.v3');
+  assert.equal(VERSION, 3);
   assert.deepEqual(leer(a).datos, datos);
 });
 
-test('datosIniciales: versión 2, modo normal y sin vistoComoJugar', () => {
+test('datosIniciales: versión 3, modo normal, reto imagenes y un bloque por reto', () => {
   assert.deepEqual(datosIniciales(), {
-    version: 2,
-    ajustes: { modo: 'normal' },
-    partidas: {},
-    racha: 0,
-    mejorRacha: 0
+    version: 3,
+    ajustes: { modo: 'normal', reto: 'imagenes' },
+    retos: {
+      imagenes: { partidas: {}, racha: 0, mejorRacha: 0 },
+      titulares: { partidas: {}, racha: 0, mejorRacha: 0 }
+    }
   });
 });
 
@@ -77,13 +87,18 @@ test('27. JSON corrupto o versión distinta dan datos iniciales; v1 no se lee ni
     datos: datosIniciales(),
     disponible: true
   });
-  const v3 = JSON.stringify({ ...datosIniciales(), version: 3, racha: 4 });
-  assert.deepEqual(leer(almacenMemoria({ [CLAVE]: v3 })).datos, datosIniciales());
+  const v2 = JSON.stringify({ version: 2, ajustes: { modo: 'perro' }, partidas: {}, racha: 4, mejorRacha: 4 });
+  assert.deepEqual(leer(almacenMemoria({ [CLAVE]: v2 })).datos, datosIniciales());
+  const v2sola = almacenMemoria({ 'identifaiit.v2': v2, 'identifaiit.v1': '{"a":1}' });
+  assert.deepEqual(leer(v2sola).datos, datosIniciales());
+  guardar(datosIniciales(), v2sola);
+  assert.equal(v2sola.getItem('identifaiit.v2'), v2);
+  assert.equal(v2sola.getItem('identifaiit.v1'), '{"a":1}');
   const v1 = JSON.stringify({ version: 1, ajustes: { modo: 'perro' }, partidas: {}, racha: 9, mejorRacha: 9 });
   const viejo = almacenMemoria({ 'identifaiit.v1': v1 });
   assert.deepEqual(leer(viejo).datos, datosIniciales());
   assert.equal(viejo.getItem('identifaiit.v1'), v1);
-  assert.equal(viejo.getItem('identifaiit.v2'), null);
+  assert.equal(viejo.getItem('identifaiit.v3'), null);
   assert.deepEqual(leer(almacenMemoria({ [CLAVE]: v1 })).datos, datosIniciales());
   assert.deepEqual(leer(almacenMemoria({ [CLAVE]: '[1,2]' })).datos, datosIniciales());
 });
@@ -115,8 +130,8 @@ test('registrarPrueba y registrarFin no mutan y actualizan aciertos', () => {
   assert.equal(partidaDe(d, '2026-11-01').aciertos, 2);
   const fin = registrarFin(d, '2026-11-01', '2026-11-01');
   assert.equal(partidaDe(fin, '2026-11-01').estado, 'terminada');
-  assert.equal(fin.racha, 1);
-  assert.equal(fin.mejorRacha, 1);
+  assert.equal(racha(fin), 1);
+  assert.equal(mejor(fin), 1);
 });
 
 test('29. cerrarAbandonada convierte AF--- en AFFFF terminada con 1 acierto', () => {
@@ -145,11 +160,13 @@ test('30. calcularRacha', () => {
 });
 
 test('31. mejorRacha nunca disminuye', () => {
-  let d = { ...datosIniciales(), mejorRacha: 5, racha: 5 };
+  let d = datosIniciales();
+  d.retos.imagenes.mejorRacha = 5;
+  d.retos.imagenes.racha = 5;
   d = registrarInicio(d, { fecha: '2026-11-10', n: 10, modo: 'normal', sesion: 's' });
   d = registrarFin(d, '2026-11-10', '2026-11-10');
-  assert.equal(d.racha, 1);
-  assert.equal(d.mejorRacha, 5);
+  assert.equal(racha(d), 1);
+  assert.equal(mejor(d), 5);
 });
 
 test('32. lo guardado no contiene la verdad ni el voto', () => {
@@ -184,7 +201,7 @@ test('33. dos pestañas: actualizar relee y solo aplica el cambio sobre lo últi
   assert.equal(a.datos.ajustes.modo, 'perro');
   assert.equal(partidaDe(a.datos, F).estado, 'terminada');
   assert.equal(partidaDe(leer(compartido).datos, F).modo, 'investigador');
-  assert.equal(leer(compartido).datos.racha, 1);
+  assert.equal(leer(compartido).datos.retos.imagenes.racha, 1);
 });
 
 test('34. una partida terminada nunca se sobrescribe', () => {
@@ -213,7 +230,7 @@ test('35. registrarInicio atómico: la segunda pestaña ve la sesión de la prim
 test('36. la fecha de la partida manda: terminar tras medianoche cuenta para el día de inicio', () => {
   let d = registrarInicio(datosIniciales(), { fecha: '2026-11-01', n: 1, modo: 'normal', sesion: 's' });
   d = registrarFin(d, '2026-11-01', '2026-11-01', 's');
-  assert.equal(d.racha, 1);
+  assert.equal(racha(d), 1);
   assert.equal(partidaDe(d, '2026-11-02'), null);
 });
 
@@ -259,4 +276,84 @@ test('105. crearAlmacenMemoria', () => {
     if (g) Object.defineProperty(globalThis, 'localStorage', g); else delete globalThis.localStorage;
     if (g2) Object.defineProperty(globalThis, 'sessionStorage', g2); else delete globalThis.sessionStorage;
   }
+});
+
+const T = 'titulares';
+const IM = 'imagenes';
+const ini = { fecha: F, n: 1, modo: null, sesion: 's' };
+
+test('31b. mejorRacha de Headlines nunca disminuye', () => {
+  let d = datosIniciales();
+  d.retos.titulares.mejorRacha = 4;
+  d = registrarInicio_r(d, T, ini);
+  d = registrarFin_r(d, T, F, F);
+  assert.equal(racha(d, T), 1);
+  assert.equal(mejor(d, T), 4);
+});
+
+test('174. cada reto toca solo el suyo; un reto inválido no cambia nada ni lanza', () => {
+  const base = datosIniciales();
+  const imgAntes = JSON.stringify(base.retos.imagenes);
+  let d = registrarInicio_r(base, T, ini);
+  d = registrarPrueba_r(d, T, F, 0, 'A', 's');
+  d = registrarFin_r(d, T, F, F, 's');
+  assert.equal(JSON.stringify(d.retos.imagenes), imgAntes);
+  assert.equal(partidaDe_r(d, T, F).modo, null);
+  assert.equal(partidaDe_r(d, IM, F), null);
+  const titAntes = JSON.stringify(d.retos.titulares);
+  let e = registrarInicio_r(d, IM, { ...ini, modo: 'normal' });
+  e = registrarPrueba_r(e, IM, F, 0, 'F', 's');
+  e = cerrarAbandonada_r(e, IM, F, F);
+  assert.equal(JSON.stringify(e.retos.titulares), titAntes);
+  assert.equal(partidaDe_r(e, IM, F).resultados, 'FFFFF');
+  for (const x of ['x', undefined, null, '__proto__']) {
+    assert.equal(registrarInicio_r(d, x, ini), d);
+    assert.equal(registrarPrueba_r(d, x, F, 0, 'A'), d);
+    assert.equal(registrarFin_r(d, x, F, F), d);
+    assert.equal(cerrarAbandonada_r(d, x, F, F), d);
+    assert.equal(partidaDe_r(d, x, F), null);
+  }
+});
+
+test('29b. cerrarAbandonada en Headlines: AF--- pasa a AFFFF solo en su reto', () => {
+  let d = registrarInicio_r(datosIniciales(), T, ini);
+  d = registrarPrueba_r(registrarPrueba_r(d, T, F, 0, 'A'), T, F, 1, 'F');
+  const c = cerrarAbandonada_r(d, T, F, F);
+  const p = partidaDe_r(c, T, F);
+  assert.deepEqual([p.resultados, p.estado, p.aciertos], ['AFFFF', 'terminada', 1]);
+  assert.deepEqual(c.retos.imagenes, datosIniciales().retos.imagenes);
+});
+
+test('175. rachas independientes por reto', () => {
+  let d = datosIniciales();
+  for (const f of ['2026-11-01', '2026-11-02', '2026-11-03']) {
+    d = registrarInicio_r(d, IM, { fecha: f, n: 1, modo: 'normal', sesion: 's' });
+    d = registrarFin_r(d, IM, f, f, 's');
+  }
+  d = registrarInicio_r(d, T, { fecha: '2026-11-03', n: 1, modo: null, sesion: 's' });
+  d = registrarFin_r(d, T, '2026-11-03', '2026-11-03', 's');
+  assert.equal(racha(d, IM), 3);
+  assert.equal(racha(d, T), 1);
+  assert.equal(mejor(d, IM), 3);
+  assert.equal(mejor(d, T), 1);
+});
+
+test('176. leer devuelve tal cual ajustes no válidos escritos a mano y rellena lo que falta', () => {
+  const a = almacenMemoria({
+    [CLAVE]: JSON.stringify({ version: 3, ajustes: { modo: 'medio', reto: 'x' }, retos: { titulares: { racha: 2 } } })
+  });
+  const { datos } = leer(a);
+  assert.equal(datos.ajustes.modo, 'medio');
+  assert.equal(datos.ajustes.reto, 'x');
+  assert.deepEqual(datos.retos.imagenes, { partidas: {}, racha: 0, mejorRacha: 0 });
+  assert.deepEqual(datos.retos.titulares, { partidas: {}, racha: 2, mejorRacha: 0 });
+  assert.deepEqual(conAjustes(datosIniciales(), { reto: 'titulares' }).ajustes, { modo: 'normal', reto: 'titulares' });
+});
+
+test('32b. lo guardado de Headlines tampoco contiene datos prohibidos', () => {
+  let d = registrarInicio_r(datosIniciales(), T, ini);
+  d = registrarPrueba_r(d, T, F, 0, 'A', 's');
+  d = registrarFin_r(d, T, F, F, 's');
+  assert.deepEqual(Object.keys(partidaDe_r(d, T, F)).sort(), ['aciertos', 'estado', 'modo', 'n', 'resultados', 'sesion']);
+  assert.equal(/tapada|motivo|voto|verdad|ficha|texto|ausencia/i.test(JSON.stringify(d)), false);
 });
