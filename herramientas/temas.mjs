@@ -24,6 +24,11 @@ function diasEntreISO(desde, hasta) {
   return Math.round((aUTC(hasta) - aUTC(desde)) / 86400000);
 }
 
+// Fecha ISO real (AAAA-MM-DD que sobrevive a ida y vuelta por Date.UTC).
+function esFechaISO(x) {
+  return typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) && sumarDiasISO(x, 0) === x;
+}
+
 // ---------- Palabras prohibidas ----------
 
 export function contienePalabraProhibida(texto, excepciones = ['identifAI-it']) {
@@ -130,7 +135,8 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
   for (const a of hijos) {
     const { c, n, tema } = a;
     const nom = c.nombre;
-    const fecha = sumarDias(lanzamiento, n - 1);
+    // [2.0] Sin lanzamiento (null) no hay fecha: tampoco se comprueba que sea posterior a hoy.
+    const fecha = lanzamiento === null || lanzamiento === undefined ? null : sumarDias(lanzamiento, n - 1);
     const ia = c.ia ?? [];
     const real = c.real ?? [];
     const nIa = ia.filter((f) => !EXT_FICHA.test(f)).length;
@@ -153,7 +159,7 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     if (estructuraOk && (nIa < 1 || nIa > 4)) {
       errores.push(`${nom} tiene ${nIa} imágenes en ia/ y ${nReal} en real/. Cada día necesita entre 1 y 4 en ia/.`);
     }
-    if (diasEntre(hoyISO, fecha) < 1) {
+    if (fecha !== null && diasEntre(hoyISO, fecha) < 1) {
       errores.push(
         `El día ${String(n).padStart(2, '0')} (${fecha}) ya ha llegado o ha pasado; no se pueden añadir días de hoy ni del pasado.`
       );
@@ -258,10 +264,16 @@ export function normalizarFicha(texto, maxBytes) {
   return { texto: puntos.join('').trimEnd() + '…', vacia: false, truncada: true, bytesOriginales };
 }
 
+// [2.0] Acepta las versiones 2, 3 y 4. El lanzamiento es una fecha ISO válida (o null, solo en la 4).
+// Las versiones 2 y 3 llevan fecha en cada día; la 4 no.
 export function calendarioAnteriorValido(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-  if (obj.version !== 2 && obj.version !== 3) return false;
-  if (obj.lanzamiento !== '2026-11-01') return false;
+  if (obj.version !== 2 && obj.version !== 3 && obj.version !== 4) return false;
+  if (obj.lanzamiento === null) {
+    if (obj.version !== 4) return false;
+  } else if (!esFechaISO(obj.lanzamiento)) {
+    return false;
+  }
   if (!Array.isArray(obj.dias)) return false;
   return obj.dias.every(
     (d) =>
@@ -269,8 +281,7 @@ export function calendarioAnteriorValido(obj) {
       typeof d === 'object' &&
       Number.isInteger(d.n) &&
       d.n >= 1 &&
-      typeof d.fecha === 'string' &&
-      /^\d{4}-\d{2}-\d{2}$/.test(d.fecha) &&
+      (obj.version === 4 || esFechaISO(d.fecha)) &&
       Array.isArray(d.pruebas) &&
       d.pruebas.length === 5 &&
       d.pruebas.every((id) => typeof id === 'string')
@@ -350,9 +361,16 @@ export function comprobarReimportacion({ calendario, nombresCarpetas, hoyISO, di
     return errores;
   }
   const dosCifras = (n) => String(n).padStart(2, '0');
-  const llegado = dias.find((d) => diasEntre(hoyISO, d.fecha) < 1);
+  // [2.0] La fecha de cada día se deriva de calendario.lanzamiento; sin lanzamiento (null) ningún día ha llegado.
+  // Un calendario sin campo lanzamiento (versión 3 antigua) usa la fecha propia de cada día.
+  const fechaDe = (d) =>
+    calendario.lanzamiento === undefined ? d.fecha : calendario.lanzamiento === null ? null : sumarDiasISO(calendario.lanzamiento, d.n - 1);
+  const llegado = dias.find((d) => {
+    const f = fechaDe(d);
+    return f !== null && f !== undefined && diasEntre(hoyISO, f) < 1;
+  });
   if (llegado) {
-    errores.push(`El día ${dosCifras(llegado.n)} (${llegado.fecha}) ya ha llegado o ha pasado: después del lanzamiento no se reimporta ningún día.`);
+    errores.push(`El día ${dosCifras(llegado.n)} (${fechaDe(llegado)}) ya ha llegado o ha pasado: después del lanzamiento no se reimporta ningún día.`);
   }
   const numeros = new Set();
   for (const nombre of nombresCarpetas) {
@@ -370,7 +388,80 @@ export function comprobarReimportacion({ calendario, nombresCarpetas, hoyISO, di
 
 export function mensajeReimportacion({ dias, borradas }) {
   if (dias.length === 0) return '';
-  return `Se regenerarían ${dias.length} días (${dias[0].fecha} a ${dias[dias.length - 1].fecha}) y se borrarían ${borradas} imágenes antiguas de casos/. Para hacerlo: npm run importar -- --reimportar --confirmar`;
+  const rango = dias[0].fecha ? `${dias[0].fecha} a ${dias[dias.length - 1].fecha}` : 'sin fecha de lanzamiento';
+  return `Se regenerarían ${dias.length} días (${rango}) y se borrarían ${borradas} imágenes antiguas de casos/. Para hacerlo: npm run importar -- --reimportar --confirmar`;
+}
+
+// ---------- Fecha de lanzamiento y migración de versiones (spec 4.2.1, 4.6) [D-95, D-96] ----------
+
+export function analizarArgumentosLanzamiento(argv) {
+  const lista = Array.isArray(argv) ? argv : [];
+  const r = { accion: 'mostrar', fecha: null, errores: [] };
+  if (lista.length === 0) return r;
+  if (lista.length > 1) {
+    r.errores.push(`Solo se admite un argumento (una fecha AAAA-MM-DD o --sin-fecha); recibidos ${lista.length}.`);
+    return r;
+  }
+  const [a] = lista;
+  if (a === '--sin-fecha') {
+    r.accion = 'quitar';
+  } else if (esFechaISO(a)) {
+    r.accion = 'fijar';
+    r.fecha = a;
+  } else {
+    r.errores.push(`Argumento no válido: ${a}. Usa una fecha AAAA-MM-DD válida, --sin-fecha o nada para solo mostrar.`);
+  }
+  return r;
+}
+
+// nuevo === null equivale a --sin-fecha.
+export function comprobarCambioLanzamiento({ actual, nuevo, hoyISO }) {
+  const errores = [];
+  if (nuevo !== null && nuevo !== undefined) {
+    if (!esFechaISO(nuevo)) {
+      errores.push(`La fecha ${JSON.stringify(nuevo)} no es una fecha válida AAAA-MM-DD.`);
+    } else if (diasEntreISO(hoyISO, nuevo) < 1) {
+      errores.push(`La fecha de lanzamiento (${nuevo}) debe ser posterior a hoy (${hoyISO}); como pronto, mañana.`);
+    }
+  }
+  if (actual !== null && actual !== undefined && esFechaISO(actual) && diasEntreISO(hoyISO, actual) < 1) {
+    errores.push(`El juego se lanzó el ${actual}: cambiar la fecha renumeraría los casos ya jugados y rompería las rachas.`);
+  }
+  return errores;
+}
+
+const sinFecha = ({ fecha, ...resto }) => resto;
+
+// Versión 3 -> 4: comprueba cada fecha y la quita. No muta.
+export function migrarCalendario(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { calendario: null, errores: ['El calendario no es un objeto.'] };
+  if (obj.version === 4) return { calendario: obj, errores: [] };
+  if (obj.version !== 3) {
+    return { calendario: null, errores: [`No sé migrar un calendario de la versión ${obj.version}; solo de la 3 a la 4.`] };
+  }
+  const errores = [];
+  if (!esFechaISO(obj.lanzamiento)) errores.push('El calendario de la versión 3 no tiene un lanzamiento válido.');
+  if (!Array.isArray(obj.dias)) errores.push('El calendario de la versión 3 no tiene días.');
+  if (errores.length > 0) return { calendario: null, errores };
+  for (const d of obj.dias) {
+    const esperada = sumarDiasISO(obj.lanzamiento, d.n - 1);
+    if (d.fecha !== esperada) {
+      errores.push(`El día ${d.n} tiene fecha ${d.fecha} y le corresponde ${esperada} (lanzamiento ${obj.lanzamiento}); no se migra.`);
+    }
+  }
+  if (errores.length > 0) return { calendario: null, errores };
+  return { calendario: { ...obj, version: 4, dias: obj.dias.map(sinFecha) }, errores: [] };
+}
+
+// Versión 2 -> 3: quita fecha de cada imagen. No muta.
+export function migrarBanco(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { banco: null, errores: ['El banco no es un objeto.'] };
+  if (obj.version === 3) return { banco: obj, errores: [] };
+  if (obj.version !== 2) {
+    return { banco: null, errores: [`No sé migrar un banco de la versión ${obj.version}; solo de la 2 a la 3.`] };
+  }
+  if (!Array.isArray(obj.imagenes)) return { banco: null, errores: ['El banco de la versión 2 no tiene imágenes.'] };
+  return { banco: { ...obj, version: 3, imagenes: obj.imagenes.map(sinFecha) }, errores: [] };
 }
 
 // ---------- Aleatorio, ids y hashes ----------

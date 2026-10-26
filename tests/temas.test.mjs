@@ -4,7 +4,8 @@ import {
   analizarCarpeta, temaDeCarpeta, contienePalabraProhibida, fuenteDeArchivo, planificar,
   barajar, nuevoId, distanciaHamming, compararPesos, avisosMezcla, analizarPesos,
   POSICIONES_RECORTE, analizarLote, analizarArgumentos, comprobarReimportacion, mensajeReimportacion,
-  analizarPruebasAbiertas, normalizarFicha, calendarioAnteriorValido
+  analizarPruebasAbiertas, normalizarFicha, calendarioAnteriorValido,
+  analizarArgumentosLanzamiento, comprobarCambioLanzamiento, migrarCalendario, migrarBanco
 } from '../herramientas/temas.mjs';
 
 const nombres = ['01-fireworks', '02-dogs', '03-people-eating', '04-people-drinking', '05-table-with-food', '06-nightclub', '07-people-fighting'];
@@ -354,15 +355,97 @@ test('146 planificar con fichas en inglés (.en.txt)', () => {
 
 test('145 calendarioAnteriorValido', () => {
   const dia = (n) => ({ n, fecha: `2026-11-0${n}`, pruebas: ['a', 'b', 'c', 'd', 'e'] });
+  const dia4 = (n) => ({ n, pruebas: ['a', 'b', 'c', 'd', 'e'] });
   const cal = (version) => ({ version, lanzamiento: '2026-11-01', dias: [dia(1), dia(2)] });
+  const cal4 = (lanzamiento) => ({ version: 4, lanzamiento, dias: [dia4(1), dia4(2)] });
   assert.equal(calendarioAnteriorValido(cal(2)), true);
   assert.equal(calendarioAnteriorValido(cal(3)), true);
   assert.equal(calendarioAnteriorValido({ version: 3, lanzamiento: '2026-11-01', dias: [] }), true);
+  assert.equal(calendarioAnteriorValido(cal4(null)), true);
+  assert.equal(calendarioAnteriorValido(cal4('2026-12-15')), true);
+  assert.equal(calendarioAnteriorValido(cal4('2026-02-30')), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(3), lanzamiento: null }), false); // null solo en la 4
+  assert.equal(calendarioAnteriorValido({ ...cal(3), lanzamiento: '2099-01-01' }), true); // ya no hay fecha fija
   assert.equal(calendarioAnteriorValido(cal(1)), false);
-  assert.equal(calendarioAnteriorValido({ ...cal(2), lanzamiento: '2026-10-19' }), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(5) }), false);
   assert.equal(calendarioAnteriorValido(null), false);
   assert.equal(calendarioAnteriorValido({}), false);
   assert.equal(calendarioAnteriorValido([]), false);
   assert.equal(calendarioAnteriorValido({ ...cal(2), dias: [{ ...dia(1), pruebas: ['a', 'b', 'c', 'd'] }] }), false);
+  assert.equal(calendarioAnteriorValido({ ...cal4(null), dias: [{ ...dia4(1), pruebas: ['a', 'b', 'c', 'd'] }] }), false);
   assert.equal(calendarioAnteriorValido({ ...cal(2), dias: [{ ...dia(0) }] }), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(3), dias: [{ n: 1, pruebas: dia(1).pruebas }] }), false); // la 3 exige fecha
+});
+
+test('planificar con lanzamiento null: fechas null y sin comprobar el pasado', () => {
+  const r = planificar({ ultimoDia: 0, hoyISO: '2030-01-01', lanzamiento: null, carpetas: carpetas() });
+  assert.deepEqual(r.errores, []);
+  assert.equal(r.nuevos.length, 7);
+  assert.ok(r.nuevos.every((d) => d.fecha === null));
+  // Con fecha pasada sí falla.
+  const p = planificar({ ultimoDia: 0, hoyISO: '2030-01-01', lanzamiento: '2026-11-01', carpetas: carpetas() });
+  assert.ok(p.errores.some((e) => /ya ha llegado/.test(e)));
+});
+
+test('comprobarReimportacion con lanzamiento null o derivado de la fecha', () => {
+  const dias4 = Array.from({ length: 7 }, (_, i) => ({ n: i + 1 }));
+  const b = { nombresCarpetas: nombres, hoyISO: '2030-01-01' };
+  assert.deepEqual(comprobarReimportacion({ ...b, calendario: { lanzamiento: null, dias: dias4 } }), []);
+  assert.deepEqual(comprobarReimportacion({ ...b, calendario: { lanzamiento: '2031-01-01', dias: dias4 } }), []);
+  const e = comprobarReimportacion({ ...b, calendario: { lanzamiento: '2029-12-30', dias: dias4 } });
+  assert.match(e[0], /^El día 01 \(2029-12-30\) ya ha llegado/);
+});
+
+test('151 analizarArgumentosLanzamiento', () => {
+  assert.deepEqual(analizarArgumentosLanzamiento([]), { accion: 'mostrar', fecha: null, errores: [] });
+  assert.deepEqual(analizarArgumentosLanzamiento(['2026-12-01']), { accion: 'fijar', fecha: '2026-12-01', errores: [] });
+  assert.deepEqual(analizarArgumentosLanzamiento(['--sin-fecha']), { accion: 'quitar', fecha: null, errores: [] });
+  assert.equal(analizarArgumentosLanzamiento(['x']).errores.length, 1);
+  assert.equal(analizarArgumentosLanzamiento(['2026-02-30']).errores.length, 1);
+  assert.equal(analizarArgumentosLanzamiento(['2026-12-01', '--sin-fecha']).errores.length, 1);
+});
+
+test('151 comprobarCambioLanzamiento', () => {
+  const hoyISO = '2026-10-26';
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-27', hoyISO }), []);
+  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-26', hoyISO }).length, 1);
+  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-01', hoyISO }).length, 1);
+  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-13-01', hoyISO }).length, 1);
+  assert.match(comprobarCambioLanzamiento({ actual: '2026-10-26', nuevo: '2026-12-01', hoyISO })[0], /^El juego se lanzó el 2026-10-26: cambiar la fecha renumeraría/);
+  assert.equal(comprobarCambioLanzamiento({ actual: '2026-10-01', nuevo: null, hoyISO }).length, 1);
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: '2026-11-01', nuevo: '2026-12-01', hoyISO }), []);
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: '2026-11-01', nuevo: null, hoyISO }), []);
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: null, nuevo: null, hoyISO }), []);
+});
+
+test('152 migrarCalendario y migrarBanco', () => {
+  const dia = (n) => ({ n, fecha: `2099-01-0${n}`, tema: `Tema ${n}`, pruebas: ['a', 'b', 'c', 'd', 'e'], clave: 'Mpb9Ycc=', fichas: ['f1', 'f2', 'f3', 'f4', 'f5'] });
+  const v3 = { version: 3, lanzamiento: '2099-01-01', dias: [dia(1), dia(2)] };
+  const copia = JSON.parse(JSON.stringify(v3));
+  const { calendario, errores } = migrarCalendario(v3);
+  assert.deepEqual(errores, []);
+  assert.deepEqual(v3, copia); // no muta
+  assert.equal(calendario.version, 4);
+  assert.equal(calendario.lanzamiento, '2099-01-01');
+  assert.deepEqual(calendario.dias.map((d) => Object.keys(d)), [['n', 'tema', 'pruebas', 'clave', 'fichas'], ['n', 'tema', 'pruebas', 'clave', 'fichas']]);
+  calendario.dias.forEach((d, i) => {
+    const { fecha, ...resto } = v3.dias[i];
+    assert.deepEqual(d, resto);
+  });
+  assert.deepEqual(migrarCalendario(calendario), { calendario, errores: [] }); // idempotente
+  const mala = { ...v3, dias: [dia(1), { ...dia(2), fecha: '2099-01-09' }] };
+  assert.equal(migrarCalendario(mala).errores.length, 1);
+  assert.equal(migrarCalendario({ ...v3, version: 2 }).errores.length, 1);
+  assert.equal(migrarCalendario(null).errores.length, 1);
+  assert.equal(migrarCalendario({ ...v3, lanzamiento: null }).errores.length, 1);
+
+  const b2 = { version: 2, imagenes: [{ id: 'abc', tipo: 'autentica', dia: 1, fecha: '2099-01-01', dhash: '00' }] };
+  const copiaB = JSON.parse(JSON.stringify(b2));
+  const mb = migrarBanco(b2);
+  assert.deepEqual(mb.errores, []);
+  assert.deepEqual(b2, copiaB);
+  assert.deepEqual(mb.banco, { version: 3, imagenes: [{ id: 'abc', tipo: 'autentica', dia: 1, dhash: '00' }] });
+  assert.deepEqual(migrarBanco(mb.banco), { banco: mb.banco, errores: [] });
+  assert.equal(migrarBanco({ version: 1, imagenes: [] }).errores.length, 1);
+  assert.equal(migrarBanco(null).errores.length, 1);
 });
