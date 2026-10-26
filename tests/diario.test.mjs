@@ -16,6 +16,19 @@ import {
   desofuscar,
   FICHA_BLOQUE,
   FICHA_MAX_BYTES,
+  flujoBytes,
+  ofuscarBloque,
+  desofuscarBloque,
+  TEXTO_BLOQUE,
+  TEXTO_MAX_BYTES,
+  NOTICIA_BLOQUE,
+  NOTICIA_MAX_BYTES,
+  ofuscarTexto,
+  desofuscarTexto,
+  ofuscarNoticia,
+  desofuscarNoticia,
+  urlFuenteValida,
+  medioDeUrl,
   flujoFicha,
   ofuscarFicha,
   desofuscarFicha,
@@ -387,4 +400,147 @@ test('formatearFecha: inglés americano, determinista', () => {
   assert.equal(formatearFecha('2026-12-09'), 'Dec 9, 2026');
   assert.equal(formatearFecha('2026-13-01'), '2026-13-01');
   assert.equal(formatearFecha('basura'), 'basura');
+});
+
+const VEC_TEXTO = '33U5OfM7LppifDdq0nnQSxAoroypcnnrzBoHKRwS7AzSj/iiz8msx5zwE+fuUFzLmw1ro7NeNpidp+zmPopfe41Xj15Y+nRxqAHLbjZmGhI52L4/BpMvuk31AyEH//01qwl8x/CBkdPpuOXbl5MQazTL6VsdyCkMmwn7gc+Mo6NfWPB5qwkVDHJmIwGZE4yJdK4i0X0cyC4Q9443RqkMCRi1vwEu6YOE3T5V/Xu3g5dHZnzRVHz+wZBqYPjyf7N0qt9dI0dFveHKXRNqSVKOTH+4q/C6l00scsRJTwz4Q3bnPt7DDCw31lDQLjOVnjnlORBSiQDY+K3cfplfNUzq2Tc1VOa6fPXp+XIEvZs8DkXxodeDDiKI54OjzM+6XT5BNzAnP3YrZP/2z1u/dZ8Ejg+Z8W6khLRk/mcCZLm8Qe/BrRDAymbaREhZAA0r63F3SwPK+eacCU0vPkP8NATDdwJQTwMvu4mMFiOtJaZzwZcoecMs/MRab+ExH85Ew6RlzNJuOr660QOSErMQZEnO4OXM6+JOqeiIl/8yTHdoUxZOOsvncC8FiQR98MAEvantMVAquCXAncnhw6Ul0ltcfGo0Bzqz5NKlLb4yXRlXt9/r6yYbAXSXXAklBTFpPMKjDaCgWLavw96edkvEwXgHoEa5hg/9ih8JuV9GCJ8U4WY=';
+const VEC_NOTICIA = 'Cxp56vxKI+0QdAALjipcdh9k61SkxYitF4irQPdO+BC6V7I4THEqi+cFCwTVQUpy9L9P7bCnZD37U3RDdAdUgZpWI5lDMTlgmJqXuqzp1q4GUxlJ7Aub4wxz2nWEeaXUlr1TpSXd0IvdZAcSonKeAY8w1p0NVtRcRmUJjNgYCzGssV3hJiN1aWMlAAUnQqWnKvPEntbEmIpOTCMO3HyFfUh+4nbxrfL8zBZUTO4P4I9Tr8oUvuRotYMdDHkt/Rdy7GxHdYt20HDdeYlY3Rv27ART91MD9C5DMbgoSR+3U5n7+hXq3At/nAnuhHww9ltK6ki7Po/sdx8YRw4GNd/618UKAb0UBpeak6nQFjNQHvI+YmMAgmw4ENAbAx49Wss8sF3HZvN6P99gEN/kYx85+I4fMDF/tdL0kbTR5qwzF55mAkO8dCVZ4S8wU2D/u3fp/hc6A4juqXfbkIWf2AazIaG2k5BSpBrZn65TCtnRnGAjLCWf/O8lxlpEihgqU8MrcxCtJrgEO6QpqBQ0WuGjQWZznUHJ88uDNSl2MK/3Vl76S+AWITw76SkEuAECoH0oKUDrjc/rICt/oC2X2JZ9Q93aECe28nQ71jNapO3q2SCkBgG54k2chYuBJHi3UQc0bK+F4ZfgQNuDEQiD3TYm9DpGKBZZfUxF/17vRgYVGKlZktBAzgzYzw79qvhujvBdDgo9evRx2SvhG8YKlZioHkv+MoXPC1Giwp/6tASeRpc7ztEVtAVQoR39m2FUImb9C4iOyFderpljCCxkPpdeVaZgEVSZn6noB1PWlissHi3eHXzyTx7KDD56qiZUUWLre1M04s7WJaY6fOpwemUXQt0W0QDEuCNHX0Ch7kyOjD8lSWglT6WROc6hyO40KAwNpsKIvaVy6jqB1eQMgIhSZ9Qr2d2VXDoEfYpwik+rkhFZzB02Jm+ruLqrmj4wgrMBkSh8LjY9lTUu0MqStyvV0s2KEHhTfOccQjSFAqqIIr07ZaZ8S71mQ7NRdbkzTc2DpgdiyB8oEaRZNSYnismYHxH8enf1/kESb33yrgqaztNgRAAdsLwg8zZc1sOSFQVaJHfXy8lZxZGkwR/xUimjsFg1hK+NM0/6Vw/cjDVQ5KMa84Rbx3HE7rRmWdsnTooy0ovxWzzXcq6hGyhj21qvL1jhYotZ9EZ6HoXorwSmg8zBBspeNeQ1UcCoPRjFN9dOO8d49Y4hLnJe9Y8OrAHxSoM1QT63TE57Bwxh05AudLcSYVdz3nUJhHJGRqRFwmNvv8kwHpv5s34hGLse+CRn2RU1iBeYKkOF6Lm8ezCtCYW752B58bcoSPm2SjpeBByD8pLCf4uNLK1pUT7w3kgG1w==';
+
+const cifrarBloque = (bloque, semilla) => {
+  const flujo = flujoBytes(semilla, bloque.length);
+  return btoa(String.fromCharCode(...bloque.map((b, k) => b ^ flujo[k])));
+};
+const bloqueDe = (largoBloque, ...bytes) => {
+  const b = new Uint8Array(largoBloque);
+  b.set(bytes);
+  return b;
+};
+
+test('167. flujoFicha es flujoBytes con la semilla de la ficha y ofuscarFicha sigue dando el vector de D-92', () => {
+  assert.deepEqual([...flujoFicha(CL, 1, 0)], [...flujoBytes(`${CL}|1|0`, 512)]);
+  assert.deepEqual([...flujoFicha(CL, 7, 3)], [...flujoBytes(`${CL}|7|3`, 512)]);
+  assert.equal(flujoBytes('x', 1024).length, 1024);
+  assert.deepEqual([...flujoBytes('x', 16)], [...flujoBytes('x', 1024).slice(0, 16)]);
+  assert.deepEqual([...flujoBytes(`${CL}|1|0`, 8)], [140, 64, 54, 92, 177, 170, 222, 108]);
+  const bytes = new TextEncoder().encode('Real photograph');
+  assert.equal(ofuscarBloque(bytes, `${CL}|1|0`, 512, () => 0), ofuscarFicha('Real photograph', CL, 1, 0, () => 0));
+  assert.deepEqual([...desofuscarBloque(ofuscarBloque(bytes, 's', 512), 's', 512)], [...bytes]);
+  assert.deepEqual([...desofuscarBloque(ofuscarBloque(bytes, 's', 1024), 's', 1024)], [...bytes]);
+  assert.throws(() => ofuscarBloque(new Uint8Array(511), 's', 512), RangeError);
+  assert.equal(ofuscarBloque(new Uint8Array(510), 's', 512).length, 684);
+  assert.equal(ofuscarBloque(new Uint8Array(1022), 's', 1024).length, 1368);
+  for (const malo of [null, 5, '', 'A'.repeat(684), 'A'.repeat(683) + '=', '!'.repeat(683) + '=']) {
+    assert.equal(desofuscarBloque(malo, 's', 1024), null);
+  }
+  assert.equal(desofuscarBloque(ofuscarBloque(bytes, 's', 512), 's', 1024), null);
+  assert.equal(desofuscarBloque(cifrarBloque(bloqueDe(512, 1, 255), 's'), 's', 512), null);
+});
+
+test('168. ofuscarTexto y desofuscarTexto', () => {
+  const casos = [
+    ['Test headline', 'Test lede.'],
+    ['Council’s plan — a café “deal”', 'Résumé of the story 🐕🎉.'],
+    ['Titular', 'Línea uno\nlínea dos'],
+    ['H', 'é'.repeat(253) + 'e']
+  ];
+  assert.equal(TEXTO_BLOQUE, 512);
+  assert.equal(TEXTO_MAX_BYTES, 510);
+  for (const [titular, entradilla] of casos) {
+    const c = ofuscarTexto({ titular, entradilla }, CL, 4, 2);
+    assert.match(c, /^[A-Za-z0-9+/]{683}=$/);
+    assert.deepEqual(desofuscarTexto(c, CL, 4, 2), { titular, entradilla });
+  }
+  const justo = { titular: 'A', entradilla: 'b'.repeat(508) };
+  assert.equal(new TextEncoder().encode(`${justo.titular}\n${justo.entradilla}`).length, 510);
+  assert.deepEqual(desofuscarTexto(ofuscarTexto(justo, CL, 1, 0), CL, 1, 0), justo);
+  assert.throws(() => ofuscarTexto({ titular: 'A', entradilla: 'b'.repeat(509) }, CL, 1, 0), RangeError);
+  assert.throws(() => ofuscarTexto({ titular: 'a\nb', entradilla: 'c' }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarTexto({ titular: '', entradilla: 'c' }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarTexto({ titular: 'a', entradilla: 5 }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarTexto({ titular: 'a', entradilla: '' }, CL, 1, 0), TypeError);
+  const ok = ofuscarTexto({ titular: 'a', entradilla: 'b' }, CL, 1, 0, () => 0);
+  for (const malo of [ok.slice(0, 683), ok + 'A', ok.slice(0, 10) + '!' + ok.slice(11), null, undefined, 5, {}]) {
+    assert.equal(desofuscarTexto(malo, CL, 1, 0), null);
+  }
+  const semilla = `${CL}|1|0|texto`;
+  const enc = new TextEncoder();
+  const bloqueTexto = (texto) => bloqueDe(512, 0, enc.encode(texto).length, ...enc.encode(texto));
+  assert.equal(desofuscarTexto(cifrarBloque(bloqueTexto('sin salto'), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarTexto(cifrarBloque(bloqueTexto('\nentradilla'), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarTexto(cifrarBloque(bloqueTexto('titular\n'), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarTexto(cifrarBloque(bloqueDe(512, 0, 4, 0xc3, 0x28, 0x0a, 0x61), semilla), CL, 1, 0), null);
+  assert.deepEqual(desofuscarTexto(cifrarBloque(bloqueTexto('a\nb\nc'), semilla), CL, 1, 0), { titular: 'a', entradilla: 'b\nc' });
+  // el flujo del texto no es el de la ficha de imagen
+  assert.notDeepEqual([...flujoBytes(semilla, 512)], [...flujoFicha(CL, 1, 0)]);
+  assert.notEqual(desofuscarFicha(ofuscarTexto({ titular: 'a', entradilla: 'b' }, CL, 1, 0), CL, 1, 0), 'a\nb');
+});
+
+test('169. ofuscarNoticia y desofuscarNoticia', () => {
+  assert.equal(NOTICIA_BLOQUE, 1024);
+  assert.equal(NOTICIA_MAX_BYTES, 1021);
+  const casos = [
+    { tipo: 'fuente', texto: 'https://example.com/story' },
+    { tipo: 'prompt', texto: 'Write a short “plausible” headline — with é and 🐈.' },
+    { tipo: 'prompt', texto: 'p'.repeat(1000) },
+    { tipo: 'fuente', texto: 'u'.repeat(1021) }
+  ];
+  for (const caso of casos) {
+    const c = ofuscarNoticia(caso, CL, 4, 2);
+    assert.match(c, /^[A-Za-z0-9+/]{1366}==$/);
+    assert.equal(c.length, 1368);
+    assert.deepEqual(desofuscarNoticia(c, CL, 4, 2), caso);
+  }
+  assert.equal(ofuscarNoticia(casos[0], CL, 1, 0).length, ofuscarNoticia(casos[2], CL, 1, 0).length);
+  assert.throws(() => ofuscarNoticia({ tipo: 'fuente', texto: 'u'.repeat(1022) }, CL, 1, 0), RangeError);
+  assert.throws(() => ofuscarNoticia({ tipo: 'otro', texto: 'x' }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarNoticia({ tipo: 'fuente', texto: '' }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarNoticia({ tipo: 'fuente', texto: 5 }, CL, 1, 0), TypeError);
+  const ok = ofuscarNoticia(casos[0], CL, 1, 0, () => 0);
+  for (const malo of [ok.slice(0, 1367), ok + 'A', null, undefined, 5, {}]) {
+    assert.equal(desofuscarNoticia(malo, CL, 1, 0), null);
+  }
+  const semilla = `${CL}|1|0|noticia`;
+  const cuerpo = (...bytes) => cifrarBloque(bloqueDe(1024, 0, bytes.length, ...bytes), semilla);
+  assert.equal(desofuscarNoticia(cuerpo(2, 0x61), CL, 1, 0), null);
+  assert.equal(desofuscarNoticia(cifrarBloque(bloqueDe(1024), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarNoticia(cuerpo(0), CL, 1, 0), null);
+  assert.equal(desofuscarNoticia(cifrarBloque(bloqueDe(1024, 0x03, 0xff), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarNoticia(cuerpo(1, 0xc3, 0x28), CL, 1, 0), null);
+  assert.deepEqual(desofuscarNoticia(cuerpo(1, 0x61), CL, 1, 0), { tipo: 'prompt', texto: 'a' });
+  // el flujo de la noticia no es el del texto ni el de la ficha de imagen
+  assert.notDeepEqual([...flujoBytes(semilla, 512)], [...flujoBytes(`${CL}|1|0|texto`, 512)]);
+});
+
+test('170. vectores de regresión de Headlines (4.8)', () => {
+  assert.equal(ofuscarTexto({ titular: 'Test headline', entradilla: 'Test lede.' }, CL, 1, 0, () => 0), VEC_TEXTO);
+  assert.equal(ofuscarNoticia({ tipo: 'fuente', texto: 'https://example.com/story' }, CL, 1, 0, () => 0), VEC_NOTICIA);
+  assert.deepEqual(desofuscarTexto(VEC_TEXTO, CL, 1, 0), { titular: 'Test headline', entradilla: 'Test lede.' });
+  assert.deepEqual(desofuscarNoticia(VEC_NOTICIA, CL, 1, 0), { tipo: 'fuente', texto: 'https://example.com/story' });
+});
+
+test('171. urlFuenteValida y medioDeUrl', () => {
+  assert.equal(urlFuenteValida('https://example.com/a?b=1'), true);
+  assert.equal(urlFuenteValida('https://example.com/' + 'p'.repeat(1021 - 'https://example.com/'.length)), true);
+  const invalidas = [
+    'http://example.com/',
+    'javascript:alert(1)',
+    'https://user:pw@example.com/',
+    'https://user@example.com/',
+    '/relativa',
+    'https://192.168.1.1/',
+    'https://[::1]/',
+    'https://localhost/',
+    'HTTPS://Example.com/',
+    'https://example.com',
+    'https://example.com/' + 'p'.repeat(1022 - 'https://example.com/'.length),
+    '',
+    null,
+    undefined,
+    42
+  ];
+  for (const x of invalidas) assert.equal(urlFuenteValida(x), false, String(x));
+  assert.equal(medioDeUrl('https://www.apnews.com/x'), 'apnews.com');
+  assert.equal(medioDeUrl('https://news.example.co.uk/x'), 'news.example.co.uk');
+  assert.equal(medioDeUrl('https://wwwx.com/x'), 'wwwx.com');
+  assert.equal(medioDeUrl('x'), null);
+  assert.equal(medioDeUrl(null), null);
 });

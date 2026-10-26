@@ -185,44 +185,161 @@ function mulberry32(semilla) {
   };
 }
 
-// Flujo de 512 bytes, determinista, para cifrar la ficha de una prueba [D-86].
-export function flujoFicha(clave, n, indice) {
-  const azar = mulberry32(fnv1a32(`${clave}|${n}|${indice}`));
-  const flujo = new Uint8Array(FICHA_BLOQUE);
-  for (let k = 0; k < FICHA_BLOQUE; k++) flujo[k] = Math.floor(azar() * 256);
+// Flujo de bytes determinista a partir de una semilla de texto [D-103].
+export function flujoBytes(semilla, largo) {
+  const azar = mulberry32(fnv1a32(semilla));
+  const flujo = new Uint8Array(largo);
+  for (let k = 0; k < largo; k++) flujo[k] = Math.floor(azar() * 256);
   return flujo;
+}
+
+// Flujo de 512 bytes para cifrar la ficha de una prueba [D-86].
+export function flujoFicha(clave, n, indice) {
+  return flujoBytes(`${clave}|${n}|${indice}`, FICHA_BLOQUE);
+}
+
+// 2 bytes de longitud + contenido + relleno aleatorio, XOR con el flujo, en base64.
+export function ofuscarBloque(bytes, semilla, largoBloque, aleatorio = Math.random) {
+  const largo = bytes.length;
+  if (largo > largoBloque - 2) {
+    throw new RangeError(`El contenido ocupa ${largo} bytes (máximo ${largoBloque - 2})`);
+  }
+  const bloque = new Uint8Array(largoBloque);
+  bloque[0] = largo >> 8;
+  bloque[1] = largo & 0xff;
+  bloque.set(bytes, 2);
+  for (let k = 2 + largo; k < largoBloque; k++) bloque[k] = Math.floor(aleatorio() * 256);
+  const flujo = flujoBytes(semilla, largoBloque);
+  let binario = '';
+  for (let k = 0; k < largoBloque; k++) binario += String.fromCharCode(bloque[k] ^ flujo[k]);
+  return btoa(binario);
+}
+
+// Nunca lanza: devuelve null si el bloque no se puede descifrar.
+export function desofuscarBloque(cadena, semilla, largoBloque) {
+  try {
+    if (typeof cadena !== 'string') return null;
+    const total = 4 * Math.ceil(largoBloque / 3);
+    const relleno = (3 - (largoBloque % 3)) % 3;
+    const formato = new RegExp(`^[A-Za-z0-9+/]{${total - relleno}}={${relleno}}$`);
+    if (!formato.test(cadena)) return null;
+    const binario = atob(cadena);
+    if (binario.length !== largoBloque) return null;
+    const flujo = flujoBytes(semilla, largoBloque);
+    const bloque = new Uint8Array(largoBloque);
+    for (let k = 0; k < largoBloque; k++) bloque[k] = binario.charCodeAt(k) ^ flujo[k];
+    const largo = (bloque[0] << 8) | bloque[1];
+    if (largo > largoBloque - 2) return null;
+    return bloque.slice(2, 2 + largo);
+  } catch {
+    return null;
+  }
 }
 
 export function ofuscarFicha(texto, clave, n, indice, aleatorio = Math.random) {
   if (typeof texto !== 'string') throw new TypeError('La ficha debe ser una cadena');
   const bytes = new TextEncoder().encode(texto);
-  const largo = bytes.length;
-  if (largo > FICHA_MAX_BYTES) {
-    throw new RangeError(`La ficha ocupa ${largo} bytes (máximo ${FICHA_MAX_BYTES})`);
+  if (bytes.length > FICHA_MAX_BYTES) {
+    throw new RangeError(`La ficha ocupa ${bytes.length} bytes (máximo ${FICHA_MAX_BYTES})`);
   }
-  const bloque = new Uint8Array(FICHA_BLOQUE);
-  bloque[0] = largo >> 8;
-  bloque[1] = largo & 0xff;
-  bloque.set(bytes, 2);
-  for (let k = 2 + largo; k < FICHA_BLOQUE; k++) bloque[k] = Math.floor(aleatorio() * 256);
-  const flujo = flujoFicha(clave, n, indice);
-  let binario = '';
-  for (let k = 0; k < FICHA_BLOQUE; k++) binario += String.fromCharCode(bloque[k] ^ flujo[k]);
-  return btoa(binario);
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}`, FICHA_BLOQUE, aleatorio);
 }
 
 // Nunca lanza: devuelve null si la ficha no se puede descifrar.
 export function desofuscarFicha(ficha, clave, n, indice) {
   try {
-    if (typeof ficha !== 'string' || !RE_FICHA.test(ficha)) return null;
-    const binario = atob(ficha);
-    if (binario.length !== FICHA_BLOQUE) return null;
-    const flujo = flujoFicha(clave, n, indice);
-    const bloque = new Uint8Array(FICHA_BLOQUE);
-    for (let k = 0; k < FICHA_BLOQUE; k++) bloque[k] = binario.charCodeAt(k) ^ flujo[k];
-    const largo = (bloque[0] << 8) | bloque[1];
-    if (largo > FICHA_MAX_BYTES) return null;
-    return new TextDecoder('utf-8', { fatal: true }).decode(bloque.subarray(2, 2 + largo));
+    const bytes = desofuscarBloque(ficha, `${clave}|${n}|${indice}`, FICHA_BLOQUE);
+    if (bytes === null) return null;
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+// Headlines [D-103, D-104]
+export const TEXTO_BLOQUE = 512;
+export const TEXTO_MAX_BYTES = 510;
+export const NOTICIA_BLOQUE = 1024;
+export const NOTICIA_MAX_BYTES = 1021;
+
+const TIPOS_NOTICIA = ['fuente', 'prompt'];
+
+function cadenaNoVacia(x) {
+  return typeof x === 'string' && x.length > 0;
+}
+
+export function ofuscarTexto({ titular, entradilla } = {}, clave, n, indice, aleatorio = Math.random) {
+  if (!cadenaNoVacia(titular) || !cadenaNoVacia(entradilla) || titular.includes('\n')) {
+    throw new TypeError('Titular y entradilla deben ser cadenas no vacías y el titular no puede contener saltos de línea');
+  }
+  const bytes = new TextEncoder().encode(`${titular}\n${entradilla}`);
+  if (bytes.length > TEXTO_MAX_BYTES) {
+    throw new RangeError(`El texto ocupa ${bytes.length} bytes (máximo ${TEXTO_MAX_BYTES})`);
+  }
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|texto`, TEXTO_BLOQUE, aleatorio);
+}
+
+// Nunca lanza.
+export function desofuscarTexto(cadena, clave, n, indice) {
+  try {
+    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|texto`, TEXTO_BLOQUE);
+    if (bytes === null) return null;
+    const texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const corte = texto.indexOf('\n');
+    if (corte < 0) return null;
+    const titular = texto.slice(0, corte);
+    const entradilla = texto.slice(corte + 1);
+    if (titular === '' || entradilla === '') return null;
+    return { titular, entradilla };
+  } catch {
+    return null;
+  }
+}
+
+export function ofuscarNoticia({ tipo, texto } = {}, clave, n, indice, aleatorio = Math.random) {
+  const marca = TIPOS_NOTICIA.indexOf(tipo);
+  if (marca < 0 || !cadenaNoVacia(texto)) {
+    throw new TypeError('La ficha de la noticia necesita un tipo válido y un texto no vacío');
+  }
+  const cuerpo = new TextEncoder().encode(texto);
+  if (cuerpo.length > NOTICIA_MAX_BYTES) {
+    throw new RangeError(`La ficha ocupa ${cuerpo.length} bytes (máximo ${NOTICIA_MAX_BYTES})`);
+  }
+  const bytes = new Uint8Array(1 + cuerpo.length);
+  bytes[0] = marca;
+  bytes.set(cuerpo, 1);
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|noticia`, NOTICIA_BLOQUE, aleatorio);
+}
+
+// Nunca lanza.
+export function desofuscarNoticia(cadena, clave, n, indice) {
+  try {
+    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|noticia`, NOTICIA_BLOQUE);
+    if (bytes === null || bytes.length < 2) return null;
+    const tipo = TIPOS_NOTICIA[bytes[0]];
+    if (tipo === undefined) return null;
+    const texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(1));
+    return texto === '' ? null : { tipo, texto };
+  } catch {
+    return null;
+  }
+}
+
+export function urlFuenteValida(url) {
+  try {
+    if (typeof url !== 'string' || new TextEncoder().encode(url).length > NOTICIA_MAX_BYTES) return false;
+    const u = new URL(url);
+    if (u.protocol !== 'https:' || u.username !== '' || u.password !== '') return false;
+    if (!u.hostname.includes('.') || u.hostname.includes(':') || /^[\d.]+$/.test(u.hostname)) return false;
+    return u.href === url;
+  } catch {
+    return false;
+  }
+}
+
+export function medioDeUrl(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
   } catch {
     return null;
   }
