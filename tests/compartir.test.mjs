@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { CUADROS, rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from '../js/compartir.js';
 import { TEXTOS } from '../js/textos.js';
 
+const EJEMPLO_TITULARES =
+  'identifAI-it Headlines #12\n4/5 🟥🟩🟩🟩🟩\nStreak: 5\nhttps://usuario.github.io/identifAI-it/';
 const EJEMPLO =
-  'identifAI-it · Case #12\nMode: Bloodhound\n3/5 🟩🟩🟥🟩🟥\nStreak: 3\nhttps://usuario.github.io/identifAI-it/';
+  'identifAI-it Images #12\nMode: Bloodhound\n3/5 🟩🟩🟥🟩🟥\nStreak: 3\nhttps://usuario.github.io/identifAI-it/';
 
 test('33. cuadros', () => {
   assert.equal(cuadros('AAFAF'), '🟩🟩🟥🟩🟥');
@@ -39,6 +41,44 @@ test('35. el texto no revela nada de las pruebas', () => {
   const sinNombre = texto.replaceAll('identifAI-it', '');
   assert.equal(/\bIA\b|\bREAL\b|autentica|generada/i.test(sinNombre), false);
   assert.equal(/k3x9q2m7ab|[a-z0-9]{10}\.webp/.test(texto), false);
+});
+
+test('177. textoCompartir de Headlines coincide con el ejemplo literal, sin modo', () => {
+  const texto = textoCompartir({
+    plantilla: TEXTOS.compartir.plantilla_titulares,
+    n: 12,
+    resultados: 'FAAAA',
+    racha: 5,
+    url: 'https://usuario.github.io/identifAI-it/'
+  });
+  assert.equal(texto, EJEMPLO_TITULARES);
+  assert.equal(texto.split('\n').length, 4);
+  assert.equal(texto.includes('Mode'), false);
+  assert.equal(texto.includes('undefined'), false);
+  // un nombreModo sobrante no aparece en la plantilla sin {modo}
+  assert.equal(
+    textoCompartir({ plantilla: TEXTOS.compartir.plantilla_titulares, n: 12, nombreModo: 'Normal', resultados: 'FAAAA', racha: 5, url: 'https://usuario.github.io/identifAI-it/' }),
+    EJEMPLO_TITULARES
+  );
+});
+
+test('179. el texto compartido no revela titulares, dominios, prompts ni temas (los dos retos)', () => {
+  const conocidos = [
+    'Local council approves new bike lanes', 'A quiet lede about the budget vote.', 'example-news.com',
+    'https://example-news.com/story', 'a cat astronaut in watercolor, ultra detailed', 'Space cats'
+  ];
+  for (const [plantilla, nombreModo] of [
+    [TEXTOS.compartir.plantilla, 'Investigator'],
+    [TEXTOS.compartir.plantilla_titulares, undefined]
+  ]) {
+    for (const resultados of ['AAAAA', 'FFFFF', 'FAAFA']) {
+      const texto = textoCompartir({ plantilla, n: 3, nombreModo, resultados, racha: 2, url: 'https://u.github.io/identifAI-it/' });
+      const sinNombre = texto.replaceAll('identifAI-it', '');
+      assert.equal(/\bAI\b|\bIA\b|\bREAL\b|autentica|generada|⬛/i.test(sinNombre), false, texto);
+      for (const c of conocidos) assert.equal(texto.includes(c), false, c);
+      assert.equal(texto.includes('{'), false);
+    }
+  }
 });
 
 test('rellenar deja los marcadores sin valor', () => {
