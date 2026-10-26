@@ -32,3 +32,6 @@ Ya no existen importar-dataset.mjs ni generar-calendario.mjs (ni sus scripts de 
 - Si falta banco.json, importar.mjs lo crea vacío solo cuando casos/ y el calendario están vacíos; si no, se detiene con un aviso claro. validar avisa en vez de fallar con un error críptico.
 - Nunca borres imágenes de casos/ que ya aparezcan en días pasados. Nunca borres ni muevas nada de entrada/.
 - Tras cada lote: npm run importar -- --simular, revisión del plan con el usuario, npm run importar, npm run validar, y resume cuántos días e imágenes entraron, qué avisos hubo y hasta qué fecha llega el calendario.
+
+## Norma de contenido de las noticias (reto Headlines)
+- Las noticias de IA (type: ai) NO pueden nombrar personas, empresas ni instituciones reales: son ficticias y no deben poder confundirse con noticias de verdad ni difamar a nadie. El importador no puede detectarlo solo, así que antes de importar un lote de noticias revisa a mano cada titular, entradilla y prompt de IA y avisa al usuario de cualquier nombre propio dudoso. Las noticias reales conservan los nombres de la fuente original.

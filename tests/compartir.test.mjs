@@ -4,7 +4,7 @@ import { CUADROS, rellenar, cuadros, textoCompartir, urlDelJuego, compartir } fr
 import { TEXTOS } from '../js/textos.js';
 
 const EJEMPLO =
-  'identifAI-it · Caso nº 12\nModo: Perro de presa\n3/5 🟩🟩🟥🟩🟥\nRacha: 3\nhttps://usuario.github.io/identifAI-it/';
+  'identifAI-it · Case #12\nMode: Bloodhound\n3/5 🟩🟩🟥🟩🟥\nStreak: 3\nhttps://usuario.github.io/identifAI-it/';
 
 test('33. cuadros', () => {
   assert.equal(cuadros('AAFAF'), '🟩🟩🟥🟩🟥');
@@ -17,7 +17,7 @@ test('34. textoCompartir coincide con el ejemplo literal', () => {
   const texto = textoCompartir({
     plantilla: TEXTOS.compartir.plantilla,
     n: 12,
-    nombreModo: 'Perro de presa',
+    nombreModo: 'Bloodhound',
     resultados: 'AAFAF',
     racha: 3,
     url: 'https://usuario.github.io/identifAI-it/'

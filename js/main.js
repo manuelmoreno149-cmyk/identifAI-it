@@ -2,6 +2,7 @@
 import { TEXTOS } from './textos.js';
 import {
   fechaLocal,
+  formatearFecha,
   msHastaMedianoche,
   formatearCuentaAtras,
   casoDelDia,
@@ -196,7 +197,7 @@ function prepararModoPrueba() {
   const elegido = diaDePrueba(location.search, dias, fechaLocal(new Date()));
   fechaPrueba = elegido?.fecha ?? null;
   const aviso = $('aviso-previsualizacion');
-  aviso.textContent = rellenar(TEXTOS.avisos.previsualizacion, { fecha: hoy() });
+  aviso.textContent = rellenar(TEXTOS.avisos.previsualizacion, { fecha: formatearFecha(hoy()) });
   aviso.hidden = false;
   if (elegido && !$('selector-prueba')) crearSelectorPrueba(dias, elegido);
 }
@@ -771,7 +772,7 @@ function arrancar() {
   rellenarTextos();
   if (fechaFija) {
     const aviso = $('aviso-previsualizacion');
-    aviso.textContent = rellenar(TEXTOS.avisos.previsualizacion, { fecha: fechaFija });
+    aviso.textContent = rellenar(TEXTOS.avisos.previsualizacion, { fecha: formatearFecha(fechaFija) });
     aviso.hidden = false;
   }
   for (const radio of app.querySelectorAll('input[name="modo"]')) radio.checked = radio.value === estado.modo;

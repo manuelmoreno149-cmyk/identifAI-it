@@ -9,6 +9,7 @@ import {
   formatearCuentaAtras,
   validarCalendario,
   temaValido,
+  formatearFecha,
   casoDelDia,
   rutaPrueba,
   ofuscar,
@@ -30,7 +31,7 @@ import {
 const clave = ofuscar([0, 1, 1, 0, 1], 1, () => 0);
 
 function fichasDe(n) {
-  return [0, 1, 2, 3, 4].map((i) => ofuscarFicha(i % 2 ? `Prompt ${i}` : 'Fotografía real', clave, n, i, () => 0.5));
+  return [0, 1, 2, 3, 4].map((i) => ofuscarFicha(i % 2 ? `Prompt ${i}` : 'Real photograph', clave, n, i, () => 0.5));
 }
 
 function diaValido(n, fecha) {
@@ -104,7 +105,7 @@ test('8. casoDelDia devuelve null fuera de calendario o con fecha distinta', () 
   assert.equal(caso.pruebas.length, 5);
   assert.deepEqual(Object.keys(caso).sort(), ['clave', 'fecha', 'fichas', 'n', 'pruebas', 'tema']);
   caso.fichas.forEach((f, i) => assert.ok(f === cal.dias[1].fichas[i]));
-  assert.equal(desofuscarFicha(caso.fichas[0], clave, 2, 0), 'Fotografía real');
+  assert.equal(desofuscarFicha(caso.fichas[0], clave, 2, 0), 'Real photograph');
 });
 
 test('9. validarCalendario', () => {
@@ -181,12 +182,12 @@ test('9. validarCalendario', () => {
 });
 
 test('temaValido', () => {
-  assert.equal(temaValido('Mesa con comida'), true);
-  assert.equal(temaValido('Árboles'), true);
+  assert.equal(temaValido('Table with food'), true);
+  assert.equal(temaValido('Éclair'), true);
   assert.equal(temaValido('A'.repeat(30)), true);
   assert.equal(temaValido('A'.repeat(31)), false);
   assert.equal(temaValido(''), false);
-  assert.equal(temaValido('perros'), false);
+  assert.equal(temaValido('dogs'), false);
   assert.equal(temaValido(null), false);
 });
 
@@ -318,13 +319,13 @@ test('139. flujoFicha: 512 bytes deterministas y vector de regresión', () => {
   // Vector de regresión (4.3.1): cambiarlo invalida el calendario publicado.
   assert.deepEqual([...f.slice(0, 8)], [140, 64, 54, 92, 177, 170, 222, 108]);
   assert.equal(
-    ofuscarFicha('Fotografía real', CL, 1, 0, () => 0),
-    'jFBwM8XFuR5ZnUV94BNErwRuQJS2kY4Y8dkbgLBUUi1lyBB4U2ipzadweUOy+9giNc0e7LD1iSKfgLCHBcvemRFsOA2UtuVnVo7HYR9s/UeIt0TEEA08yCFQIC/o0FHwd5Z/VZsnLU1ytDF1WdtpO4+GqrNepMNz8yCJbtDSZQxMZ4OLXn+UwFLdtB7VsrSdGo6h8gbsG9sd/w8zY/6jP08HHd2N2ZCgIlFkQK8bIvCH3Q5FzcJkLJ4WYnL0j649Uc9VyZJzwB2oHL87rt60S/ibb3w/3OijhBHpJOpSC6Q4dr2yEVAZZOpln5PTnOlgEtxHVKmfSzQj/EuNlaSU/Qh+UL+h6GxX0EGEIGpc2F0WB9tnGpMRpTvLDP1mEvXk6czBidSa+01cuPCZdKmD2UunzLqKv+R5X4+k7knAhUyOaEEbGxYejkflSSidsswIATzr8vu52snzKNsWzkaOS/pfQS1TFGO9Bmwuhj4crIWU1CXMbx+uOuyx2l5pKgNo6uPG8sl9D3knqUzUNpmoXBsUV7Hax+3jUmPSvnrxqdd7ainaPefeOMU/JxJ+RWA7BcLTVujr+WWDpEA5PWlya+uceovdLGanddCUOXiI75psE8XcwAvlOFn25J/elFCuBrh2H2DL1ZTjOzCHBjekCdM9jqeyzlIKp5UufR0XTaU='
+    ofuscarFicha('Real photograph', CL, 1, 0, () => 0),
+    'jE9kOdDG/hxQlPK/5kFXug0CQJS2kY4Y8dkbgLBUUi1lyBB4U2ipzadweUOy+9giNc0e7LD1iSKfgLCHBcvemRFsOA2UtuVnVo7HYR9s/UeIt0TEEA08yCFQIC/o0FHwd5Z/VZsnLU1ytDF1WdtpO4+GqrNepMNz8yCJbtDSZQxMZ4OLXn+UwFLdtB7VsrSdGo6h8gbsG9sd/w8zY/6jP08HHd2N2ZCgIlFkQK8bIvCH3Q5FzcJkLJ4WYnL0j649Uc9VyZJzwB2oHL87rt60S/ibb3w/3OijhBHpJOpSC6Q4dr2yEVAZZOpln5PTnOlgEtxHVKmfSzQj/EuNlaSU/Qh+UL+h6GxX0EGEIGpc2F0WB9tnGpMRpTvLDP1mEvXk6czBidSa+01cuPCZdKmD2UunzLqKv+R5X4+k7knAhUyOaEEbGxYejkflSSidsswIATzr8vu52snzKNsWzkaOS/pfQS1TFGO9Bmwuhj4crIWU1CXMbx+uOuyx2l5pKgNo6uPG8sl9D3knqUzUNpmoXBsUV7Hax+3jUmPSvnrxqdd7ainaPefeOMU/JxJ+RWA7BcLTVujr+WWDpEA5PWlya+uceovdLGanddCUOXiI75psE8XcwAvlOFn25J/elFCuBrh2H2DL1ZTjOzCHBjekCdM9jqeyzlIKp5UufR0XTaU='
   );
 });
 
 test('139. ofuscarFicha y desofuscarFicha: ida y vuelta, formato y relleno', () => {
-  const textos = ['', 'Fotografía real', 'ñandú 🐕 «comillas»\nsegunda línea', 'é'.repeat(255)];
+  const textos = ['', 'Real photograph', 'ñandú 🐕 «comillas»\nsegunda línea', 'é'.repeat(255)];
   assert.equal(new TextEncoder().encode(textos[3]).length, 510);
   for (const t of textos) {
     const f = ofuscarFicha(t, CL, 4, 2);
@@ -376,6 +377,14 @@ test('139. desofuscarFicha devuelve null sin lanzar', () => {
 
 test('el calendario de ejemplo no contiene textos de fichas en claro', () => {
   const texto = JSON.stringify(calendarioValido());
-  assert.equal(/Fotograf|Prompt/.test(texto), false);
+  assert.equal(/photograph|Prompt/i.test(texto), false);
   assert.ok(calendarioValido().dias.every((d) => d.fichas.every((f) => f.length === 684)));
+});
+
+test('formatearFecha: inglés americano, determinista', () => {
+  assert.equal(formatearFecha('2026-11-03'), 'Nov 3, 2026');
+  assert.equal(formatearFecha('2026-01-31'), 'Jan 31, 2026');
+  assert.equal(formatearFecha('2026-12-09'), 'Dec 9, 2026');
+  assert.equal(formatearFecha('2026-13-01'), '2026-13-01');
+  assert.equal(formatearFecha('basura'), 'basura');
 });

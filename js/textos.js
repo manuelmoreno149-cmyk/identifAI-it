@@ -1,155 +1,155 @@
-// Textos del juego. Voz de novela negra, español de España, tuteo al jugador.
+// Textos del juego. Voz de novela negra, inglés americano (en-US), tuteo al jugador (you).
 // Las claves que llevan {x} son plantillas: las rellena el código que las usa.
 
 export const TEXTOS = {
   portada: {
     titulo: 'identifAI-it',
-    lema: 'Cinco pruebas, un solo intento: ¿auténtica o generada?',
-    elige_modo: 'Elige tu modo de investigación',
-    modo_investigador: 'Investigador',
+    lema: 'Five pieces of evidence. One shot. Real or AI?',
+    elige_modo: 'Choose your investigation mode',
+    modo_investigador: 'Investigator',
     modo_normal: 'Normal',
-    modo_perro: 'Perro de presa',
-    desc_investigador: 'Sin límite de tiempo',
-    desc_normal: '3 segundos de observación',
-    desc_perro: '1 segundo de observación',
-    boton_empezar: 'Empezar',
-    etiqueta_caso: 'Caso nº {n}',
-    tema: 'Caso del día: {tema}',
-    racha: 'Racha: {racha}',
-    enlace_creditos: 'Créditos'
+    modo_perro: 'Bloodhound',
+    desc_investigador: 'No time limit',
+    desc_normal: '3 seconds to examine',
+    desc_perro: '1 second to examine',
+    boton_empezar: 'Start',
+    etiqueta_caso: 'Case #{n}',
+    tema: 'Case of the day: {tema}',
+    racha: 'Streak: {racha}',
+    enlace_creditos: 'Credits'
   },
 
   como_jugar: {
-    titulo: 'Cómo jugar',
+    titulo: 'How to play',
     pasos: [
-      'Cada día hay un caso con cinco pruebas, las mismas para todos los detectives.',
-      'Examina cada imagen y decide si es REAL o si la ha generado una IA.',
-      'Si se agota el tiempo de observación, la prueba se sella y responde sin prisa.',
-      'Solo hay un intento al día, sea cual sea el modo. Elige bien.'
+      'Each day brings one case: five pieces of evidence, same for everyone.',
+      'Study each image and call it: REAL or AI.',
+      'Time runs out? The evidence gets sealed. Answer at your leisure.',
+      'One attempt a day, whatever the mode. Choose wisely.'
     ]
   },
 
   cargando: {
-    texto: 'Preparando las pruebas del caso...'
+    texto: 'Preparing the case evidence...'
   },
 
   cuenta_atras: {
-    aviso: 'Prepara la mirada. La primera prueba llega en:'
+    aviso: 'Steady your eyes. The first piece of evidence arrives in:'
   },
 
   partida: {
-    caso_del_dia: 'Caso del día: {tema}',
-    etiqueta_prueba: 'Prueba {i}/5',
-    marcador: 'Aciertos: {aciertos}',
-    alt_prueba: 'Prueba {i} de 5',
+    caso_del_dia: 'Case of the day: {tema}',
+    etiqueta_prueba: 'Evidence {i}/5',
+    marcador: 'Correct: {aciertos}',
+    alt_prueba: 'Evidence {i} of 5',
     boton_autentica: 'REAL',
-    boton_generada: 'IA',
+    boton_generada: 'AI',
     sello_autentica: 'REAL',
-    sello_generada: 'IA',
-    quedan: 'Quedan {s} s',
-    boton_siguiente: 'Siguiente',
-    boton_ver_resultado: 'Ver resultado',
-    sobre_texto: 'PRUEBA SELLADA',
-    sobre_anuncio: 'Tiempo de observación agotado. La prueba está sellada: responde cuando quieras.'
+    sello_generada: 'AI',
+    quedan: '{s} s left',
+    boton_siguiente: 'Next',
+    boton_ver_resultado: 'See result',
+    sobre_texto: 'SEALED EVIDENCE',
+    sobre_anuncio: 'Observation time is up. The evidence is sealed: answer whenever you like.'
   },
 
   veredictos: {
     acierto: [
-      'Buen ojo, detective. Esta prueba queda bien archivada.',
-      'Eso es. La prueba no pudo engañarte.',
-      'Certero. Anótalo en el expediente.',
-      'Lo has clavado. Nada se escapa a tu mirada.'
+      'Good eye, detective. This one goes in the file.',
+      'Right. The evidence didn\'t fool you.',
+      'Dead on. Log it in the case file.',
+      'Nailed it. Nothing gets past you.'
     ],
     fallo: [
-      'Mal dato. La prueba te ha engañado.',
-      'Te has equivocado. Anótalo en el expediente.',
-      'Error de detective. Toca revisar la coartada.',
-      'La prueba no era lo que parecía. Sigue adelante.'
+      'Bad call. The evidence played you.',
+      'Wrong. Log it in the file and keep moving.',
+      'Rookie mistake. Time to check the alibi again.',
+      'It wasn\'t what it seemed. Keep going.'
     ]
   },
 
   confesion: {
-    titulo: 'Confesión del sospechoso',
-    leer_entera: 'Leer entera',
-    no_disponible: 'La confesión se ha traspapelado.'
+    titulo: 'The suspect\'s confession',
+    leer_entera: 'Read full confession',
+    no_disponible: 'The confession got lost in the paperwork. Convenient.'
   },
 
   ficha: {
-    cerrar: 'Cerrar'
+    cerrar: 'Close'
   },
 
   fichas: {
-    autentica: 'Fotografía real',
-    sin_prompt: 'El sospechoso se niega a confesar.'
+    autentica: 'Real photograph',
+    sin_prompt: 'The suspect refuses to confess. Make of that what you will.'
   },
 
   final: {
-    alt_prueba: 'Prueba {n}',
+    alt_prueba: 'Evidence {n}',
     mensajes: [
-      'La IA te tiene dominado. Ningún acierto. El caso queda archivado sin pruebas a tu favor.',
-      'Un solo acierto. Demasiadas sombras para un detective. Mañana, con la vista afinada.',
-      'Dos aciertos. Te moviste a tientas en la niebla. Afila la mirada para el próximo caso.',
-      'Tres aciertos. Buen trabajo, aunque el sospechoso todavía guarda algún secreto.',
-      'Cuatro aciertos. Casi perfecto: una sola prueba se te escapó entre los dedos.',
-      'Cinco de cinco. Ni la IA te engaña. Caso cerrado y expediente impecable.'
+      'The AI has you beat. Zero hits. The case goes cold in the archive.',
+      'One hit. Too many shadows for one detective. Come back tomorrow with sharper eyes.',
+      'Two hits. You fumbled through the fog. Sharpen your eye for the next case.',
+      'Three hits. Good work, though the suspect still has a secret or two.',
+      'Four hits. Almost clean: one piece of evidence slipped through your fingers.',
+      'Five for five. Not even the AI fooled you. Case closed, file spotless.'
     ],
     aciertos: '{aciertos}/5',
-    racha: 'Racha: {racha}',
-    mejor_racha: 'Mejor racha: {racha}',
-    era: 'Era: {sello}',
-    cuadros_etiqueta: '{aciertos} aciertos de 5',
-    estado_prueba: 'Prueba {i}: {estado}',
+    racha: 'Streak: {racha}',
+    mejor_racha: 'Best streak: {racha}',
+    era: 'It was: {sello}',
+    cuadros_etiqueta: '{aciertos} out of 5 correct',
+    estado_prueba: 'Evidence {i}: {estado}',
     estados: {
-      acierto: 'acierto',
-      fallo: 'fallo'
+      acierto: 'correct',
+      fallo: 'wrong'
     }
   },
 
   ya_jugado: {
-    titulo: 'Caso archivado',
-    texto: 'Hoy ya has cerrado tu expediente. Vuelve mañana, el crimen no descansa.',
-    proximo: 'Próximo caso en {tiempo}',
-    modo: 'Modo: {modo}'
+    titulo: 'Case closed',
+    texto: 'You\'ve already filed today\'s case. Come back tomorrow. Crime never sleeps.',
+    proximo: 'Next case in {tiempo}',
+    modo: 'Mode: {modo}'
   },
 
   sin_casos: {
-    texto: 'No hay caso para hoy. Vuelve cuando el expediente tenga pruebas.'
+    texto: 'No case today. Come back when the file has evidence.'
   },
 
   errores: {
-    calendario: 'No se pudo cargar el calendario de casos. Revisa tu conexión.',
-    imagenes: 'No se pudieron preparar las pruebas. Inténtalo de nuevo.',
-    boton_reintentar: 'Reintentar'
+    calendario: 'The case calendar wouldn\'t load. Check your connection.',
+    imagenes: 'The evidence wouldn\'t load. Try again.',
+    boton_reintentar: 'Retry'
   },
 
   avisos: {
-    sin_guardar: 'El archivo de este equipo está sellado. Tu intento de hoy no quedará registrado.',
-    otra_pestana: 'Este caso está abierto en otra pestaña. Termina allí el examen de las pruebas.',
-    previsualizacion: 'Previsualización del {fecha}: no se guarda nada.'
+    sin_guardar: 'This device\'s file is sealed. Today\'s attempt won\'t be recorded.',
+    otra_pestana: 'This case is open in another tab. Finish the examination there.',
+    previsualizacion: 'Preview of {fecha}: nothing gets saved.'
   },
 
   prueba: {
-    etiqueta: 'Día de prueba',
-    opcion: 'Día {n}: {tema}',
-    boton: 'Abrir este día'
+    etiqueta: 'Test day',
+    opcion: 'Day {n}: {tema}',
+    boton: 'Open this day'
   },
 
   compartir: {
-    boton: 'Compartir',
-    copiado: 'Copiado al portapapeles',
-    manual: 'Copia este texto:',
-    plantilla: 'identifAI-it · Caso nº {caso}\nModo: {modo}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
+    boton: 'Share',
+    copiado: 'Copied to clipboard',
+    manual: 'Copy this text:',
+    plantilla: 'identifAI-it · Case #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
   },
 
   creditos: {
-    titulo_pagina: 'Créditos · identifAI-it',
-    titulo: 'Créditos',
-    intro: 'Tipografías libres y fotografías de las fuentes que se citan abajo.',
-    tipografias: 'Tipografías',
-    imagenes: 'Imágenes',
-    imagenes_intro: 'Las pruebas proceden de estas fuentes. La lista no indica qué imagen viene de cada una.',
-    sin_imagenes: 'Todavía no hay imágenes publicadas.',
-    ver_licencia: 'licencia',
-    volver: 'Volver a la portada'
+    titulo_pagina: 'Credits · identifAI-it',
+    titulo: 'Credits',
+    intro: 'Free fonts and the photo sources cited below.',
+    tipografias: 'Fonts',
+    imagenes: 'Images',
+    imagenes_intro: 'The evidence comes from these sources. The list doesn\'t say which image came from where.',
+    sin_imagenes: 'No images published yet.',
+    ver_licencia: 'license',
+    volver: 'Back to the front page'
   }
 };

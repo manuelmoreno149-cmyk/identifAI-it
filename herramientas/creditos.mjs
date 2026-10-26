@@ -28,7 +28,7 @@ export function parejasCreditos(banco) {
     vistas.set(`${fuente}\u0000${licencia}`, { fuente, licencia });
   }
   return [...vistas.values()].sort(
-    (a, b) => a.fuente.localeCompare(b.fuente, 'es') || a.licencia.localeCompare(b.licencia, 'es')
+    (a, b) => a.fuente.localeCompare(b.fuente, 'en-US') || a.licencia.localeCompare(b.licencia, 'en-US')
   );
 }
 
@@ -47,7 +47,7 @@ ${parejas.map((p) => `      <li>${e(p.fuente)} · ${e(p.licencia)}</li>`).join('
       : `    <p>${e(c.sin_imagenes)}</p>`;
 
   return `<!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">

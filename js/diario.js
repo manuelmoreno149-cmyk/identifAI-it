@@ -62,6 +62,16 @@ export function diasEntre(desdeISO, hastaISO) {
   return Math.round((utcDe(hastaISO) - utcDe(desdeISO)) / DIA_MS);
 }
 
+const MESES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// '2026-11-03' -> 'Nov 3, 2026'. Pura y determinista: no usa el locale del navegador.
+export function formatearFecha(fechaISO) {
+  if (typeof fechaISO !== 'string' || !RE_FECHA.test(fechaISO)) return String(fechaISO);
+  const [a, m, d] = fechaISO.split('-').map(Number);
+  if (m < 1 || m > 12) return fechaISO;
+  return `${MESES[m - 1]} ${d}, ${a}`;
+}
+
 export function numeroCaso(fechaISO, lanzamientoISO) {
   return diasEntre(lanzamientoISO, fechaISO) + 1;
 }
@@ -98,7 +108,7 @@ export function temaValido(tema) {
   if (tema !== tema.trim()) return false;
   if (/[\u0000-\u001f\u007f]/.test(tema)) return false;
   if (/[{}]/.test(tema)) return false;
-  return tema[0] === tema[0].toLocaleUpperCase('es');
+  return tema[0] === tema[0].toLocaleUpperCase('en-US');
 }
 
 export function validarCalendario(obj) {

@@ -239,7 +239,7 @@ async function main() {
     } else {
       const decodificador = new TextDecoder('utf-8', { fatal: true });
       for (const dia of plan.nuevos) {
-        const r = { con: 0, sin: 0, recortadas: 0 };
+        const r = { con: 0, sin: 0, recortadas: 0, sinIngles: 0 };
         for (const img of dia.imagenes) {
           if (img.tipo === 'autentica') {
             textosFicha.set(img.ruta, autentica);
@@ -274,13 +274,15 @@ async function main() {
           }
           textosFicha.set(img.ruta, n.texto);
           r.con++;
+          if (img.sinIngles) r.sinIngles++; // [D-93] se usó el .txt en español
         }
         resumenFichas.set(dia.n, r);
       }
     }
   }
   const sumaFichas = (campo) => [...resumenFichas.values()].reduce((s, r) => s + r[campo], 0);
-  const frase = (r) => `${r.con} con prompt, ${r.sin} sin prompt, ${r.recortadas} recortada${r.recortadas === 1 ? '' : 's'}`;
+  const frase = (r) =>
+    `${r.con} con prompt, ${r.sin} sin prompt, ${r.sinIngles} sin versión en inglés, ${r.recortadas} recortada${r.recortadas === 1 ? '' : 's'}`;
 
   // 6. Imágenes nuevas
   const hashes = banco.imagenes.map((i) => ({ ruta: i.original, dhash: i.dhash }));
@@ -420,7 +422,7 @@ async function main() {
   console.log(reimportar ? 'Días reimportados:' : 'Días añadidos:');
   for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema}`);
   console.log(`Recortes manuales (lote.json): ${manuales.length}. El resto usa el recorte por atención.`);
-  console.log(`Fichas: ${frase({ con: sumaFichas('con'), sin: sumaFichas('sin'), recortadas: sumaFichas('recortadas') })}.`);
+  console.log(`Fichas: ${frase({ con: sumaFichas('con'), sin: sumaFichas('sin'), recortadas: sumaFichas('recortadas'), sinIngles: sumaFichas('sinIngles') })}.`);
   for (const a of avisos) console.log(`AVISO: ${a}`);
   const gen = nuevoCalendario.dias.map((d) => d.pruebas.reduce((s, _, i) => s + desofuscar(d.clave, d.n, i), 0));
   for (const a of avisosMezcla(gen)) console.log(a);
@@ -428,7 +430,7 @@ async function main() {
   for (const d of nuevoCalendario.dias) for (const id of d.pruebas) tamanos.set(id, statSync(join(RUTA_CASOS, `${id}.webp`)).size);
   const peso = mensajePeso(analizarPesos({ dias: nuevoCalendario.dias, tamanos, desofuscar }));
   if (peso) console.log(peso);
-  console.log('Los originales y los .txt siguen en entrada/temas/; el importador no los mueve ni los borra. Puedes archivarlos a mano.');
+  console.log('Los originales y los .txt (y .en.txt) siguen en entrada/temas/; el importador no los mueve ni los borra. Puedes archivarlos a mano.');
   if (reimportar) {
     console.log(
       `Reimportados ${diasNuevos.length} días; borradas ${borradas} imágenes antiguas de casos/. Copia del banco anterior en herramientas/banco.anterior.json.`

@@ -7,9 +7,9 @@ import { contienePalabraProhibida } from '../herramientas/temas.mjs';
 const banco = {
   version: 2,
   imagenes: [
-    { id: 'k3x9q2m7ab', tipo: 'generada', fuente: 'Creación propia (Gemini)', licencia: 'Términos de uso de Gemini' },
-    { id: 'p0w8e4r1tz', tipo: 'autentica', fuente: 'Unsplash', licencia: 'Licencia de Unsplash' },
-    { id: 'zzzzzzzzzz', tipo: 'autentica', fuente: 'Unsplash', licencia: 'Licencia de Unsplash' }
+    { id: 'k3x9q2m7ab', tipo: 'generada', fuente: 'Own creation (Gemini)', licencia: 'Gemini Terms of Use' },
+    { id: 'p0w8e4r1tz', tipo: 'autentica', fuente: 'Unsplash', licencia: 'Unsplash License' },
+    { id: 'zzzzzzzzzz', tipo: 'autentica', fuente: 'Unsplash', licencia: 'Unsplash License' }
   ]
 };
 
@@ -19,8 +19,8 @@ test('77 tipografías y sin imágenes', () => {
     { familia: 'Special Elite', licencia: 'Apache License 2.0', archivo: 'fonts/LICENSE-special-elite.txt' }
   ]);
   const html = creditosParaBanco({ version: 2, imagenes: [] });
-  assert.ok(html.includes('<li>Oswald · SIL Open Font License 1.1 (<a href="fonts/OFL-oswald.txt">licencia</a>)</li>'));
-  assert.ok(html.includes('<li>Special Elite · Apache License 2.0 (<a href="fonts/LICENSE-special-elite.txt">licencia</a>)</li>'));
+  assert.ok(html.includes(`<li>Oswald · SIL Open Font License 1.1 (<a href="fonts/OFL-oswald.txt">${TEXTOS.creditos.ver_licencia}</a>)</li>`));
+  assert.ok(html.includes(`<li>Special Elite · Apache License 2.0 (<a href="fonts/LICENSE-special-elite.txt">${TEXTOS.creditos.ver_licencia}</a>)</li>`));
   assert.ok(!html.includes('OFL-special-elite'));
   assert.ok(html.includes(`<p>${TEXTOS.creditos.sin_imagenes}</p>`));
   assert.ok(!html.includes('creditos-lista'));
@@ -35,11 +35,11 @@ test('78 escaparHtml', () => {
 
 test('79 parejasCreditos', () => {
   assert.deepEqual(parejasCreditos(banco), [
-    { fuente: 'Creación propia (Gemini)', licencia: 'Términos de uso de Gemini' },
-    { fuente: 'Unsplash', licencia: 'Licencia de Unsplash' }
+    { fuente: 'Own creation (Gemini)', licencia: 'Gemini Terms of Use' },
+    { fuente: 'Unsplash', licencia: 'Unsplash License' }
   ]);
   const html = creditosParaBanco(banco);
-  assert.ok(html.includes('<li>Creación propia (Gemini) · Términos de uso de Gemini</li>\n      <li>Unsplash · Licencia de Unsplash</li>'));
+  assert.ok(html.includes('<li>Own creation (Gemini) · Gemini Terms of Use</li>\n      <li>Unsplash · Unsplash License</li>'));
 });
 
 test('80 determinista, LF y un salto final', () => {

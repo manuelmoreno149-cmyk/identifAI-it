@@ -246,7 +246,7 @@ for (const f of ['index.html', 'creditos.html', ...recorrer('css'), ...recorrer(
 if (existsSync(p('creditos.html')) && existsSync(p('index.html'))) {
   const c = leer('creditos.html');
   const cspIndex = leer('index.html').match(/<meta http-equiv="Content-Security-Policy"[^>]*>/)?.[0];
-  if (!/<html lang="es">/.test(c)) error('creditos.html: falta <html lang="es">.');
+  if (!/<html lang="en">/.test(c)) error('creditos.html: falta <html lang="en">.');
   if (!/<title>[^<]+<\/title>/.test(c)) error('creditos.html: falta <title>.');
   if (!/<meta name="viewport"/.test(c)) error('creditos.html: falta el viewport.');
   if (!cspIndex || !c.includes(cspIndex)) error('creditos.html: la CSP no es idéntica a la de index.html.');

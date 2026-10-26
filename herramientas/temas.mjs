@@ -7,6 +7,7 @@ export const UMBRAL_PESO = 0.25;
 const RE_CARPETA = /^(\d{2,})-([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)$/u;
 const EXT_IMAGEN = /\.(jpe?g|png|webp)$/i;
 const EXT_FICHA = /\.txt$/i;
+const EXT_FICHA_EN = /\.en\.txt$/i; // [D-93] X.en.txt es el prompt en inglés de X.jpg; X.txt es el original en español.
 
 // ---------- Fechas (Date.UTC, sin importar nada) ----------
 
@@ -51,12 +52,12 @@ export function analizarCarpeta(nombre) {
   const nfc = String(nombre).normalize('NFC');
   const m = RE_CARPETA.exec(nfc);
   if (!m) {
-    throw new Error(`El nombre de carpeta "${nombre}" no cumple el patrón NN-nombre-del-tema (por ejemplo, 02-perros).`);
+    throw new Error(`El nombre de carpeta "${nombre}" no cumple el patrón NN-nombre-del-tema (por ejemplo, 02-dogs).`);
   }
   const n = parseInt(m[1], 10);
   if (n < 1) throw new Error(`El número de la carpeta "${nombre}" debe ser 01 o mayor.`);
   const texto = m[2].replace(/-/g, ' ');
-  const tema = texto.charAt(0).toLocaleUpperCase('es') + texto.slice(1);
+  const tema = texto.charAt(0).toLocaleUpperCase('en-US') + texto.slice(1);
   return { n, tema };
 }
 
@@ -67,10 +68,11 @@ export function temaDeCarpeta(nombre) {
 // ---------- Fuentes ----------
 
 export const FUENTES = [
-  { tipo: 'generada', patron: /^gemini[_ -]/i, fuente: 'Creación propia (Gemini)', licencia: 'Términos de uso de Gemini' },
-  { tipo: 'generada', patron: /^chatgpt[_ -]/i, fuente: 'Creación propia (ChatGPT)', licencia: 'Términos de uso de OpenAI' },
-  { tipo: 'autentica', patron: /-unsplash\.[a-z]+$/i, fuente: 'Unsplash', licencia: 'Licencia de Unsplash' },
-  { tipo: 'autentica', patron: /^pexels-/i, fuente: 'Pexels', licencia: 'Licencia de Pexels' }
+  // [D-93] Fuente y licencia se publican en creditos.html, que está en inglés.
+  { tipo: 'generada', patron: /^gemini[_ -]/i, fuente: 'Own creation (Gemini)', licencia: 'Gemini Terms of Use' },
+  { tipo: 'generada', patron: /^chatgpt[_ -]/i, fuente: 'Own creation (ChatGPT)', licencia: 'OpenAI Terms of Use' },
+  { tipo: 'autentica', patron: /-unsplash\.[a-z]+$/i, fuente: 'Unsplash', licencia: 'Unsplash License' },
+  { tipo: 'autentica', patron: /^pexels-/i, fuente: 'Pexels', licencia: 'Pexels License' }
 ];
 
 export function fuenteDeArchivo(nombre, tipo) {
@@ -178,7 +180,11 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     };
     const sIa = separar(ia, 'ia');
     const sReal = separar(real, 'real');
-    const baseDe = (archivo) => archivo.normalize('NFC').replace(/\.[^.]+$/, '');
+    const baseDe = (archivo) =>
+      archivo
+        .normalize('NFC')
+        .replace(EXT_FICHA_EN, '')
+        .replace(/\.[^.]+$/, '');
     const porBase = new Map();
     for (const archivo of sIa.imgs) {
       const b = baseDe(archivo);
@@ -190,10 +196,13 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
         porBase.set(b, archivo);
       }
     }
+    // [D-93] X.en.txt (inglés) y X.txt (español, original) pertenecen a la misma imagen X.
     const fichaDe = new Map();
+    const fichaEnDe = new Map();
     for (const t of sIa.txts) {
       const b = baseDe(t);
-      if (porBase.has(b)) fichaDe.set(b, t);
+      const mapa = EXT_FICHA_EN.test(t) ? fichaEnDe : fichaDe;
+      if (porBase.has(b)) mapa.set(b, t);
       else avisos.push(`${nom}/ia/${t} no tiene imagen con ese nombre base; se ignora.`);
     }
     for (const t of sReal.txts) {
@@ -205,15 +214,21 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
         try {
           const { fuente, licencia } = fuenteDeArchivo(ruta, tipo);
           let ficha = null;
+          let sinIngles = false;
           if (tipo === 'generada') {
             const b = baseDe(archivo);
-            if (fichaDe.has(b) && porBase.get(b) === archivo) {
+            const propia = porBase.get(b) === archivo;
+            if (propia && fichaEnDe.has(b)) {
+              ficha = `${nom}/ia/${fichaEnDe.get(b)}`;
+            } else if (propia && fichaDe.has(b)) {
               ficha = `${nom}/ia/${fichaDe.get(b)}`;
+              sinIngles = true;
+              avisos.push(`${ruta}: falta la versión en inglés (${b}.en.txt); se usa el .txt original.`);
             } else {
-              avisos.push(`${ruta} no tiene ficha (${b}.txt); su confesión será la de «sin confesión».`);
+              avisos.push(`${ruta} no tiene ficha (${b}.en.txt ni ${b}.txt); su confesión será la de «sin confesión».`);
             }
           }
-          imagenes.push({ ruta, tipo, fuente, licencia, ficha });
+          imagenes.push({ ruta, tipo, fuente, licencia, ficha, sinIngles });
         } catch (e) {
           errores.push(e.message);
         }
@@ -297,7 +312,7 @@ export function analizarLote(lote, rutasNuevas, rutasOmitidas = []) {
       resultado.avisos.push(`lote.json: "${clave}" es de un día ya importado; su recorte solo se aplica con --reimportar.`);
     } else {
       resultado.errores.push(
-        `lote.json: no existe la imagen "${clave}" en entrada/temas/ (usa la ruta relativa con /, por ejemplo "04-gente-bebiendo/real/foto.jpg").`
+        `lote.json: no existe la imagen "${clave}" en entrada/temas/ (usa la ruta relativa con /, por ejemplo "04-people-drinking/real/foto.jpg").`
       );
     }
   }
@@ -476,4 +491,4 @@ export function analizarPruebasAbiertas(codigo) {
   return m.length === 1 ? m[0][1] === 'true' : null;
 }
 
-export { EXT_IMAGEN, EXT_FICHA };
+export { EXT_IMAGEN, EXT_FICHA, EXT_FICHA_EN };

@@ -18,7 +18,7 @@ import { ofuscar, ofuscarFicha } from '../js/diario.js';
 
 const VERDADES = [0, 1, 1, 0, 1];
 const CLAVE = ofuscar(VERDADES, 3, () => 0.3);
-const TEXTOS_FICHA = ['Fotografía real', 'Un perro astronauta', 'Un gato en la niebla', 'Fotografía real', 'ñandú 🐕'];
+const TEXTOS_FICHA = ['Real photograph', 'An astronaut dog', 'A cat in the fog', 'Real photograph', 'ñandú 🐕'];
 const FICHAS = TEXTOS_FICHA.map((t, i) => ofuscarFicha(t, CLAVE, 3, i, () => 0.25));
 const CASO = {
   n: 3,
