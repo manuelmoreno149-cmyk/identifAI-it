@@ -12,7 +12,8 @@
     "validar": "node herramientas/validar.mjs",
     "importar": "node herramientas/importar.mjs",
     "creditos": "node herramientas/creditos.mjs",
-    "lanzamiento": "node herramientas/lanzamiento.mjs"
+    "lanzamiento": "node herramientas/lanzamiento.mjs",
+    "afirmaciones": "node herramientas/importar-afirmaciones.mjs"
   },
   "devDependencies": {
     "sharp": "^0.33.5"
