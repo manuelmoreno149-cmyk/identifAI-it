@@ -42,12 +42,12 @@ export function pruebaActiva(search, abiertas) {
   return new URLSearchParams(search).get('prueba') === '1';
 }
 
-// Unión de los días del calendario y de todos los meses de titulares [D-117].
+// Unión de los días del calendario y de todos los meses de afirmaciones [D-117].
 // Solo n y los dos temas: nunca pruebas, clave, textos ni fichas.
 export function diasDePrueba(calendario, meses) {
   const porN = new Map();
   const poner = (n, campo, tema) => {
-    if (!porN.has(n)) porN.set(n, { n, temaImagenes: null, temaTitulares: null });
+    if (!porN.has(n)) porN.set(n, { n, temaImagenes: null, temaAfirmaciones: null });
     porN.get(n)[campo] = tema;
   };
   if (calendario && typeof calendario === 'object' && Array.isArray(calendario.dias)) {
@@ -59,11 +59,11 @@ export function diasDePrueba(calendario, meses) {
     const lanzamiento = calendario?.lanzamiento ?? null;
     const vistos = new Set();
     for (const el of meses) {
-      if (!validarTitulares(el, el?.mes)) continue;
+      if (!validarAfirmaciones(el, el?.mes)) continue;
       for (const d of el.dias) {
         if (vistos.has(d.n) || mesDeNumero(lanzamiento, d.n) !== el.mes) continue;
         vistos.add(d.n);
-        poner(d.n, 'temaTitulares', d.tema);
+        poner(d.n, 'temaAfirmaciones', d.tema);
       }
     }
   }
@@ -307,98 +307,72 @@ export function desofuscarFicha(ficha, clave, n, indice) {
   }
 }
 
-// Headlines [D-103, D-104]
-export const TEXTO_BLOQUE = 512;
-export const TEXTO_MAX_BYTES = 510;
-export const NOTICIA_BLOQUE = 1024;
-export const NOTICIA_MAX_BYTES = 1021;
-
-const TIPOS_NOTICIA = ['fuente', 'prompt'];
+// Afirmaciones y aclaraciones de Fact or Fake [D-124]
+export const AFIRMACION_BLOQUE = 512;
+export const AFIRMACION_MAX_BYTES = 510;
+export const ACLARACION_BLOQUE = 512;
+export const ACLARACION_MAX_BYTES = 510;
+export const DETALLES_MAX = 3;
 
 function cadenaNoVacia(x) {
   return typeof x === 'string' && x.length > 0;
 }
 
-export function ofuscarTexto({ titular, entradilla } = {}, clave, n, indice, aleatorio = Math.random) {
-  if (!cadenaNoVacia(titular) || !cadenaNoVacia(entradilla) || titular.includes('\n')) {
-    throw new TypeError('Titular y entradilla deben ser cadenas no vacías y el titular no puede contener saltos de línea');
+export function ofuscarAfirmacion(texto, clave, n, indice, aleatorio = Math.random) {
+  if (!cadenaNoVacia(texto) || texto.includes('\n')) {
+    throw new TypeError('La afirmación debe ser una cadena no vacía sin saltos de línea');
   }
-  const bytes = new TextEncoder().encode(`${titular}\n${entradilla}`);
-  if (bytes.length > TEXTO_MAX_BYTES) {
-    throw new RangeError(`El texto ocupa ${bytes.length} bytes (máximo ${TEXTO_MAX_BYTES})`);
+  const bytes = new TextEncoder().encode(texto);
+  if (bytes.length > AFIRMACION_MAX_BYTES) {
+    throw new RangeError(`La afirmación ocupa ${bytes.length} bytes (máximo ${AFIRMACION_MAX_BYTES})`);
   }
-  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|texto`, TEXTO_BLOQUE, aleatorio);
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|afirmacion`, AFIRMACION_BLOQUE, aleatorio);
 }
 
 // Nunca lanza.
-export function desofuscarTexto(cadena, clave, n, indice) {
+export function desofuscarAfirmacion(cadena, clave, n, indice) {
   try {
-    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|texto`, TEXTO_BLOQUE);
+    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|afirmacion`, AFIRMACION_BLOQUE);
     if (bytes === null) return null;
     const texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    const corte = texto.indexOf('\n');
-    if (corte < 0) return null;
-    const titular = texto.slice(0, corte);
-    const entradilla = texto.slice(corte + 1);
-    if (titular === '' || entradilla === '') return null;
-    return { titular, entradilla };
+    return texto === '' || texto.includes('\n') ? null : texto;
   } catch {
     return null;
   }
 }
 
-export function ofuscarNoticia({ tipo, texto } = {}, clave, n, indice, aleatorio = Math.random) {
-  const marca = TIPOS_NOTICIA.indexOf(tipo);
-  if (marca < 0 || !cadenaNoVacia(texto)) {
-    throw new TypeError('La ficha de la noticia necesita un tipo válido y un texto no vacío');
+export function ofuscarAclaracion({ aclaracion, detalles = [] } = {}, clave, n, indice, aleatorio = Math.random) {
+  if (
+    !cadenaNoVacia(aclaracion) ||
+    !Array.isArray(detalles) ||
+    detalles.length > DETALLES_MAX ||
+    ![aclaracion, ...detalles].every((t) => cadenaNoVacia(t) && !t.includes('\n'))
+  ) {
+    throw new TypeError(`La aclaración y hasta ${DETALLES_MAX} detalles deben ser cadenas no vacías sin saltos de línea`);
   }
-  const cuerpo = new TextEncoder().encode(texto);
-  if (cuerpo.length > NOTICIA_MAX_BYTES) {
-    throw new RangeError(`La ficha ocupa ${cuerpo.length} bytes (máximo ${NOTICIA_MAX_BYTES})`);
+  const bytes = new TextEncoder().encode([aclaracion, ...detalles].join('\n'));
+  if (bytes.length > ACLARACION_MAX_BYTES) {
+    throw new RangeError(`La aclaración ocupa ${bytes.length} bytes (máximo ${ACLARACION_MAX_BYTES})`);
   }
-  const bytes = new Uint8Array(1 + cuerpo.length);
-  bytes[0] = marca;
-  bytes.set(cuerpo, 1);
-  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|noticia`, NOTICIA_BLOQUE, aleatorio);
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|aclaracion`, ACLARACION_BLOQUE, aleatorio);
 }
 
 // Nunca lanza.
-export function desofuscarNoticia(cadena, clave, n, indice) {
+export function desofuscarAclaracion(cadena, clave, n, indice) {
   try {
-    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|noticia`, NOTICIA_BLOQUE);
-    if (bytes === null || bytes.length < 2) return null;
-    const tipo = TIPOS_NOTICIA[bytes[0]];
-    if (tipo === undefined) return null;
-    const texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(1));
-    return texto === '' ? null : { tipo, texto };
+    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|aclaracion`, ACLARACION_BLOQUE);
+    if (bytes === null) return null;
+    const partes = new TextDecoder('utf-8', { fatal: true }).decode(bytes).split('\n');
+    if (partes.length > DETALLES_MAX + 1 || partes.some((p) => p === '')) return null;
+    return { aclaracion: partes[0], detalles: partes.slice(1) };
   } catch {
     return null;
   }
 }
 
-export function urlFuenteValida(url) {
-  try {
-    if (typeof url !== 'string' || new TextEncoder().encode(url).length > NOTICIA_MAX_BYTES) return false;
-    const u = new URL(url);
-    if (u.protocol !== 'https:' || u.username !== '' || u.password !== '') return false;
-    if (!u.hostname.includes('.') || u.hostname.includes(':') || /^[\d.]+$/.test(u.hostname)) return false;
-    return u.href === url;
-  } catch {
-    return false;
-  }
-}
-
-export function medioDeUrl(url) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return null;
-  }
-}
-
-// Archivos mensuales de Headlines [D-116, D-117]
+// Archivos mensuales de Fact or Fake [D-116, D-117]
 export const MES_PATRON = /^\d{4}-(0[1-9]|1[0-2])$/;
-export const TITULARES_CARPETA = 'data/titulares/';
+export const AFIRMACIONES_CARPETA = 'data/facts/';
 
 export function mesDeFecha(fechaISO) {
   return fechaIsoValida(fechaISO) ? fechaISO.slice(0, 7) : null;
@@ -411,22 +385,20 @@ export function mesDeNumero(lanzamiento, n) {
   return mesDeFecha(fechaDelDia(base, n));
 }
 
-export function rutaTitulares(mes) {
-  return typeof mes === 'string' && MES_PATRON.test(mes) ? `${TITULARES_CARPETA}${mes}.json` : null;
+export function rutaAfirmaciones(mes) {
+  return typeof mes === 'string' && MES_PATRON.test(mes) ? `${AFIRMACIONES_CARPETA}${mes}.json` : null;
 }
 
-export function titularesVacios(mes) {
+export function afirmacionesVacias(mes) {
   return { version: 1, mes, dias: [] };
 }
 
-const RE_TEXTO = /^[A-Za-z0-9+/]{683}=$/;
-const RE_NOTICIA = /^[A-Za-z0-9+/]{1366}==$/;
 
 function esObjeto(x) {
   return x !== null && typeof x === 'object' && !Array.isArray(x);
 }
 
-export function validarTitulares(obj, mes) {
+export function validarAfirmaciones(obj, mes) {
   if (!esObjeto(obj)) return false;
   if (!mismasClaves(obj, ['version', 'mes', 'dias'])) return false;
   if (obj.version !== 1) return false;
@@ -442,63 +414,63 @@ export function validarTitulares(obj, mes) {
     return (
       Array.isArray(dia.textos) &&
       dia.textos.length === 5 &&
-      dia.textos.every((t) => typeof t === 'string' && RE_TEXTO.test(t)) &&
+      dia.textos.every((t) => typeof t === 'string' && RE_FICHA.test(t)) &&
       Array.isArray(dia.fichas) &&
       dia.fichas.length === 5 &&
-      dia.fichas.every((f) => typeof f === 'string' && RE_NOTICIA.test(f))
+      dia.fichas.every((f) => typeof f === 'string' && RE_FICHA.test(f))
     );
   });
 }
 
-function titularesDe(dia, fecha) {
+function afirmacionesDe(dia, fecha) {
   if (!dia) return null;
   return { n: dia.n, fecha, tema: dia.tema, clave: dia.clave, textos: dia.textos, fichas: dia.fichas };
 }
 
-export function titularesDelDia(titulares, lanzamiento, fechaISO) {
-  if (!titulares || !Array.isArray(titulares.dias)) return null;
+export function afirmacionesDelDia(datos, lanzamiento, fechaISO) {
+  if (!datos || !Array.isArray(datos.dias)) return null;
   const n = numeroDelDia(fechaISO, lanzamiento);
-  if (n === null || titulares.mes !== mesDeFecha(fechaISO)) return null;
-  return titularesDe(titulares.dias.find((d) => d.n === n), fechaISO);
+  if (n === null || datos.mes !== mesDeFecha(fechaISO)) return null;
+  return afirmacionesDe(datos.dias.find((d) => d.n === n), fechaISO);
 }
 
-export function titularesDeNumero(titulares, lanzamiento, n) {
-  if (!titulares || !Array.isArray(titulares.dias)) return null;
+export function afirmacionesDeNumero(datos, lanzamiento, n) {
+  if (!datos || !Array.isArray(datos.dias)) return null;
   const mes = mesDeNumero(lanzamiento, n);
-  if (mes === null || titulares.mes !== mes) return null;
-  return titularesDe(titulares.dias.find((d) => d.n === n), fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n));
+  if (mes === null || datos.mes !== mes) return null;
+  return afirmacionesDe(datos.dias.find((d) => d.n === n), fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n));
 }
 
-export function titularesDelMes(meses, mes) {
+export function afirmacionesDelMes(meses, mes) {
   if (typeof mes !== 'string' || !MES_PATRON.test(mes)) return null;
-  if (!Array.isArray(meses)) return titularesVacios(mes);
-  return meses.find((m) => m && m.mes === mes) ?? titularesVacios(mes);
+  if (!Array.isArray(meses)) return afirmacionesVacias(mes);
+  return meses.find((m) => m && m.mes === mes) ?? afirmacionesVacias(mes);
 }
 
 // Juego normal y previsualización: solo el archivo del mes de la fecha efectiva.
-export async function cargarTitulares(fechaISO, pedir = fetch) {
+export async function cargarAfirmaciones(fechaISO, pedir = fetch) {
   const mes = mesDeFecha(fechaISO);
-  if (mes === null) throw new Error('Titulares: fecha no válida');
-  const respuesta = await pedir(rutaTitulares(mes), { cache: 'no-cache' });
-  if (respuesta.status === 404) return titularesVacios(mes);
-  if (!respuesta.ok) throw new Error(`Titulares: respuesta ${respuesta.status}`);
+  if (mes === null) throw new Error('Afirmaciones: fecha no válida');
+  const respuesta = await pedir(rutaAfirmaciones(mes), { cache: 'no-cache' });
+  if (respuesta.status === 404) return afirmacionesVacias(mes);
+  if (!respuesta.ok) throw new Error(`Afirmaciones: respuesta ${respuesta.status}`);
   const obj = await respuesta.json();
-  if (!validarTitulares(obj, mes)) throw new Error('Titulares: estructura no válida');
+  if (!validarAfirmaciones(obj, mes)) throw new Error('Afirmaciones: estructura no válida');
   return obj;
 }
 
 // Modo prueba: sondeo en serie de todos los meses existentes (4.7.2).
-export async function cargarTitularesPrueba(lanzamiento, pedir = fetch) {
+export async function cargarAfirmacionesPrueba(lanzamiento, pedir = fetch) {
   const meses = [];
   let siguiente = 1;
   for (;;) {
     const mes = mesDeNumero(lanzamiento, siguiente);
-    if (mes === null) throw new Error('Titulares: lanzamiento no válido');
-    const respuesta = await pedir(rutaTitulares(mes), { cache: 'no-cache' });
+    if (mes === null) throw new Error('Afirmaciones: lanzamiento no válido');
+    const respuesta = await pedir(rutaAfirmaciones(mes), { cache: 'no-cache' });
     if (respuesta.status === 404) break;
-    if (!respuesta.ok) throw new Error(`Titulares: respuesta ${respuesta.status}`);
+    if (!respuesta.ok) throw new Error(`Afirmaciones: respuesta ${respuesta.status}`);
     const obj = await respuesta.json();
-    if (!validarTitulares(obj, mes)) throw new Error('Titulares: estructura no válida');
+    if (!validarAfirmaciones(obj, mes)) throw new Error('Afirmaciones: estructura no válida');
     if (obj.dias[0].n !== siguiente || obj.dias.some((d) => mesDeNumero(lanzamiento, d.n) !== mes)) break;
     meses.push(obj);
     siguiente = obj.dias[obj.dias.length - 1].n + 1;

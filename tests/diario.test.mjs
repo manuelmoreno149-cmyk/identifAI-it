@@ -19,16 +19,15 @@ import {
   flujoBytes,
   ofuscarBloque,
   desofuscarBloque,
-  TEXTO_BLOQUE,
-  TEXTO_MAX_BYTES,
-  NOTICIA_BLOQUE,
-  NOTICIA_MAX_BYTES,
-  ofuscarTexto,
-  desofuscarTexto,
-  ofuscarNoticia,
-  desofuscarNoticia,
-  urlFuenteValida,
-  medioDeUrl,
+  AFIRMACION_BLOQUE,
+  AFIRMACION_MAX_BYTES,
+  ACLARACION_BLOQUE,
+  ACLARACION_MAX_BYTES,
+  DETALLES_MAX,
+  ofuscarAfirmacion,
+  desofuscarAfirmacion,
+  ofuscarAclaracion,
+  desofuscarAclaracion,
   flujoFicha,
   ofuscarFicha,
   desofuscarFicha,
@@ -44,17 +43,17 @@ import {
   fechaDelDia,
   casoDeNumero,
   MES_PATRON,
-  TITULARES_CARPETA,
+  AFIRMACIONES_CARPETA,
   mesDeFecha,
   mesDeNumero,
-  rutaTitulares,
-  titularesVacios,
-  validarTitulares,
-  titularesDelDia,
-  titularesDeNumero,
-  titularesDelMes,
-  cargarTitulares,
-  cargarTitularesPrueba
+  rutaAfirmaciones,
+  afirmacionesVacias,
+  validarAfirmaciones,
+  afirmacionesDelDia,
+  afirmacionesDeNumero,
+  afirmacionesDelMes,
+  cargarAfirmaciones,
+  cargarAfirmacionesPrueba
 } from '../js/diario.js';
 
 import * as diario from '../js/diario.js';
@@ -327,8 +326,8 @@ function congelar(o) {
 function mesDeEjemplo(mes, n0, n1) {
   const dias = [];
   for (let n = n0; n <= n1; n++) {
-    const textos = [0, 1, 2, 3, 4].map((i) => ofuscarTexto({ titular: `Headline ${i}`, entradilla: 'Lede.' }, clave, n, i, () => 0.5));
-    const fichas = [0, 1, 2, 3, 4].map((i) => ofuscarNoticia({ tipo: i % 2 ? 'prompt' : 'fuente', texto: i % 2 ? 'Prompt' : 'https://example.com/story' }, clave, n, i, () => 0.5));
+    const textos = [0, 1, 2, 3, 4].map((i) => ofuscarAfirmacion(`Claim ${i}.`, clave, n, i, () => 0.5));
+    const fichas = [0, 1, 2, 3, 4].map((i) => ofuscarAclaracion({ aclaracion: 'Truth.', detalles: ['One.', 'Two.', 'Three.'].slice(0, i % 4) }, clave, n, i, () => 0.5));
     dias.push({ n, tema: `Tema${n}`, clave, textos, fichas });
   }
   return { version: 1, mes, dias };
@@ -346,15 +345,15 @@ test('115. diasDePrueba: unión de calendario y todos los meses, solo n y temas'
   const r = diasDePrueba(cal, meses);
   assert.equal(r.length, 40);
   r.forEach((d, k) => {
-    assert.deepStrictEqual(Object.keys(d), ['n', 'temaImagenes', 'temaTitulares']);
+    assert.deepStrictEqual(Object.keys(d), ['n', 'temaImagenes', 'temaAfirmaciones']);
     assert.equal(d.n, k + 1);
     assert.equal(d.temaImagenes, k < 35 ? 'Perros' : null);
-    assert.equal(d.temaTitulares, `Tema${k + 1}`);
+    assert.equal(d.temaAfirmaciones, `Tema${k + 1}`);
   });
   const soloCal = diasDePrueba(cal, null);
   assert.equal(soloCal.length, 35);
-  assert.ok(soloCal.every((d) => d.temaTitulares === null && d.temaImagenes === 'Perros'));
-  for (const m of [undefined, {}, [], [titularesVacios('2000-01')]]) {
+  assert.ok(soloCal.every((d) => d.temaAfirmaciones === null && d.temaImagenes === 'Perros'));
+  for (const m of [undefined, {}, [], [afirmacionesVacias('2000-01')]]) {
     assert.deepStrictEqual(diasDePrueba(cal, m), soloCal);
     assert.deepStrictEqual(diasDePrueba(null, m), []);
   }
@@ -373,7 +372,7 @@ test('115. diasDePrueba: unión de calendario y todos los meses, solo n y temas'
 });
 
 test('117. diaDePrueba', () => {
-  const dias = Array.from({ length: 7 }, (_, i) => ({ n: i + 1, temaImagenes: 'T', temaTitulares: null }));
+  const dias = Array.from({ length: 7 }, (_, i) => ({ n: i + 1, temaImagenes: 'T', temaAfirmaciones: null }));
   assert.equal(diaDePrueba('?prueba=1&dia=3', dias, null), dias[2]);
   for (const q of ['?prueba=1', '?prueba=1&dia=0', '?prueba=1&dia=08', '?prueba=1&dia=x', '?prueba=1&dia=9', '?prueba=1&dia=']) {
     assert.equal(diaDePrueba(q, dias, null), dias[0], q);
@@ -408,7 +407,7 @@ test('150. casoDeNumero', () => {
   for (const n of [0, 3, -1, 1.5, '1']) assert.equal(casoDeNumero(con, n), null, String(n));
 });
 
-test('211. mesDeFecha, mesDeNumero y rutaTitulares', () => {
+test('211. mesDeFecha, mesDeNumero y rutaAfirmaciones', () => {
   assert.equal(mesDeFecha('2026-12-15'), '2026-12');
   for (const x of ['2026-02-30', 'x', null, undefined]) assert.equal(mesDeFecha(x), null);
   assert.equal(mesDeNumero(null, 1), '2000-01');
@@ -421,18 +420,18 @@ test('211. mesDeFecha, mesDeNumero y rutaTitulares', () => {
   assert.equal(mesDeNumero('2026-12-15', 49), '2027-02');
   for (const n of [0, 1.5, '3']) assert.equal(mesDeNumero(null, n), null);
   assert.equal(mesDeNumero('2026-13-01', 1), null);
-  assert.equal(rutaTitulares('2026-12'), 'data/titulares/2026-12.json');
-  assert.equal(rutaTitulares('2026-1'), null);
-  assert.equal(rutaTitulares('../x'), null);
-  assert.equal(TITULARES_CARPETA, 'data/titulares/');
+  assert.equal(rutaAfirmaciones('2026-12'), 'data/facts/2026-12.json');
+  assert.equal(rutaAfirmaciones('2026-1'), null);
+  assert.equal(rutaAfirmaciones('../x'), null);
+  assert.equal(AFIRMACIONES_CARPETA, 'data/facts/');
   assert.ok(MES_PATRON.test('2026-12') && !MES_PATRON.test('2026-13'));
   assert.equal(diario.diaPedido, undefined);
 });
 
-test('172. validarTitulares', () => {
+test('172. validarAfirmaciones', () => {
   const ok = () => mesDeEjemplo('2000-02', 32, 34);
-  assert.equal(validarTitulares(ok(), '2000-02'), true);
-  assert.equal(validarTitulares(ok()), true);
+  assert.equal(validarAfirmaciones(ok(), '2000-02'), true);
+  assert.equal(validarAfirmaciones(ok()), true);
   const malos = [
     (o) => { o.version = 2; },
     (o) => { delete o.mes; },
@@ -449,40 +448,40 @@ test('172. validarTitulares', () => {
     (o) => { o.dias[0].fichas.push(o.dias[0].fichas[0]); },
     (o) => { o.dias[0].textos[0] = o.dias[0].textos[0].slice(0, 682) + '='; },
     (o) => { o.dias[0].textos[0] = o.dias[0].textos[0].slice(0, 683) + 'A='; },
-    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 1365) + '=='; },
-    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 1366) + 'A=='; },
+    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 682) + '='; },
+    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 683) + 'A='; },
     (o) => { o.dias[0].tema = 'perros'; },
     (o) => { o.dias[0].clave = 'AAAA'; }
   ];
   malos.forEach((mal, k) => {
     const o = ok();
     mal(o);
-    assert.equal(validarTitulares(o, '2000-02'), false, `caso ${k}`);
+    assert.equal(validarAfirmaciones(o, '2000-02'), false, `caso ${k}`);
   });
-  assert.equal(validarTitulares(ok(), '2000-03'), false);
-  assert.equal(validarTitulares(null, '2000-02'), false);
-  assert.equal(validarTitulares([], '2000-02'), false);
+  assert.equal(validarAfirmaciones(ok(), '2000-03'), false);
+  assert.equal(validarAfirmaciones(null, '2000-02'), false);
+  assert.equal(validarAfirmaciones([], '2000-02'), false);
 });
 
-test('173. titularesDelDia y titularesDeNumero', () => {
+test('173. afirmacionesDelDia y afirmacionesDeNumero', () => {
   const l = '2026-12-15';
   const tit = mesDeEjemplo('2027-01', 18, 48);
-  const d = titularesDelDia(tit, l, '2027-01-01');
+  const d = afirmacionesDelDia(tit, l, '2027-01-01');
   assert.equal(d.n, 18);
   assert.equal(d.fecha, '2027-01-01');
   assert.deepEqual(Object.keys(d).sort(), ['clave', 'fecha', 'fichas', 'n', 'tema', 'textos']);
   assert.ok(d.textos === tit.dias[0].textos);
-  assert.equal(titularesDelDia(tit, l, '2026-12-31'), null);
-  assert.equal(titularesDelDia(tit, null, '2027-01-01'), null);
-  assert.equal(titularesDelDia(null, l, '2027-01-01'), null);
+  assert.equal(afirmacionesDelDia(tit, l, '2026-12-31'), null);
+  assert.equal(afirmacionesDelDia(tit, null, '2027-01-01'), null);
+  assert.equal(afirmacionesDelDia(null, l, '2027-01-01'), null);
   const feb = mesDeEjemplo('2000-02', 32, 60);
-  const e = titularesDeNumero(feb, null, 32);
+  const e = afirmacionesDeNumero(feb, null, 32);
   assert.equal(e.n, 32);
   assert.equal(e.fecha, '2000-02-01');
-  assert.equal(titularesDeNumero(feb, null, 31), null);
-  assert.equal(titularesDeNumero(feb, null, 61), null);
-  assert.equal(titularesDeNumero(titularesVacios('2000-02'), null, 32), null);
-  assert.equal(titularesDeNumero(null, null, 32), null);
+  assert.equal(afirmacionesDeNumero(feb, null, 31), null);
+  assert.equal(afirmacionesDeNumero(feb, null, 61), null);
+  assert.equal(afirmacionesDeNumero(afirmacionesVacias('2000-02'), null, 32), null);
+  assert.equal(afirmacionesDeNumero(null, null, 32), null);
 });
 
 function respuesta(status, cuerpo) {
@@ -506,69 +505,69 @@ function pedirDe(archivos, rutas = [], opciones = []) {
   };
 }
 
-test('212. cargarTitulares', async () => {
+test('212. cargarAfirmaciones', async () => {
   const mes = mesDeEjemplo('2026-12', 1, 17);
   const rutas = [];
   const ops = [];
-  const r = await cargarTitulares('2026-12-15', pedirDe({ 'data/titulares/2026-12.json': mes }, rutas, ops));
+  const r = await cargarAfirmaciones('2026-12-15', pedirDe({ 'data/facts/2026-12.json': mes }, rutas, ops));
   assert.equal(r, mes);
-  assert.deepEqual(rutas, ['data/titulares/2026-12.json']);
+  assert.deepEqual(rutas, ['data/facts/2026-12.json']);
   assert.deepEqual(ops, [{ cache: 'no-cache' }]);
-  assert.deepEqual(await cargarTitulares('2026-12-15', pedirDe({})), titularesVacios('2026-12'));
-  const ruta = 'data/titulares/2026-12.json';
-  await assert.rejects(cargarTitulares('2026-12-15', async () => respuesta(500)));
-  await assert.rejects(cargarTitulares('2026-12-15', pedirDe({ [ruta]: new Error('red') })));
-  await assert.rejects(cargarTitulares('2026-12-15', async () => respuesta(200, new Error('json'))));
-  await assert.rejects(cargarTitulares('2026-12-15', pedirDe({ [ruta]: mesDeEjemplo('2026-11', 1, 3) })));
-  await assert.rejects(cargarTitulares('2026-12-15', pedirDe({ [ruta]: { version: 1 } })));
+  assert.deepEqual(await cargarAfirmaciones('2026-12-15', pedirDe({})), afirmacionesVacias('2026-12'));
+  const ruta = 'data/facts/2026-12.json';
+  await assert.rejects(cargarAfirmaciones('2026-12-15', async () => respuesta(500)));
+  await assert.rejects(cargarAfirmaciones('2026-12-15', pedirDe({ [ruta]: new Error('red') })));
+  await assert.rejects(cargarAfirmaciones('2026-12-15', async () => respuesta(200, new Error('json'))));
+  await assert.rejects(cargarAfirmaciones('2026-12-15', pedirDe({ [ruta]: mesDeEjemplo('2026-11', 1, 3) })));
+  await assert.rejects(cargarAfirmaciones('2026-12-15', pedirDe({ [ruta]: { version: 1 } })));
   let llamadas = 0;
-  await assert.rejects(cargarTitulares('2026-13-01', async () => { llamadas++; return respuesta(404); }));
+  await assert.rejects(cargarAfirmaciones('2026-13-01', async () => { llamadas++; return respuesta(404); }));
   assert.equal(llamadas, 0);
 });
 
-test('222. cargarTitularesPrueba', async () => {
+test('222. cargarAfirmacionesPrueba', async () => {
   const ene = mesDeEjemplo('2000-01', 1, 31);
   const feb40 = mesDeEjemplo('2000-02', 32, 40);
   const feb60 = mesDeEjemplo('2000-02', 32, 60);
-  const A = 'data/titulares/2000-01.json';
-  const B = 'data/titulares/2000-02.json';
-  const C = 'data/titulares/2000-03.json';
+  const A = 'data/facts/2000-01.json';
+  const B = 'data/facts/2000-02.json';
+  const C = 'data/facts/2000-03.json';
 
   let rutas = [];
   let ops = [];
-  let r = await cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: feb40 }, rutas, ops));
+  let r = await cargarAfirmacionesPrueba(null, pedirDe({ [A]: ene, [B]: feb40 }, rutas, ops));
   assert.deepEqual(rutas, [A, B]);
   assert.deepEqual(ops, [{ cache: 'no-cache' }, { cache: 'no-cache' }]);
   assert.deepEqual(r, [ene, feb40]);
 
   rutas = [];
-  r = await cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: feb60 }, rutas));
+  r = await cargarAfirmacionesPrueba(null, pedirDe({ [A]: ene, [B]: feb60 }, rutas));
   assert.deepEqual(rutas, [A, B, C]);
   assert.equal(r.length, 2);
 
   rutas = [];
-  assert.deepEqual(await cargarTitularesPrueba(null, pedirDe({}, rutas)), []);
+  assert.deepEqual(await cargarAfirmacionesPrueba(null, pedirDe({}, rutas)), []);
   assert.deepEqual(rutas, [A]);
 
-  await assert.rejects(cargarTitularesPrueba(null, async (u) => (u === A ? respuesta(200, ene) : respuesta(500))));
-  await assert.rejects(cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: new Error('red') })));
-  await assert.rejects(cargarTitularesPrueba(null, async (u) => (u === A ? respuesta(200, ene) : respuesta(200, new Error('json')))));
-  await assert.rejects(cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: { version: 1 } })));
+  await assert.rejects(cargarAfirmacionesPrueba(null, async (u) => (u === A ? respuesta(200, ene) : respuesta(500))));
+  await assert.rejects(cargarAfirmacionesPrueba(null, pedirDe({ [A]: ene, [B]: new Error('red') })));
+  await assert.rejects(cargarAfirmacionesPrueba(null, async (u) => (u === A ? respuesta(200, ene) : respuesta(200, new Error('json')))));
+  await assert.rejects(cargarAfirmacionesPrueba(null, pedirDe({ [A]: ene, [B]: { version: 1 } })));
 
-  assert.deepEqual(await cargarTitularesPrueba(null, pedirDe({ [A]: ene, [B]: mesDeEjemplo('2000-02', 33, 40) })), [ene]);
+  assert.deepEqual(await cargarAfirmacionesPrueba(null, pedirDe({ [A]: ene, [B]: mesDeEjemplo('2000-02', 33, 40) })), [ene]);
   rutas = [];
-  assert.deepEqual(await cargarTitularesPrueba(null, pedirDe({ [A]: mesDeEjemplo('2000-01', 1, 32) }, rutas)), []);
+  assert.deepEqual(await cargarAfirmacionesPrueba(null, pedirDe({ [A]: mesDeEjemplo('2000-01', 1, 32) }, rutas)), []);
   assert.deepEqual(rutas, [A]);
 
   const dic = mesDeEjemplo('2026-12', 1, 17);
   const ene27 = mesDeEjemplo('2027-01', 18, 20);
   rutas = [];
-  r = await cargarTitularesPrueba('2026-12-15', pedirDe({ 'data/titulares/2026-12.json': dic, 'data/titulares/2027-01.json': ene27 }, rutas));
-  assert.deepEqual(rutas, ['data/titulares/2026-12.json', 'data/titulares/2027-01.json']);
+  r = await cargarAfirmacionesPrueba('2026-12-15', pedirDe({ 'data/facts/2026-12.json': dic, 'data/facts/2027-01.json': ene27 }, rutas));
+  assert.deepEqual(rutas, ['data/facts/2026-12.json', 'data/facts/2027-01.json']);
   assert.equal(r.length, 2);
 
   let llamadas = 0;
-  await assert.rejects(cargarTitularesPrueba('2026-13-01', async () => { llamadas++; return respuesta(404); }));
+  await assert.rejects(cargarAfirmacionesPrueba('2026-13-01', async () => { llamadas++; return respuesta(404); }));
   assert.equal(llamadas, 0);
 
   // en serie: la segunda petición no empieza hasta que termina la primera
@@ -581,20 +580,20 @@ test('222. cargarTitularesPrueba', async () => {
     activas--;
     return url === A ? respuesta(200, ene) : url === B ? respuesta(200, feb40) : respuesta(404);
   };
-  assert.equal((await cargarTitularesPrueba(null, lento)).length, 2);
+  assert.equal((await cargarAfirmacionesPrueba(null, lento)).length, 2);
   assert.equal(maxActivas, 1);
 });
 
-test('223. titularesDelMes', () => {
+test('223. afirmacionesDelMes', () => {
   const ene = mesDeEjemplo('2000-01', 1, 31);
   const feb = mesDeEjemplo('2000-02', 32, 60);
   const meses = [ene, feb];
-  assert.ok(titularesDelMes(meses, '2000-02') === feb);
-  assert.deepEqual(titularesDelMes(meses, '2000-03'), titularesVacios('2000-03'));
-  assert.deepEqual(titularesDelMes(null, '2000-02'), titularesVacios('2000-02'));
-  assert.deepEqual(titularesDelMes({}, '2000-02'), titularesVacios('2000-02'));
-  assert.equal(titularesDelMes(meses, '2000-13'), null);
-  const mes35 = titularesDeNumero(titularesDelMes(meses, mesDeNumero(null, 35)), null, 35);
+  assert.ok(afirmacionesDelMes(meses, '2000-02') === feb);
+  assert.deepEqual(afirmacionesDelMes(meses, '2000-03'), afirmacionesVacias('2000-03'));
+  assert.deepEqual(afirmacionesDelMes(null, '2000-02'), afirmacionesVacias('2000-02'));
+  assert.deepEqual(afirmacionesDelMes({}, '2000-02'), afirmacionesVacias('2000-02'));
+  assert.equal(afirmacionesDelMes(meses, '2000-13'), null);
+  const mes35 = afirmacionesDeNumero(afirmacionesDelMes(meses, mesDeNumero(null, 35)), null, 35);
   assert.equal(mes35.n, 35);
   assert.equal(mes35.fecha, '2000-02-04');
 });
@@ -681,9 +680,6 @@ test('formatearFecha: inglés americano, determinista', () => {
   assert.equal(formatearFecha('basura'), 'basura');
 });
 
-const VEC_TEXTO = '33U5OfM7LppifDdq0nnQSxAoroypcnnrzBoHKRwS7AzSj/iiz8msx5zwE+fuUFzLmw1ro7NeNpidp+zmPopfe41Xj15Y+nRxqAHLbjZmGhI52L4/BpMvuk31AyEH//01qwl8x/CBkdPpuOXbl5MQazTL6VsdyCkMmwn7gc+Mo6NfWPB5qwkVDHJmIwGZE4yJdK4i0X0cyC4Q9443RqkMCRi1vwEu6YOE3T5V/Xu3g5dHZnzRVHz+wZBqYPjyf7N0qt9dI0dFveHKXRNqSVKOTH+4q/C6l00scsRJTwz4Q3bnPt7DDCw31lDQLjOVnjnlORBSiQDY+K3cfplfNUzq2Tc1VOa6fPXp+XIEvZs8DkXxodeDDiKI54OjzM+6XT5BNzAnP3YrZP/2z1u/dZ8Ejg+Z8W6khLRk/mcCZLm8Qe/BrRDAymbaREhZAA0r63F3SwPK+eacCU0vPkP8NATDdwJQTwMvu4mMFiOtJaZzwZcoecMs/MRab+ExH85Ew6RlzNJuOr660QOSErMQZEnO4OXM6+JOqeiIl/8yTHdoUxZOOsvncC8FiQR98MAEvantMVAquCXAncnhw6Ul0ltcfGo0Bzqz5NKlLb4yXRlXt9/r6yYbAXSXXAklBTFpPMKjDaCgWLavw96edkvEwXgHoEa5hg/9ih8JuV9GCJ8U4WY=';
-const VEC_NOTICIA = 'Cxp56vxKI+0QdAALjipcdh9k61SkxYitF4irQPdO+BC6V7I4THEqi+cFCwTVQUpy9L9P7bCnZD37U3RDdAdUgZpWI5lDMTlgmJqXuqzp1q4GUxlJ7Aub4wxz2nWEeaXUlr1TpSXd0IvdZAcSonKeAY8w1p0NVtRcRmUJjNgYCzGssV3hJiN1aWMlAAUnQqWnKvPEntbEmIpOTCMO3HyFfUh+4nbxrfL8zBZUTO4P4I9Tr8oUvuRotYMdDHkt/Rdy7GxHdYt20HDdeYlY3Rv27ART91MD9C5DMbgoSR+3U5n7+hXq3At/nAnuhHww9ltK6ki7Po/sdx8YRw4GNd/618UKAb0UBpeak6nQFjNQHvI+YmMAgmw4ENAbAx49Wss8sF3HZvN6P99gEN/kYx85+I4fMDF/tdL0kbTR5qwzF55mAkO8dCVZ4S8wU2D/u3fp/hc6A4juqXfbkIWf2AazIaG2k5BSpBrZn65TCtnRnGAjLCWf/O8lxlpEihgqU8MrcxCtJrgEO6QpqBQ0WuGjQWZznUHJ88uDNSl2MK/3Vl76S+AWITw76SkEuAECoH0oKUDrjc/rICt/oC2X2JZ9Q93aECe28nQ71jNapO3q2SCkBgG54k2chYuBJHi3UQc0bK+F4ZfgQNuDEQiD3TYm9DpGKBZZfUxF/17vRgYVGKlZktBAzgzYzw79qvhujvBdDgo9evRx2SvhG8YKlZioHkv+MoXPC1Giwp/6tASeRpc7ztEVtAVQoR39m2FUImb9C4iOyFderpljCCxkPpdeVaZgEVSZn6noB1PWlissHi3eHXzyTx7KDD56qiZUUWLre1M04s7WJaY6fOpwemUXQt0W0QDEuCNHX0Ch7kyOjD8lSWglT6WROc6hyO40KAwNpsKIvaVy6jqB1eQMgIhSZ9Qr2d2VXDoEfYpwik+rkhFZzB02Jm+ruLqrmj4wgrMBkSh8LjY9lTUu0MqStyvV0s2KEHhTfOccQjSFAqqIIr07ZaZ8S71mQ7NRdbkzTc2DpgdiyB8oEaRZNSYnismYHxH8enf1/kESb33yrgqaztNgRAAdsLwg8zZc1sOSFQVaJHfXy8lZxZGkwR/xUimjsFg1hK+NM0/6Vw/cjDVQ5KMa84Rbx3HE7rRmWdsnTooy0ovxWzzXcq6hGyhj21qvL1jhYotZ9EZ6HoXorwSmg8zBBspeNeQ1UcCoPRjFN9dOO8d49Y4hLnJe9Y8OrAHxSoM1QT63TE57Bwxh05AudLcSYVdz3nUJhHJGRqRFwmNvv8kwHpv5s34hGLse+CRn2RU1iBeYKkOF6Lm8ezCtCYW752B58bcoSPm2SjpeBByD8pLCf4uNLK1pUT7w3kgG1w==';
-
 const cifrarBloque = (bloque, semilla) => {
   const flujo = flujoBytes(semilla, bloque.length);
   return btoa(String.fromCharCode(...bloque.map((b, k) => b ^ flujo[k])));
@@ -714,112 +710,116 @@ test('167. flujoFicha es flujoBytes con la semilla de la ficha y ofuscarFicha si
   assert.equal(desofuscarBloque(cifrarBloque(bloqueDe(512, 1, 255), 's'), 's', 512), null);
 });
 
-test('168. ofuscarTexto y desofuscarTexto', () => {
-  const casos = [
-    ['Test headline', 'Test lede.'],
-    ['Council’s plan — a café “deal”', 'Résumé of the story 🐕🎉.'],
-    ['Titular', 'Línea uno\nlínea dos'],
-    ['H', 'é'.repeat(253) + 'e']
-  ];
-  assert.equal(TEXTO_BLOQUE, 512);
-  assert.equal(TEXTO_MAX_BYTES, 510);
-  for (const [titular, entradilla] of casos) {
-    const c = ofuscarTexto({ titular, entradilla }, CL, 4, 2);
+// Vectores de regresión de Fact or Fake (4.8), con aleatorio = () => 0:
+//   ofuscarAfirmacion('Test claim.', 'Mpb9Ycc=', 1, 0, () => 0)
+//     = jJUSnRT/oxx8vuB2fffgulbHNx6sQmwbEiv25lgZtrBxNN3e+cbp3CbFytsyWntZ5wE5SL4oT3FEra9UPZj6SLkOjUOtQRf5BDjI7flJLYj86KRuuR1w3+7nOGpEh+nK6lOz+oid3C+27ChHG4mi3s1fcti33FSKJfe/qkG3UZb9Lwkc7LCK6EipJCvOnQ7In2qbZAqmHTAGcjoevO4u0slulGAykOyqs3b4gHBAFZz7s69ZTdt/+WeA+DM2cn6qbr4YOIvK+4SbmAWcFJm0v3a19rRxHH38BhCaCa7uXNAJlOL5ytyqwZL8gGxQTBroMcVhQJ/oG1yZ1BvD+qDBg+K+X8l5IL6jrj2mW51sRpYuY/3BKHd3gPlDILmDt1fIIl7K33oL5CNqKD9N/4cSNohL0CJ17VeimJ6Pz4jSVS7Y4lARyeO7b/LvQg6xqRF83Z6CKm4ZhjvWzVgHoit0EcLotLra63eYVfEZc1EOYO7GmnCS3kOmBTMKN4odVXhxiDp3nD6oDidevx10VZt916cgcrKlP1dbV/ysL9O8R8smnogVJk6IX9Z1IGvhah6nFRR98RDxITAmgI03NrIHO64CHb5/XaHNXovDn97sove2I0MArXRS4JcYdTlGJAbJ+feZDbw8ksqoLAPjNldT0o8G0bEqW7IFxAFXUxFUtwM=
+//   ofuscarAclaracion({aclaracion: 'Test truth.', detalles: ['One.', 'Two.']}, 'Mpb9Ycc=', 1, 0, () => 0)
+//     = 5r3RasQkU5PxSD+QV5XV8rSpPG/aVoXJdpPNeSQwzh22Dad9F86JJYfY1oOfSwgXqrhUBawYheMZ6qpESQzznEMVbTBcjJluUYJBE7q0kub/pKcr6p0bhC23VLyOmRmLbOg6BnsZ6VuB/ZrOC/+tk1FwRVIRn8UgmC6vc7FDR4640rsxfYvQIpYJVwmiTDtPzap5Z/C/CbnkVFgTvso8qOZ3i8TBfh05qnRwFJG6YUThkOdov/rGViONPE+6CcTcofxKPWMt6aDwyCBaQhewdjJx92MiH7etbqaEbWBmaaYPbo07B1uDgJpILOumpckJ6aBDPgfVXIMxjVig9rB5clrXAiAPpq9Nue+o0D0yfcNycFmhkjDBgIMLVegSBJSaPOz1C6VLmdL9M6yMYdRXoTZYy66/09W+ySEZWiI2vyerlhQ23CQpZMxhkCHrf7vcrIS9I+8oHZYYPKmCU929ALOUPHTYGyy7jqM2zGAEz51m2Yk3M3wvsXunAd0hNd15m323i9CrzXVnfPH82t5ttbWPd9khFWr+9Cm9AQIbU4P7K1w3h4EAzyzwXRznxoaMxdCJ7j6JaJWoohkwF/xPvOh640XSbtpDHI3DjMvvqJs1zMG80o95NWTIpzKbPrhYo/Gv4IgOuUCD8QjciXZBG1iZskgki3pB6CVh8IpD4t4=
+// Cambiarlos invalida los archivos data/facts/ publicados.
+const VEC_AFIRMACION = 'jJUSnRT/oxx8vuB2fffgulbHNx6sQmwbEiv25lgZtrBxNN3e+cbp3CbFytsyWntZ5wE5SL4oT3FEra9UPZj6SLkOjUOtQRf5BDjI7flJLYj86KRuuR1w3+7nOGpEh+nK6lOz+oid3C+27ChHG4mi3s1fcti33FSKJfe/qkG3UZb9Lwkc7LCK6EipJCvOnQ7In2qbZAqmHTAGcjoevO4u0slulGAykOyqs3b4gHBAFZz7s69ZTdt/+WeA+DM2cn6qbr4YOIvK+4SbmAWcFJm0v3a19rRxHH38BhCaCa7uXNAJlOL5ytyqwZL8gGxQTBroMcVhQJ/oG1yZ1BvD+qDBg+K+X8l5IL6jrj2mW51sRpYuY/3BKHd3gPlDILmDt1fIIl7K33oL5CNqKD9N/4cSNohL0CJ17VeimJ6Pz4jSVS7Y4lARyeO7b/LvQg6xqRF83Z6CKm4ZhjvWzVgHoit0EcLotLra63eYVfEZc1EOYO7GmnCS3kOmBTMKN4odVXhxiDp3nD6oDidevx10VZt916cgcrKlP1dbV/ysL9O8R8smnogVJk6IX9Z1IGvhah6nFRR98RDxITAmgI03NrIHO64CHb5/XaHNXovDn97sove2I0MArXRS4JcYdTlGJAbJ+feZDbw8ksqoLAPjNldT0o8G0bEqW7IFxAFXUxFUtwM=';
+const VEC_ACLARACION = '5r3RasQkU5PxSD+QV5XV8rSpPG/aVoXJdpPNeSQwzh22Dad9F86JJYfY1oOfSwgXqrhUBawYheMZ6qpESQzznEMVbTBcjJluUYJBE7q0kub/pKcr6p0bhC23VLyOmRmLbOg6BnsZ6VuB/ZrOC/+tk1FwRVIRn8UgmC6vc7FDR4640rsxfYvQIpYJVwmiTDtPzap5Z/C/CbnkVFgTvso8qOZ3i8TBfh05qnRwFJG6YUThkOdov/rGViONPE+6CcTcofxKPWMt6aDwyCBaQhewdjJx92MiH7etbqaEbWBmaaYPbo07B1uDgJpILOumpckJ6aBDPgfVXIMxjVig9rB5clrXAiAPpq9Nue+o0D0yfcNycFmhkjDBgIMLVegSBJSaPOz1C6VLmdL9M6yMYdRXoTZYy66/09W+ySEZWiI2vyerlhQ23CQpZMxhkCHrf7vcrIS9I+8oHZYYPKmCU929ALOUPHTYGyy7jqM2zGAEz51m2Yk3M3wvsXunAd0hNd15m323i9CrzXVnfPH82t5ttbWPd9khFWr+9Cm9AQIbU4P7K1w3h4EAzyzwXRznxoaMxdCJ7j6JaJWoohkwF/xPvOh640XSbtpDHI3DjMvvqJs1zMG80o95NWTIpzKbPrhYo/Gv4IgOuUCD8QjciXZBG1iZskgki3pB6CVh8IpD4t4=';
+
+test('168. ofuscarAfirmacion y desofuscarAfirmacion', () => {
+  assert.equal(AFIRMACION_BLOQUE, 512);
+  assert.equal(AFIRMACION_MAX_BYTES, 510);
+  for (const t of ['Octopuses have three hearts.', 'ñandú 🐕 «comillas»', 'é'.repeat(255), 'a']) {
+    const c = ofuscarAfirmacion(t, CL, 4, 2);
     assert.match(c, /^[A-Za-z0-9+/]{683}=$/);
-    assert.deepEqual(desofuscarTexto(c, CL, 4, 2), { titular, entradilla });
+    assert.equal(desofuscarAfirmacion(c, CL, 4, 2), t);
   }
-  const justo = { titular: 'A', entradilla: 'b'.repeat(508) };
-  assert.equal(new TextEncoder().encode(`${justo.titular}\n${justo.entradilla}`).length, 510);
-  assert.deepEqual(desofuscarTexto(ofuscarTexto(justo, CL, 1, 0), CL, 1, 0), justo);
-  assert.throws(() => ofuscarTexto({ titular: 'A', entradilla: 'b'.repeat(509) }, CL, 1, 0), RangeError);
-  assert.throws(() => ofuscarTexto({ titular: 'a\nb', entradilla: 'c' }, CL, 1, 0), TypeError);
-  assert.throws(() => ofuscarTexto({ titular: '', entradilla: 'c' }, CL, 1, 0), TypeError);
-  assert.throws(() => ofuscarTexto({ titular: 'a', entradilla: 5 }, CL, 1, 0), TypeError);
-  assert.throws(() => ofuscarTexto({ titular: 'a', entradilla: '' }, CL, 1, 0), TypeError);
-  const ok = ofuscarTexto({ titular: 'a', entradilla: 'b' }, CL, 1, 0, () => 0);
+  assert.equal(desofuscarAfirmacion(ofuscarAfirmacion('a'.repeat(510), CL, 1, 0), CL, 1, 0), 'a'.repeat(510));
+  assert.throws(() => ofuscarAfirmacion('a'.repeat(511), CL, 1, 0), RangeError);
+  assert.throws(() => ofuscarAfirmacion('é'.repeat(256), CL, 1, 0), RangeError);
+  assert.throws(() => ofuscarAfirmacion('', CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAfirmacion('a\nb', CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAfirmacion(5, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAfirmacion(null, CL, 1, 0), TypeError);
+  const ok = ofuscarAfirmacion('hola', CL, 1, 0, () => 0);
   for (const malo of [ok.slice(0, 683), ok + 'A', ok.slice(0, 10) + '!' + ok.slice(11), null, undefined, 5, {}]) {
-    assert.equal(desofuscarTexto(malo, CL, 1, 0), null);
+    assert.equal(desofuscarAfirmacion(malo, CL, 1, 0), null);
   }
-  const semilla = `${CL}|1|0|texto`;
-  const enc = new TextEncoder();
-  const bloqueTexto = (texto) => bloqueDe(512, 0, enc.encode(texto).length, ...enc.encode(texto));
-  assert.equal(desofuscarTexto(cifrarBloque(bloqueTexto('sin salto'), semilla), CL, 1, 0), null);
-  assert.equal(desofuscarTexto(cifrarBloque(bloqueTexto('\nentradilla'), semilla), CL, 1, 0), null);
-  assert.equal(desofuscarTexto(cifrarBloque(bloqueTexto('titular\n'), semilla), CL, 1, 0), null);
-  assert.equal(desofuscarTexto(cifrarBloque(bloqueDe(512, 0, 4, 0xc3, 0x28, 0x0a, 0x61), semilla), CL, 1, 0), null);
-  assert.deepEqual(desofuscarTexto(cifrarBloque(bloqueTexto('a\nb\nc'), semilla), CL, 1, 0), { titular: 'a', entradilla: 'b\nc' });
-  // el flujo del texto no es el de la ficha de imagen
-  assert.notDeepEqual([...flujoBytes(semilla, 512)], [...flujoFicha(CL, 1, 0)]);
-  assert.notEqual(desofuscarFicha(ofuscarTexto({ titular: 'a', entradilla: 'b' }, CL, 1, 0), CL, 1, 0), 'a\nb');
+  const semilla = `${CL}|1|0|afirmacion`;
+  const texto = (s) => bloqueDe(512, 0, s.length, ...new TextEncoder().encode(s));
+  assert.equal(desofuscarAfirmacion(cifrarBloque(bloqueDe(512), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAfirmacion(cifrarBloque(texto('a\nb'), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAfirmacion(cifrarBloque(bloqueDe(512, 1, 255), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAfirmacion(cifrarBloque(bloqueDe(512, 0, 2, 0xc3, 0x28), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAfirmacion(cifrarBloque(texto('ok'), semilla), CL, 1, 0), 'ok');
+  // semilla propia: no se descifra como ficha de imagen ni como aclaración
+  assert.notEqual(desofuscarFicha(ok, CL, 1, 0), 'hola');
+  assert.equal(desofuscarAclaracion(ok, CL, 1, 0) === null || desofuscarAclaracion(ok, CL, 1, 0).aclaracion !== 'hola', true);
 });
 
-test('169. ofuscarNoticia y desofuscarNoticia', () => {
-  assert.equal(NOTICIA_BLOQUE, 1024);
-  assert.equal(NOTICIA_MAX_BYTES, 1021);
+test('169. ofuscarAclaracion y desofuscarAclaracion', () => {
+  assert.equal(ACLARACION_BLOQUE, 512);
+  assert.equal(ACLARACION_MAX_BYTES, 510);
+  assert.equal(DETALLES_MAX, 3);
   const casos = [
-    { tipo: 'fuente', texto: 'https://example.com/story' },
-    { tipo: 'prompt', texto: 'Write a short “plausible” headline — with é and 🐈.' },
-    { tipo: 'prompt', texto: 'p'.repeat(1000) },
-    { tipo: 'fuente', texto: 'u'.repeat(1021) }
+    { aclaracion: 'Truth.', detalles: [] },
+    { aclaracion: 'Truth.', detalles: ['One.'] },
+    { aclaracion: 'ñandú 🐕', detalles: ['Uno.', 'Dos «x».'] },
+    { aclaracion: 'Truth.', detalles: ['One.', 'Two.', 'Three.'] }
   ];
   for (const caso of casos) {
-    const c = ofuscarNoticia(caso, CL, 4, 2);
-    assert.match(c, /^[A-Za-z0-9+/]{1366}==$/);
-    assert.equal(c.length, 1368);
-    assert.deepEqual(desofuscarNoticia(c, CL, 4, 2), caso);
+    const c = ofuscarAclaracion(caso, CL, 4, 2);
+    assert.match(c, /^[A-Za-z0-9+/]{683}=$/);
+    assert.deepEqual(desofuscarAclaracion(c, CL, 4, 2), caso);
   }
-  assert.equal(ofuscarNoticia(casos[0], CL, 1, 0).length, ofuscarNoticia(casos[2], CL, 1, 0).length);
-  assert.throws(() => ofuscarNoticia({ tipo: 'fuente', texto: 'u'.repeat(1022) }, CL, 1, 0), RangeError);
-  assert.throws(() => ofuscarNoticia({ tipo: 'otro', texto: 'x' }, CL, 1, 0), TypeError);
-  assert.throws(() => ofuscarNoticia({ tipo: 'fuente', texto: '' }, CL, 1, 0), TypeError);
-  assert.throws(() => ofuscarNoticia({ tipo: 'fuente', texto: 5 }, CL, 1, 0), TypeError);
-  const ok = ofuscarNoticia(casos[0], CL, 1, 0, () => 0);
-  for (const malo of [ok.slice(0, 1367), ok + 'A', null, undefined, 5, {}]) {
-    assert.equal(desofuscarNoticia(malo, CL, 1, 0), null);
+  // detalles por defecto: []
+  assert.deepEqual(desofuscarAclaracion(ofuscarAclaracion({ aclaracion: 'T.' }, CL, 1, 0), CL, 1, 0), { aclaracion: 'T.', detalles: [] });
+  // misma longitud con 0 y con 3 detalles
+  assert.equal(ofuscarAclaracion(casos[0], CL, 1, 0).length, ofuscarAclaracion(casos[3], CL, 1, 0).length);
+  // límite de 510 bytes
+  const justo = { aclaracion: 'a'.repeat(300), detalles: ['b'.repeat(209)] };
+  assert.equal(new TextEncoder().encode([justo.aclaracion, ...justo.detalles].join('\n')).length, 510);
+  assert.deepEqual(desofuscarAclaracion(ofuscarAclaracion(justo, CL, 1, 0), CL, 1, 0), justo);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: 'a'.repeat(300), detalles: ['b'.repeat(210)] }, CL, 1, 0), RangeError);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: 'Truth.', detalles: ['a', 'b', 'c', 'd'] }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: '', detalles: [] }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: 'a\nb' }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: 'a', detalles: [''] }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: 'a', detalles: ['x\ny'] }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: 'a', detalles: 'x' }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAclaracion({ aclaracion: 5 }, CL, 1, 0), TypeError);
+  assert.throws(() => ofuscarAclaracion(undefined, CL, 1, 0), TypeError);
+  // descifrado: nunca lanza
+  const ok = ofuscarAclaracion(casos[1], CL, 1, 0, () => 0);
+  for (const malo of [ok.slice(0, 683), ok + 'A', ok.slice(0, 10) + '!' + ok.slice(11), null, undefined, 5, {}]) {
+    assert.equal(desofuscarAclaracion(malo, CL, 1, 0), null);
   }
-  const semilla = `${CL}|1|0|noticia`;
-  const cuerpo = (...bytes) => cifrarBloque(bloqueDe(1024, 0, bytes.length, ...bytes), semilla);
-  assert.equal(desofuscarNoticia(cuerpo(2, 0x61), CL, 1, 0), null);
-  assert.equal(desofuscarNoticia(cifrarBloque(bloqueDe(1024), semilla), CL, 1, 0), null);
-  assert.equal(desofuscarNoticia(cuerpo(0), CL, 1, 0), null);
-  assert.equal(desofuscarNoticia(cifrarBloque(bloqueDe(1024, 0x03, 0xff), semilla), CL, 1, 0), null);
-  assert.equal(desofuscarNoticia(cuerpo(1, 0xc3, 0x28), CL, 1, 0), null);
-  assert.deepEqual(desofuscarNoticia(cuerpo(1, 0x61), CL, 1, 0), { tipo: 'prompt', texto: 'a' });
-  // el flujo de la noticia no es el del texto ni el de la ficha de imagen
-  assert.notDeepEqual([...flujoBytes(semilla, 512)], [...flujoBytes(`${CL}|1|0|texto`, 512)]);
+  const semilla = `${CL}|1|0|aclaracion`;
+  const cuerpo = (s) => bloqueDe(512, 0, s.length, ...[...s].map((ch) => ch.charCodeAt(0)));
+  assert.equal(desofuscarAclaracion(cifrarBloque(bloqueDe(512), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAclaracion(cifrarBloque(cuerpo('\nb'), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAclaracion(cifrarBloque(cuerpo('a\n'), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAclaracion(cifrarBloque(cuerpo('a\n\nb'), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAclaracion(cifrarBloque(cuerpo('a\nb\nc\nd\ne'), semilla), CL, 1, 0), null);
+  assert.deepEqual(desofuscarAclaracion(cifrarBloque(cuerpo('a\nb\nc\nd'), semilla), CL, 1, 0), { aclaracion: 'a', detalles: ['b', 'c', 'd'] });
+  assert.equal(desofuscarAclaracion(cifrarBloque(bloqueDe(512, 1, 255), semilla), CL, 1, 0), null);
+  assert.equal(desofuscarAclaracion(cifrarBloque(bloqueDe(512, 0, 2, 0xc3, 0x28), semilla), CL, 1, 0), null);
+  // semilla propia: no es la de la afirmación
+  assert.equal(desofuscarAfirmacion(ok, CL, 1, 0) === null || desofuscarAfirmacion(ok, CL, 1, 0) !== 'Truth.', true);
 });
 
-test('170. vectores de regresión de Headlines (4.8)', () => {
-  assert.equal(ofuscarTexto({ titular: 'Test headline', entradilla: 'Test lede.' }, CL, 1, 0, () => 0), VEC_TEXTO);
-  assert.equal(ofuscarNoticia({ tipo: 'fuente', texto: 'https://example.com/story' }, CL, 1, 0, () => 0), VEC_NOTICIA);
-  assert.deepEqual(desofuscarTexto(VEC_TEXTO, CL, 1, 0), { titular: 'Test headline', entradilla: 'Test lede.' });
-  assert.deepEqual(desofuscarNoticia(VEC_NOTICIA, CL, 1, 0), { tipo: 'fuente', texto: 'https://example.com/story' });
+test('170. vectores de regresión de afirmación y aclaración (4.8)', () => {
+  assert.equal(ofuscarAfirmacion('Test claim.', CL, 1, 0, () => 0), VEC_AFIRMACION);
+  assert.equal(
+    ofuscarAclaracion({ aclaracion: 'Test truth.', detalles: ['One.', 'Two.'] }, CL, 1, 0, () => 0),
+    VEC_ACLARACION
+  );
+  assert.equal(desofuscarAfirmacion(VEC_AFIRMACION, CL, 1, 0), 'Test claim.');
+  assert.deepEqual(desofuscarAclaracion(VEC_ACLARACION, CL, 1, 0), { aclaracion: 'Test truth.', detalles: ['One.', 'Two.'] });
 });
 
-test('171. urlFuenteValida y medioDeUrl', () => {
-  assert.equal(urlFuenteValida('https://example.com/a?b=1'), true);
-  assert.equal(urlFuenteValida('https://example.com/' + 'p'.repeat(1021 - 'https://example.com/'.length)), true);
-  const invalidas = [
-    'http://example.com/',
-    'javascript:alert(1)',
-    'https://user:pw@example.com/',
-    'https://user@example.com/',
-    '/relativa',
-    'https://192.168.1.1/',
-    'https://[::1]/',
-    'https://localhost/',
-    'HTTPS://Example.com/',
-    'https://example.com',
-    'https://example.com/' + 'p'.repeat(1022 - 'https://example.com/'.length),
-    '',
-    null,
-    undefined,
-    42
-  ];
-  for (const x of invalidas) assert.equal(urlFuenteValida(x), false, String(x));
-  assert.equal(medioDeUrl('https://www.apnews.com/x'), 'apnews.com');
-  assert.equal(medioDeUrl('https://news.example.co.uk/x'), 'news.example.co.uk');
-  assert.equal(medioDeUrl('https://wwwx.com/x'), 'wwwx.com');
-  assert.equal(medioDeUrl('x'), null);
-  assert.equal(medioDeUrl(null), null);
+test('232. el módulo ya no exporta Headlines y el archivo de ejemplo no lleva textos en claro', () => {
+  for (const viejo of ['TEXTO_BLOQUE', 'TEXTO_MAX_BYTES', 'NOTICIA_BLOQUE', 'NOTICIA_MAX_BYTES', 'ofuscarTexto', 'desofuscarTexto',
+    'ofuscarNoticia', 'desofuscarNoticia', 'urlFuenteValida', 'medioDeUrl', 'TITULARES_CARPETA', 'rutaTitulares', 'titularesVacios',
+    'validarTitulares', 'titularesDelDia', 'titularesDeNumero', 'titularesDelMes', 'cargarTitulares', 'cargarTitularesPrueba']) {
+    assert.equal(diario[viejo], undefined, viejo);
+  }
+  const texto = JSON.stringify(mesDeEjemplo('2000-01', 1, 3));
+  assert.equal(/claim|truth|one\.|two\./i.test(texto), false);
+  assert.ok(mesDeEjemplo('2000-01', 1, 1).dias[0].textos.every((t) => t.length === 684));
+  assert.ok(mesDeEjemplo('2000-01', 1, 1).dias[0].fichas.every((t) => t.length === 684));
 });
+
