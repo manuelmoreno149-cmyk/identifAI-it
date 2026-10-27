@@ -12,7 +12,7 @@
 <script type="module" src="js/main.js"></script>
 </head>
 <body data-pagina="juego">
-<main id="app" data-pantalla="portada" data-modo="normal">
+<main id="app" data-pantalla="portada" data-reto="imagenes" data-modo="normal">
 
   <!-- Portada -->
   <section class="pantalla" id="pantalla-portada" hidden>
@@ -21,8 +21,27 @@
       <h1 tabindex="-1" data-texto="portada.titulo">[[portada.titulo]]</h1>
       <p class="portada-lema" data-texto="portada.lema">[[portada.lema]]</p>
       <p id="portada-caso"></p>
-      <p id="portada-tema"></p>
     </header>
+    <fieldset id="portada-retos">
+      <legend data-texto="portada.elige_reto">[[portada.elige_reto]]</legend>
+      <div class="retos">
+        <div class="reto">
+          <input type="radio" name="reto" id="reto-imagenes" value="imagenes">
+          <label for="reto-imagenes">
+            <span class="reto-nombre" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
+            <span class="reto-estado" id="reto-imagenes-estado"></span>
+          </label>
+        </div>
+        <div class="reto">
+          <input type="radio" name="reto" id="reto-afirmaciones" value="afirmaciones">
+          <label for="reto-afirmaciones">
+            <span class="reto-nombre" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
+            <span class="reto-estado" id="reto-afirmaciones-estado"></span>
+          </label>
+        </div>
+      </div>
+    </fieldset>
+    <p id="portada-tema"></p>
     <fieldset id="portada-modos">
       <legend data-texto="portada.elige_modo">[[portada.elige_modo]]</legend>
       <div class="modos">
@@ -49,9 +68,10 @@
         </div>
       </div>
     </fieldset>
+    <p id="portada-regla" data-texto="portada.regla_afirmaciones" hidden>[[portada.regla_afirmaciones]]</p>
     <p id="portada-racha" hidden></p>
     <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="empezar" data-foco><span class="boton-texto" data-texto="portada.boton_empezar">[[portada.boton_empezar]]</span></button>
+      <button type="button" class="boton boton-primario" data-accion="empezar" data-foco><span class="boton-texto" id="portada-empezar-texto" data-texto="portada.boton_empezar">[[portada.boton_empezar]]</span></button>
     </div>
     <details id="como-jugar">
       <summary id="como-jugar-resumen"><span data-texto="como_jugar.titulo">[[como_jugar.titulo]]</span></summary>
@@ -86,17 +106,26 @@
       <p id="caso-tema"></p>
       <p id="caso-etiqueta" tabindex="-1" data-foco></p>
       <p id="caso-marcador"></p>
+      <p id="caso-aviso" data-texto="afirmaciones.aviso_oculta" hidden>[[afirmaciones.aviso_oculta]]</p>
     </header>
     <div id="caso-escena">
       <figure id="prueba-marco"></figure>
       <div id="prueba-sobre" hidden aria-hidden="true">
         <p id="prueba-sobre-texto" data-texto="partida.sobre_texto">[[partida.sobre_texto]]</p>
       </div>
+      <article id="afirmacion" hidden aria-labelledby="caso-etiqueta">
+        <p id="afirmacion-texto"></p>
+        <p id="afirmacion-marca" aria-hidden="true" data-texto="afirmaciones.marca">[[afirmaciones.marca]]</p>
+      </article>
       <div id="veredicto" role="status" aria-live="polite" hidden>
         <p id="veredicto-sello"></p>
         <div id="veredicto-pie">
           <span id="veredicto-icono" aria-hidden="true"></span>
           <p id="veredicto-texto"></p>
+        </div>
+        <div id="veredicto-aclaracion" hidden>
+          <p id="veredicto-aclaracion-texto"></p>
+          <ul id="veredicto-detalles"></ul>
         </div>
         <div id="veredicto-confesion">
           <p id="veredicto-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</p>
@@ -113,12 +142,12 @@
     <p id="temporizador-anuncio" class="solo-lectores" aria-live="polite"></p>
     <div id="caso-botones">
       <button type="button" class="boton boton-voto" data-voto="autentica" aria-keyshortcuts="R">
-        <span class="boton-texto" data-texto="partida.boton_autentica">[[partida.boton_autentica]]</span>
-        <kbd aria-hidden="true">R</kbd>
+        <span class="boton-texto" id="voto-autentica-texto"></span>
+        <kbd id="voto-autentica-tecla" aria-hidden="true"></kbd>
       </button>
       <button type="button" class="boton boton-voto" data-voto="generada" aria-keyshortcuts="I">
-        <span class="boton-texto" data-texto="partida.boton_generada">[[partida.boton_generada]]</span>
-        <kbd aria-hidden="true">I</kbd>
+        <span class="boton-texto" id="voto-generada-texto"></span>
+        <kbd id="voto-generada-tecla" aria-hidden="true"></kbd>
       </button>
       <button type="button" class="boton boton-primario" data-accion="siguiente"><span class="boton-texto" data-texto="partida.boton_siguiente">[[partida.boton_siguiente]]</span></button>
     </div>
@@ -128,6 +157,7 @@
   <section class="pantalla" id="pantalla-resultado" hidden>
     <div class="cinta-peligro" aria-hidden="true"></div>
     <div class="tarjeta">
+      <p id="resultado-reto"></p>
       <p id="resultado-aciertos" tabindex="-1" data-foco></p>
       <p id="resultado-mensaje"></p>
     </div>
@@ -135,6 +165,7 @@
     <p id="resultado-rachas"><span id="resultado-racha"></span> <span id="resultado-mejor-racha"></span></p>
     <div class="acciones">
       <button type="button" class="boton boton-primario" data-accion="compartir"><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
+      <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">[[final.boton_volver]]</span></button>
     </div>
   </section>
 
@@ -143,6 +174,7 @@
     <div class="tarjeta">
       <h2 tabindex="-1" data-texto="ya_jugado.titulo">[[ya_jugado.titulo]]</h2>
       <p id="ya-jugado-texto" data-texto="ya_jugado.texto">[[ya_jugado.texto]]</p>
+      <p id="ya-jugado-reto"></p>
       <p id="ya-jugado-aciertos"></p>
       <p id="ya-jugado-modo"></p>
       <p id="ya-jugado-cuadros" role="img"></p>
@@ -151,6 +183,7 @@
     </div>
     <div class="acciones">
       <button type="button" class="boton boton-primario" data-accion="compartir"><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
+      <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">[[final.boton_volver]]</span></button>
     </div>
   </section>
 
@@ -158,7 +191,7 @@
   <section class="pantalla" id="pantalla-sin-casos" hidden>
     <div class="centrado">
       <div class="huella-fondo" aria-hidden="true"></div>
-      <p tabindex="-1" data-foco data-texto="sin_casos.texto">[[sin_casos.texto]]</p>
+      <p id="sin-casos-texto" tabindex="-1" data-foco data-texto="sin_casos.texto">[[sin_casos.texto]]</p>
     </div>
   </section>
 
@@ -182,9 +215,14 @@
   <dialog id="ficha" aria-labelledby="ficha-titulo">
     <h2 id="ficha-titulo"></h2>
     <img id="ficha-img" alt="" width="1080" height="1350" hidden>
+    <p id="ficha-afirmacion" hidden></p>
     <p id="ficha-era"></p>
     <h3 id="ficha-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</h3>
     <p id="ficha-texto"></p>
+    <div id="ficha-aclaracion" hidden>
+      <p id="ficha-aclaracion-texto"></p>
+      <ul id="ficha-detalles"></ul>
+    </div>
     <button type="button" id="ficha-cerrar" class="boton" data-accion="cerrar-ficha">
       <span class="boton-texto" data-texto="ficha.cerrar">[[ficha.cerrar]]</span>
     </button>
