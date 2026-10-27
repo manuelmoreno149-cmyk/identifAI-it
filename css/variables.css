@@ -32,6 +32,7 @@
   /* Estados (los iconos llevan su propio disco de color) */
   --color-acierto: #1f7a46;
   --color-fallo: #c4302b;
+  --color-hecho: #14532d;        /* sello de afirmacion verdadera sobre papel: 7:1 */
 
   /* Cinta de no pasar */
   --color-cinta: #f5c518;
@@ -54,6 +55,8 @@
   --ancho-lectura: 65ch;
   --tactil-min: 44px;
   --alto-boton: 4rem;
+  --alto-sello: 2.75rem;         /* banda superior de la tarjeta de afirmacion en el veredicto */
+  --alto-ficha-reto: clamp(2.75rem, 8dvh, 4rem);
 
   /* Radios */
   --radio-1: 2px;
@@ -77,4 +80,6 @@
   --texto-pequeno: 0.875rem;
   --texto-grande: 1.25rem;
   --texto-titulo: clamp(2.6rem, 14vw, 4.5rem);
+  --texto-afirmacion: clamp(1.25rem, min(7vw, 6.5dvh + 0.5rem), 2.5rem); /* 20 px como minimo */
+  --curva-estampa: cubic-bezier(0.2, 1.3, 0.4, 1);
 }
