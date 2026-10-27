@@ -1,48 +1,66 @@
-// Funciones puras y de archivo del importador de Headlines (spec 4.9 a 4.13) [D-106, D-107, D-116].
-// Las funciones puras no tocan el disco; solo leerTitularesMensuales y escribirTitularesMensuales lo hacen.
+// Funciones puras y de archivo del importador de Fact or Fake (spec 4.9 a 4.13) [D-123, D-131].
+// Las funciones puras no tocan el disco; solo leerAfirmacionesMensuales y escribirAfirmacionesMensuales lo hacen.
+// No hay banco ni fuentes [D-131]. datos.txt y datos.original.txt nunca se abren [D-139].
 
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  TEXTO_MAX_BYTES, NOTICIA_MAX_BYTES, MES_PATRON, urlFuenteValida, validarTitulares,
+  AFIRMACION_MAX_BYTES, DETALLES_MAX, MES_PATRON, validarAfirmaciones,
   mesDeNumero, fechaDelDia, diasEntre, temaValido
 } from '../js/diario.js';
-import { analizarCarpeta, contienePalabraProhibida, normalizarFicha } from './temas.mjs';
+import { analizarCarpeta, contienePalabraProhibida } from './temas.mjs';
 
-export const CAMPOS_NOTICIA = ['type', 'headline', 'lede', 'source', 'prompt'];
-export const TITULAR_MAX = 110;
-export const ENTRADILLA_MAX = 280;
-export const UMBRAL_LONGITUD = 0.25;
+export const CAMPOS_AFIRMACION = ['answer', 'claim', 'truth', 'details'];
+export const AFIRMACION_MAX = 140;
+export const ACLARACION_MAX = 160;
+export const DETALLE_MAX = 80;
+export const ARCHIVOS_AFIRMACIONES = ['facts.en.txt', 'facts.txt'];
+export const UMBRAL_LONGITUD = 0.2;
 export const ARCHIVO_MES = /^(\d{4}-(?:0[1-9]|1[0-2]))\.json$/;
 
-// Lista de comprobación de 4.13 (más el añadido de DP-49).
+// Lista de comprobación de 4.13 [D-136, D-137].
 export const LISTA_REVISION = [
-  'Ninguna noticia de IA nombra a una persona real (tampoco por su cargo único: "the current Pope").',
-  'Ninguna noticia de IA nombra una empresa, marca, producto, medio u organización real.',
-  'Ninguna noticia de IA nombra una institución real (gobiernos, ministerios, partidos, universidades, hospitales, equipos, cuerpos de policía).',
-  'Los prompts tampoco contienen nombres reales.',
-  'Las noticias auténticas tienen su URL https original, el titular adaptado del medio sin cambiar su sentido y una entradilla resumida con palabras propias (no copiada) que no cambia el sentido de la noticia.',
-  'Ninguna noticia (auténtica o de IA) revela el medio ni la fecha en el texto.',
-  'Ninguna noticia de IA atribuye sucesos graves inventados (muertes, catástrofes, delitos, salud pública) a lugares reales.'
+  'Ninguna afirmación falsa daña la reputación de la persona o marca de la que habla: con personas y marcas famosas solo altera una cifra o un récord (una estatura, unas ventas, una marca deportiva), sin atribuirles hechos, dichos ni conductas.',
+  'Ninguna afirmación falsa trata de salud, medicina, nutrición, fármacos ni remedios.',
+  'Ninguna afirmación falsa trata de seguridad (electricidad, química, conducción, primeros auxilios, animales peligrosos…) ni podría causar daño si alguien se la creyera.',
+  'Ninguna afirmación falsa trata de tragedias (muertes, catástrofes, crímenes, accidentes, guerras).',
+  'Ninguna afirmación falsa trata de política, elecciones, gobiernos, partidos ni conflictos.',
+  'Cada `truth` es correcta, se entiende sola y corrige (o confirma) la afirmación sin ambigüedad, sin referirse a fuentes.',
+  'Ninguna afirmación verdadera es engañosa por omisión; si hace falta, su `truth` la matiza.',
+  'Verdaderas y falsas tienen el mismo estilo (tono, cifras, unidades, longitud). Ojo: si solo las verdaderas tratan de los temas de los puntos 2 a 5, el tema delata la respuesta. Este punto solo advierte: la norma no prohíbe verdaderas sobre esos temas.'
 ];
 
-const NOMBRE_NOTICIAS = 'noticias.txt';
 const RE_CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
+const RE_URL = /(?:https?:\/\/|www\.)/i;
 const bytes = (t) => new TextEncoder().encode(t).length;
 const puntos = (t) => Array.from(t).length;
 
-// ---------- noticias.txt (4.9) ----------
+export function elegirArchivo(archivos) {
+  const lista = Array.isArray(archivos) ? archivos : [];
+  return ARCHIVOS_AFIRMACIONES.find((a) => lista.includes(a)) ?? null;
+}
 
-export function analizarNoticias(texto, ruta, { textoMaxBytes = TEXTO_MAX_BYTES, fichaMaxBytes = NOTICIA_MAX_BYTES, urlValida = urlFuenteValida } = {}) {
+export function normalizarParaDuplicados(texto) {
+  return String(texto ?? '')
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[\s.,;:!?¡¿"'“”‘’…]+$/u, '')
+    .trim();
+}
+
+// ---------- facts.txt (4.9) ----------
+
+export function analizarAfirmaciones(texto, ruta, { maxBytes = AFIRMACION_MAX_BYTES } = {}) {
   const errores = [];
   const avisos = [];
-  const noticias = [];
+  const afirmaciones = [];
   try {
     let t = typeof texto === 'string' ? texto : String(texto ?? '');
     if (t.charCodeAt(0) === 0xfeff) t = t.slice(1);
     t = t.replace(/\r\n?/g, '\n').normalize('NFC');
 
-    // Bloques separados por '---'.
     const bloques = [];
     let actual = [];
     for (const linea of t.split('\n')) {
@@ -56,22 +74,27 @@ export function analizarNoticias(texto, ruta, { textoMaxBytes = TEXTO_MAX_BYTES,
     bloques.push(actual);
     const llenos = bloques.map((b) => b.filter((l) => l.trim() !== '')).filter((b) => b.length > 0);
 
-    let nIa = 0;
-    let tiposOk = true;
+    let nFalsas = 0;
+    let respuestasOk = true;
     llenos.forEach((lineas, i) => {
       const donde = `${ruta}, bloque ${i + 1}`;
       const err = [];
       const campos = new Map();
+      const detalles = [];
       for (const linea of lineas) {
         const k = linea.indexOf(':');
         if (k < 0) {
-          err.push(`${donde}: la línea "${linea.trim().slice(0, 30)}" no tiene la forma campo: valor.`);
+          err.push(`${donde}: una línea no tiene la forma campo: valor.`);
           continue;
         }
         const campo = linea.slice(0, k).trim();
         const valor = linea.slice(k + 1).trim().replace(/[ \t]+/g, ' ');
-        if (!CAMPOS_NOTICIA.includes(campo)) {
+        if (!CAMPOS_AFIRMACION.includes(campo)) {
           err.push(`${donde}: campo no previsto "${campo.slice(0, 30)}".`);
+          continue;
+        }
+        if (campo === 'details') {
+          detalles.push(valor);
           continue;
         }
         if (campos.has(campo)) {
@@ -80,96 +103,70 @@ export function analizarNoticias(texto, ruta, { textoMaxBytes = TEXTO_MAX_BYTES,
         }
         campos.set(campo, valor);
       }
-      for (const obligatorio of ['type', 'headline', 'lede']) {
+      for (const obligatorio of ['answer', 'claim', 'truth']) {
         if (!campos.has(obligatorio)) err.push(`${donde}: falta el campo ${obligatorio}.`);
       }
-      const tipoTexto = campos.get('type');
-      let tipo = null;
-      if (tipoTexto !== undefined) {
-        if (tipoTexto === 'real') tipo = 'autentica';
-        else if (tipoTexto === 'ai') tipo = 'generada';
-        else err.push(`${donde}: type debe ser real o ai.`);
-      }
-      if (tipo === null) tiposOk = false;
-      if (tipo === 'generada') nIa++;
-      if (tipo === 'autentica') {
-        if (!campos.has('source')) err.push(`${donde}: falta el campo source.`);
-        if (campos.has('prompt')) err.push(`${donde}: una noticia real no lleva prompt.`);
-      }
-      if (tipo === 'generada') {
-        if (!campos.has('prompt')) err.push(`${donde}: falta el campo prompt.`);
-        if (campos.has('source')) err.push(`${donde}: una noticia ai no lleva source.`);
-      }
+      if (detalles.length > DETALLES_MAX) err.push(`${donde}: tiene ${detalles.length} details y el máximo es ${DETALLES_MAX}.`);
 
-      const titular = campos.get('headline') ?? '';
-      const entradilla = campos.get('lede') ?? '';
-      for (const [nombre, valor, max] of [['headline', titular, TITULAR_MAX], ['lede', entradilla, ENTRADILLA_MAX]]) {
-        if (!campos.has(nombre)) continue;
+      const respuesta = campos.get('answer');
+      let tipo = null;
+      if (respuesta !== undefined) {
+        if (respuesta === 'fact') tipo = 'autentica';
+        else if (respuesta === 'fake') tipo = 'generada';
+        else err.push(`${donde}: answer debe ser fact o fake.`);
+      }
+      if (tipo === null) respuestasOk = false;
+      if (tipo === 'generada') nFalsas++;
+
+      const afirmacion = campos.get('claim') ?? '';
+      const aclaracion = campos.get('truth') ?? '';
+      const partes = [['claim', afirmacion, AFIRMACION_MAX, campos.has('claim')], ['truth', aclaracion, ACLARACION_MAX, campos.has('truth')]];
+      detalles.forEach((d, j) => partes.push([`details ${j + 1}`, d, DETALLE_MAX, true]));
+      for (const [nombre, valor, max, presente] of partes) {
+        if (!presente) continue;
         if (valor === '') err.push(`${donde}: ${nombre} está vacío.`);
         if (RE_CONTROL.test(valor)) err.push(`${donde}: ${nombre} tiene caracteres de control.`);
         if (/[{}]/.test(valor)) err.push(`${donde}: ${nombre} no puede contener { ni }.`);
+        if (RE_URL.test(valor)) err.push(`${donde}: ${nombre} no puede contener enlaces.`);
         if (puntos(valor) > max) err.push(`${donde}: ${nombre} mide ${puntos(valor)} caracteres y el máximo es ${max}.`);
       }
-      if (titular !== '' && entradilla !== '' && bytes(`${titular}\n${entradilla}`) > textoMaxBytes) {
-        err.push(`${donde}: titular y entradilla juntos pasan de ${textoMaxBytes} bytes.`);
+      if (afirmacion !== '' && bytes(afirmacion) > maxBytes) {
+        err.push(`${donde}: claim pasa de ${maxBytes} bytes.`);
+      }
+      const unida = [aclaracion, ...detalles].join('\n');
+      if (aclaracion !== '' && bytes(unida) > maxBytes) {
+        err.push(`${donde}: truth y details juntos pasan de ${maxBytes} bytes.`);
       }
 
-      let fuente = null;
-      if (tipo === 'autentica' && campos.has('source')) {
-        try {
-          fuente = new URL(campos.get('source')).href;
-        } catch {
-          fuente = null;
-        }
-        if (fuente === null || !urlValida(fuente)) {
-          err.push(`${donde}: source no es una URL https válida (sin credenciales, de ${NOTICIA_MAX_BYTES} bytes como máximo; acórtala o usa la URL canónica).`);
-          fuente = null;
-        }
-      }
+      const frases = (s) => (s.match(/[.!?](?=\s|$)/g) ?? []).length;
+      if (frases(afirmacion) > 1) avisos.push(`AVISO: ${donde}: la afirmación tiene más de una frase.`);
+      if (frases(aclaracion) > 1) avisos.push(`AVISO: ${donde}: la aclaración tiene más de una frase.`);
+      if (afirmacion !== '' && !/[.!?]["')”’]?$/.test(afirmacion)) avisos.push(`AVISO: ${donde}: la afirmación no acaba en punto.`);
 
-      let prompt = null;
-      let promptRecortado = false;
-      if (tipo === 'generada' && campos.has('prompt')) {
-        const f = normalizarFicha(campos.get('prompt'), fichaMaxBytes);
-        if (f.vacia) {
-          err.push(`${donde}: el prompt está vacío.`);
-        } else {
-          prompt = f.texto;
-          promptRecortado = f.truncada;
-          if (f.truncada) avisos.push(`AVISO: ${donde}: el prompt pasaba de ${fichaMaxBytes} bytes y se ha recortado.`);
-        }
-      }
-
-      if (tipo === 'autentica' || tipo === 'generada') {
-        const frases = (entradilla.match(/[.!?](?=\s|$)/g) ?? []).length;
-        if (frases > 2) avisos.push(`AVISO: ${donde}: la entradilla tiene más de 2 frases.`);
-      }
-
-      if (err.length === 0) noticias.push({ tipo, titular, entradilla, fuente, prompt, promptRecortado });
+      if (err.length === 0) afirmaciones.push({ tipo, afirmacion, aclaracion, detalles });
       errores.push(...err);
     });
 
     if (llenos.length !== 5) {
-      errores.push(`${ruta}: tiene ${llenos.length} noticias y cada día necesita exactamente 5.`);
-    } else if (tiposOk && (nIa === 0 || nIa === 5)) {
-      errores.push(`${ruta}: tiene ${nIa} noticias de IA; cada día necesita entre 1 y 4.`);
+      errores.push(`${ruta}: tiene ${llenos.length} afirmaciones y cada día necesita exactamente 5.`);
+    } else if (respuestasOk && (nFalsas === 0 || nFalsas === 5)) {
+      errores.push(`${ruta}: tiene ${nFalsas} afirmaciones falsas; cada día necesita entre 1 y 4.`);
     }
   } catch (e) {
     errores.push(`${ruta}: no se pudo analizar (${e.message}).`);
   }
-  return { noticias, errores, avisos };
+  return { afirmaciones, errores, avisos };
 }
 
-// ---------- Planificación (4.11) ----------
+// ---------- Planificación (4.10 paso 4, 4.11) ----------
 
-const IGNORADOS = (n) => n.startsWith('.') || n === 'Thumbs.db' || n === 'desktop.ini';
-
-// carpetas: [{nombre, archivos: string[], subcarpetas: string[]}]
-export function planificarTitulares({ carpetas, ultimoDia = 0, hoyISO, lanzamiento = null, reimportar = false }) {
+// carpetas: [{nombre, archivos: string[]}] (archivos de la raíz; las subcarpetas no se miran).
+export function planificarAfirmaciones({ carpetas, ultimoDia = 0, hoyISO, lanzamiento = null, reimportar = false, temasImagenes = null }) {
   const errores = [];
   const avisos = [];
   const nuevos = [];
   const omitidos = [];
+  const pendientes = [];
   const ultimo = reimportar ? 0 : ultimoDia;
 
   const analizadas = [];
@@ -177,7 +174,7 @@ export function planificarTitulares({ carpetas, ultimoDia = 0, hoyISO, lanzamien
     try {
       analizadas.push({ ...analizarCarpeta(c.nombre), c });
     } catch (e) {
-      // La plantilla 00-example (número 00) se ignora sin error ni aviso: la numeración empieza en 01.
+      // La plantilla 00-example (número 00) se ignora sin error ni aviso.
       if (/^0+-/.test(String(c.nombre).normalize('NFC'))) continue;
       errores.push(e.message);
     }
@@ -200,24 +197,37 @@ export function planificarTitulares({ carpetas, ultimoDia = 0, hoyISO, lanzamien
     errores.push(`La primera carpeta nueva (${hijos[0].c.nombre}) debe ser la del día ${String(ultimo + 1).padStart(2, '0')}, el siguiente al último publicado.`);
   }
 
-  for (const a of hijos) {
+  // Las carpetas sin archivo solo pueden ser las últimas.
+  const conArchivo = hijos.map((a) => elegirArchivo(a.c.archivos));
+  let primeraSin = conArchivo.findIndex((x) => x === null);
+  if (primeraSin < 0) primeraSin = hijos.length;
+  for (let i = primeraSin; i < hijos.length; i++) {
+    if (conArchivo[i] !== null) {
+      errores.push(`${hijos[primeraSin].c.nombre} no tiene facts.en.txt ni facts.txt y le sigue ${hijos[i].c.nombre}, que sí: no puede haber huecos.`);
+      break;
+    }
+  }
+  for (let i = primeraSin; i < hijos.length; i++) pendientes.push(hijos[i].n);
+  if (pendientes.length > 0) {
+    const resto = pendientes.length > 1 ? ' y siguientes' : '';
+    avisos.push(`AVISO: ${hijos[primeraSin].c.nombre}${resto} no tienen facts.txt: Fact or Fake se queda en el día ${hijos[primeraSin].n - 1}.`);
+  }
+
+  hijos.forEach((a, i) => {
+    const archivo = conArchivo[i];
+    if (archivo === null) return;
     const { c, n, tema } = a;
     const nom = c.nombre;
-    const archivos = (c.archivos ?? []).filter((x) => !IGNORADOS(x));
-    const subs = (c.subcarpetas ?? []).filter((x) => !IGNORADOS(x));
-    if (!archivos.includes(NOMBRE_NOTICIAS)) {
-      errores.push(`${nom} debe contener ${NOMBRE_NOTICIAS}.`);
-    }
-    const sobrantes = [...archivos.filter((x) => x !== NOMBRE_NOTICIAS), ...subs];
-    if (sobrantes.length > 0) {
-      errores.push(`${nom} contiene archivos o carpetas no admitidos: ${sobrantes.join(', ')}.`);
-    }
     if (!temaValido(tema)) {
       errores.push(`El tema de ${nom} ("${tema}") no es válido: debe tener entre 1 y 30 caracteres.`);
     }
     const prohibida = contienePalabraProhibida(tema);
     if (prohibida) {
       errores.push(`El tema de ${nom} ("${tema}") contiene la palabra prohibida "${prohibida}". Cambia el nombre de la carpeta.`);
+    }
+    const temaImagenes = temasImagenes && typeof temasImagenes.get === 'function' ? temasImagenes.get(n) : undefined;
+    if (temaImagenes !== undefined && temaImagenes !== tema) {
+      errores.push(`El tema de ${nom} no coincide con el del día ${n} de Images.`);
     }
     let fecha = null;
     if (lanzamiento !== null && lanzamiento !== undefined) {
@@ -226,53 +236,47 @@ export function planificarTitulares({ carpetas, ultimoDia = 0, hoyISO, lanzamien
         errores.push(`El día ${String(n).padStart(2, '0')} (${fecha}) ya ha llegado o ha pasado; no se pueden añadir días de hoy ni del pasado.`);
       }
     }
-    nuevos.push({ n, fecha, tema, carpeta: nom, mes: mesDeNumero(lanzamiento, n) });
-  }
+    nuevos.push({ n, fecha, tema, carpeta: nom, archivo, mes: mesDeNumero(lanzamiento, n) });
+  });
 
-  return { nuevos, omitidos, errores, avisos };
+  return { nuevos, omitidos, pendientes, errores, avisos };
 }
 
 // ---------- Longitudes (4.11) ----------
 
 const media = (xs) => (xs.length === 0 ? null : xs.reduce((s, x) => s + x, 0) / xs.length);
 
-export function medias(noticias) {
-  const de = (tipo, campo) => media(noticias.filter((x) => x.tipo === tipo).map((x) => puntos(x[campo])));
-  return {
-    titular: { autentica: de('autentica', 'titular'), generada: de('generada', 'titular') },
-    entradilla: { autentica: de('autentica', 'entradilla'), generada: de('generada', 'entradilla') }
-  };
+export function medias(afirmaciones) {
+  const de = (tipo) => media(afirmaciones.filter((x) => x.tipo === tipo).map((x) => puntos(x.afirmacion)));
+  return { autentica: de('autentica'), generada: de('generada') };
 }
 
-function avisoDe(donde, nombre, m) {
+function avisoDe(donde, m) {
   const { autentica: a, generada: g } = m;
   if (a === null || g === null) return null;
   const mayor = Math.max(a, g);
   const menor = Math.min(a, g);
   if (menor <= 0 || (mayor - menor) / menor <= UMBRAL_LONGITUD) return null;
   const pct = Math.round(((mayor - menor) / menor) * 100);
-  const art = nombre === 'titulares' ? 'los' : 'las';
-  const [quien, otro] = g > a ? ['de IA', 'reales'] : ['reales', 'de IA'];
-  return `AVISO: ${donde}${donde.startsWith("en todo") ? "," : ":"} ${art} ${nombre} ${quien} miden de media un ${pct} % más que ${art} ${otro} (${Math.round(mayor)} frente a ${Math.round(menor)} caracteres).`;
+  const [quien, otro] = g > a ? ['falsas', 'verdaderas'] : ['verdaderas', 'falsas'];
+  return `AVISO: ${donde}${donde.startsWith('en todo') ? ',' : ':'} las afirmaciones ${quien} miden de media un ${pct} % más que las ${otro} (${Math.round(mayor)} frente a ${Math.round(menor)} caracteres).`;
 }
 
+// Devuelve solo avisos, nunca errores [D-140]. dias: [{n, afirmaciones}].
 export function avisosLongitud(dias) {
   const avisos = [];
-  const comprobar = (donde, noticias) => {
-    const m = medias(noticias);
-    for (const [nombre, clave] of [['titulares', 'titular'], ['entradillas', 'entradilla']]) {
-      const a = avisoDe(donde, nombre, m[clave]);
-      if (a) avisos.push(a);
-    }
-  };
-  for (const d of dias) comprobar(`día ${d.n}`, d.noticias);
-  comprobar('en todo Headlines', dias.flatMap((d) => d.noticias));
+  for (const d of dias) {
+    const a = avisoDe(`día ${d.n}`, medias(d.afirmaciones));
+    if (a) avisos.push(a);
+  }
+  const g = avisoDe('en todo Fact or Fake', medias(dias.flatMap((d) => d.afirmaciones)));
+  if (g) avisos.push(g);
   return avisos;
 }
 
 // ---------- Argumentos (4.10) ----------
 
-export function analizarArgumentosTitulares(argv) {
+export function analizarArgumentosAfirmaciones(argv) {
   const r = { simular: false, reimportar: false, confirmar: false, revisado: false, errores: [] };
   for (const a of argv) {
     if (a === '--simular') r.simular = true;
@@ -284,14 +288,14 @@ export function analizarArgumentosTitulares(argv) {
   return r;
 }
 
-// ---------- Archivos mensuales [D-116] ----------
+// ---------- Archivos mensuales [D-116, D-124] ----------
 
 export function unirMeses(archivos, { lanzamiento = null, comprobarMes = true } = {}) {
   const errores = [];
   const porN = new Map();
   try {
     for (const { nombre, contenido } of archivos ?? []) {
-      const ruta = `data/titulares/${nombre}`;
+      const ruta = `data/facts/${nombre}`;
       const m = ARCHIVO_MES.exec(nombre);
       if (!m) {
         errores.push(`${ruta}: el nombre debe ser AAAA-MM.json.`);
@@ -302,7 +306,7 @@ export function unirMeses(archivos, { lanzamiento = null, comprobarMes = true } 
         errores.push(`${ruta}: no es JSON válido.`);
         continue;
       }
-      if (!validarTitulares(contenido, mes)) {
+      if (!validarAfirmaciones(contenido, mes)) {
         errores.push(`${ruta}: no tiene la estructura de la versión 1 o su mes no coincide con el nombre.`);
         continue;
       }
@@ -310,14 +314,14 @@ export function unirMeses(archivos, { lanzamiento = null, comprobarMes = true } 
         const previo = porN.get(dia.n);
         if (previo) {
           if (!comprobarMes && JSON.stringify(previo.dia) === JSON.stringify(dia)) continue;
-          errores.push(`El día ${dia.n} de Headlines está repetido en ${previo.nombre} y ${nombre}.`);
+          errores.push(`El día ${dia.n} de Fact or Fake está repetido en ${previo.nombre} y ${nombre}.`);
           continue;
         }
         porN.set(dia.n, { dia, nombre, mes });
         if (comprobarMes) {
           const esperado = mesDeNumero(lanzamiento, dia.n);
           if (esperado !== mes) {
-            errores.push(`El día ${dia.n} de Headlines está en ${nombre} y le corresponde ${esperado}.`);
+            errores.push(`El día ${dia.n} de Fact or Fake está en ${nombre} y le corresponde ${esperado}.`);
           }
         }
       }
@@ -328,15 +332,15 @@ export function unirMeses(archivos, { lanzamiento = null, comprobarMes = true } 
       if (ns[i] !== esperado) {
         errores.push(
           i === 0
-            ? `Los días de Headlines deben empezar en 1 y el primero es el ${ns[0]}.`
-            : `Faltan días de Headlines: tras el día ${ns[i - 1]} viene el ${ns[i]}.`
+            ? `Los días de Fact or Fake deben empezar en 1 y el primero es el ${ns[0]}.`
+            : `Faltan días de Fact or Fake: tras el día ${ns[i - 1]} viene el ${ns[i]}.`
         );
         break;
       }
     }
     if (errores.length === 0) return { dias: ns.map((n) => porN.get(n).dia), errores };
   } catch (e) {
-    errores.push(`data/titulares/: no se pudo unir (${e.message}).`);
+    errores.push(`data/facts/: no se pudo unir (${e.message}).`);
   }
   return { dias: [], errores };
 }
@@ -352,7 +356,7 @@ export function repartirPorMes(dias, lanzamiento = null) {
   return [...grupos.keys()].sort().map((mes) => ({ version: 1, mes, dias: grupos.get(mes) }));
 }
 
-export function leerTitularesMensuales(dir) {
+export function leerAfirmacionesMensuales(dir) {
   if (!fs.existsSync(dir)) return [];
   const entradas = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   return entradas.map((e) => {
@@ -368,7 +372,7 @@ export function leerTitularesMensuales(dir) {
   });
 }
 
-export function escribirTitularesMensuales(dir, archivos, { borrarSobrantes = false } = {}) {
+export function escribirAfirmacionesMensuales(dir, archivos, { borrarSobrantes = false } = {}) {
   for (const a of archivos) {
     if (typeof a?.mes !== 'string' || !MES_PATRON.test(a.mes)) throw new RangeError('Archivo mensual sin un mes válido.');
   }
