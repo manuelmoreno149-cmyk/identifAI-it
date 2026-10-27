@@ -3,7 +3,7 @@ import { sumarDias } from './diario.js';
 
 export const CLAVE = 'identifaiit.v3';
 export const VERSION = 3;
-export const RETOS = ['imagenes', 'titulares'];
+export const RETOS = ['imagenes', 'afirmaciones'];
 const CLAVE_PRUEBA = 'identifaiit.prueba';
 
 function almacenGlobal() {
@@ -44,7 +44,7 @@ export function datosIniciales() {
   return {
     version: VERSION,
     ajustes: { modo: 'normal', reto: 'imagenes' },
-    retos: { imagenes: retoInicial(), titulares: retoInicial() }
+    retos: { imagenes: retoInicial(), afirmaciones: retoInicial() }
   };
 }
 
@@ -73,7 +73,7 @@ function normalizar(crudo) {
     ajustes: { ...base.ajustes, ...(esObjeto(crudo.ajustes) ? crudo.ajustes : {}) },
     retos: {
       imagenes: normalizarReto(crudo.retos.imagenes),
-      titulares: normalizarReto(crudo.retos.titulares)
+      afirmaciones: normalizarReto(crudo.retos.afirmaciones)
     }
   };
 }

@@ -77,7 +77,7 @@ test('datosIniciales: versión 3, modo normal, reto imagenes y un bloque por ret
     ajustes: { modo: 'normal', reto: 'imagenes' },
     retos: {
       imagenes: { partidas: {}, racha: 0, mejorRacha: 0 },
-      titulares: { partidas: {}, racha: 0, mejorRacha: 0 }
+      afirmaciones: { partidas: {}, racha: 0, mejorRacha: 0 }
     }
   });
 });
@@ -278,13 +278,13 @@ test('105. crearAlmacenMemoria', () => {
   }
 });
 
-const T = 'titulares';
+const T = 'afirmaciones';
 const IM = 'imagenes';
 const ini = { fecha: F, n: 1, modo: null, sesion: 's' };
 
-test('31b. mejorRacha de Headlines nunca disminuye', () => {
+test('31b. mejorRacha de Fact or Fake nunca disminuye', () => {
   let d = datosIniciales();
-  d.retos.titulares.mejorRacha = 4;
+  d.retos.afirmaciones.mejorRacha = 4;
   d = registrarInicio_r(d, T, ini);
   d = registrarFin_r(d, T, F, F);
   assert.equal(racha(d, T), 1);
@@ -300,11 +300,11 @@ test('174. cada reto toca solo el suyo; un reto inválido no cambia nada ni lanz
   assert.equal(JSON.stringify(d.retos.imagenes), imgAntes);
   assert.equal(partidaDe_r(d, T, F).modo, null);
   assert.equal(partidaDe_r(d, IM, F), null);
-  const titAntes = JSON.stringify(d.retos.titulares);
+  const titAntes = JSON.stringify(d.retos.afirmaciones);
   let e = registrarInicio_r(d, IM, { ...ini, modo: 'normal' });
   e = registrarPrueba_r(e, IM, F, 0, 'F', 's');
   e = cerrarAbandonada_r(e, IM, F, F);
-  assert.equal(JSON.stringify(e.retos.titulares), titAntes);
+  assert.equal(JSON.stringify(e.retos.afirmaciones), titAntes);
   assert.equal(partidaDe_r(e, IM, F).resultados, 'FFFFF');
   for (const x of ['x', undefined, null, '__proto__']) {
     assert.equal(registrarInicio_r(d, x, ini), d);
@@ -315,7 +315,7 @@ test('174. cada reto toca solo el suyo; un reto inválido no cambia nada ni lanz
   }
 });
 
-test('29b. cerrarAbandonada en Headlines: AF--- pasa a AFFFF solo en su reto', () => {
+test('29b. cerrarAbandonada en Fact or Fake: AF--- pasa a AFFFF solo en su reto', () => {
   let d = registrarInicio_r(datosIniciales(), T, ini);
   d = registrarPrueba_r(registrarPrueba_r(d, T, F, 0, 'A'), T, F, 1, 'F');
   const c = cerrarAbandonada_r(d, T, F, F);
@@ -340,17 +340,17 @@ test('175. rachas independientes por reto', () => {
 
 test('176. leer devuelve tal cual ajustes no válidos escritos a mano y rellena lo que falta', () => {
   const a = almacenMemoria({
-    [CLAVE]: JSON.stringify({ version: 3, ajustes: { modo: 'medio', reto: 'x' }, retos: { titulares: { racha: 2 } } })
+    [CLAVE]: JSON.stringify({ version: 3, ajustes: { modo: 'medio', reto: 'x' }, retos: { afirmaciones: { racha: 2 } } })
   });
   const { datos } = leer(a);
   assert.equal(datos.ajustes.modo, 'medio');
   assert.equal(datos.ajustes.reto, 'x');
   assert.deepEqual(datos.retos.imagenes, { partidas: {}, racha: 0, mejorRacha: 0 });
-  assert.deepEqual(datos.retos.titulares, { partidas: {}, racha: 2, mejorRacha: 0 });
-  assert.deepEqual(conAjustes(datosIniciales(), { reto: 'titulares' }).ajustes, { modo: 'normal', reto: 'titulares' });
+  assert.deepEqual(datos.retos.afirmaciones, { partidas: {}, racha: 2, mejorRacha: 0 });
+  assert.deepEqual(conAjustes(datosIniciales(), { reto: 'afirmaciones' }).ajustes, { modo: 'normal', reto: 'afirmaciones' });
 });
 
-test('32b. lo guardado de Headlines tampoco contiene datos prohibidos', () => {
+test('32b. lo guardado de Fact or Fake tampoco contiene datos prohibidos', () => {
   let d = registrarInicio_r(datosIniciales(), T, ini);
   d = registrarPrueba_r(d, T, F, 0, 'A', 's');
   d = registrarFin_r(d, T, F, F, 's');

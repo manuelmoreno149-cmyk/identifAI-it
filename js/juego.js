@@ -1,5 +1,5 @@
 // Reglas del juego y máquina de estados (funciones puras).
-import { desofuscar, desofuscarFicha, desofuscarTexto, desofuscarNoticia } from './diario.js';
+import { desofuscar, desofuscarFicha, desofuscarAfirmacion, desofuscarAclaracion } from './diario.js';
 
 // Milisegundos de observación por prueba; null = sin límite [D-81].
 export const MODOS = Object.freeze({ investigador: null, normal: 3000, perro: 1000 });
@@ -7,10 +7,16 @@ export const MODO_POR_DEFECTO = 'normal';
 export const VOTOS = { autentica: 0, generada: 1 };
 
 // Retos [D-98].
-export const RETOS = Object.freeze(['imagenes', 'titulares']);
+export const RETOS = Object.freeze(['imagenes', 'afirmaciones']);
 export const RETO_POR_DEFECTO = 'imagenes';
 
-// Umbral de una ausencia en Headlines [D-115].
+// Teclas de voto por reto [D-122].
+export const TECLAS = Object.freeze({
+  imagenes: Object.freeze({ r: 'autentica', i: 'generada' }),
+  afirmaciones: Object.freeze({ f: 'autentica', k: 'generada' })
+});
+
+// Umbral de una ausencia en Fact or Fake [D-115].
 export const OCULTA_MAX_MS = 3000;
 
 const ESTADOS_CODIGO = { A: 'acierto', F: 'fallo' };
@@ -31,6 +37,26 @@ export function retoDePrueba(search) {
   } catch {
     return null;
   }
+}
+
+// Voto de una tecla en el reto, o null [D-122].
+export function votoDeTecla(reto, tecla) {
+  if (!retoValido(reto) || typeof tecla !== 'string' || tecla.length !== 1) return null;
+  const voto = TECLAS[reto][tecla.toLowerCase()];
+  return voto ?? null;
+}
+
+// Tecla en mayúscula de un voto en el reto, o null.
+export function teclaDeVoto(reto, voto) {
+  if (!retoValido(reto) || typeof voto !== 'string') return null;
+  const par = Object.entries(TECLAS[reto]).find(([, v]) => v === voto);
+  return par ? par[0].toUpperCase() : null;
+}
+
+// Conjunto de mensajes finales del reto [D-134].
+export function mensajesDelReto(reto, final) {
+  if (!retoValido(reto) || final === null || typeof final !== 'object' || Array.isArray(final)) return null;
+  return reto === 'afirmaciones' ? final.mensajes_afirmaciones : final.mensajes;
 }
 
 export function ocultacionEsFallo(ocultoMs) {
@@ -95,7 +121,7 @@ export function estadoInicial({ modo, reto } = {}) {
     modo: modoValido(modo) ? modo : MODO_POR_DEFECTO,
     retos: {
       imagenes: { caso: null, jugado: false },
-      titulares: { caso: null, jugado: false }
+      afirmaciones: { caso: null, jugado: false }
     },
     fecha: null,
     n: null,
@@ -135,7 +161,7 @@ function copiarCaso(retos, reto) {
 
 function normalizarRetos(retos) {
   const uno = (r) => ({ caso: r?.caso ?? null, jugado: r?.jugado === true });
-  return { imagenes: uno(retos?.imagenes), titulares: uno(retos?.titulares) };
+  return { imagenes: uno(retos?.imagenes), afirmaciones: uno(retos?.afirmaciones) };
 }
 
 const LIMPIO = { fase: null, activo: false, tapada: false, texto: null, revelada: null, ficha: null, motivo: null };
@@ -145,7 +171,7 @@ function ponerCodigo(resultados, indice, codigo) {
 }
 
 function textoDe(estado, indice) {
-  return Array.isArray(estado.textos) ? desofuscarTexto(estado.textos[indice], estado.clave, estado.n, indice) : null;
+  return Array.isArray(estado.textos) ? desofuscarAfirmacion(estado.textos[indice], estado.clave, estado.n, indice) : null;
 }
 
 function resolverPrueba(estado, codigo, motivo = null) {
@@ -153,8 +179,8 @@ function resolverPrueba(estado, codigo, motivo = null) {
   let ficha = null;
   if (Array.isArray(estado.fichas)) {
     ficha =
-      estado.reto === 'titulares'
-        ? desofuscarNoticia(estado.fichas[i], estado.clave, estado.n, i)
+      estado.reto === 'afirmaciones'
+        ? desofuscarAclaracion(estado.fichas[i], estado.clave, estado.n, i)
         : desofuscarFicha(estado.fichas[i], estado.clave, estado.n, i);
   }
   return {
@@ -176,11 +202,11 @@ export function transicion(estado, evento) {
       if (pantalla !== 'iniciando') return estado;
       const retos = normalizarRetos(evento.retos);
       const base = { ...estado, ...LIMPIO, retos, error: null };
-      if (!retos.imagenes.caso && !retos.titulares.caso) {
+      if (!retos.imagenes.caso && !retos.afirmaciones.caso) {
         return { ...base, ...copiarCaso(retos, estado.reto), pantalla: 'sin-casos' };
       }
       let reto = retoValido(evento.reto) ? evento.reto : estado.reto;
-      if (!retos[reto].caso) reto = reto === 'imagenes' ? 'titulares' : 'imagenes';
+      if (!retos[reto].caso) reto = reto === 'imagenes' ? 'afirmaciones' : 'imagenes';
       return { ...base, ...copiarCaso(retos, reto), reto, pantalla: 'portada', resultados: '-----', indice: 0 };
     }
     case 'ERROR_CALENDARIO':
@@ -197,7 +223,7 @@ export function transicion(estado, evento) {
       if (!caso) return estado;
       if (jugado) return { ...estado, ...LIMPIO, pantalla: 'ya-jugado' };
       if (estado.reto === 'imagenes') return { ...estado, pantalla: 'cargando' };
-      // Headlines: sin modos ni cuenta atrás; main.js guarda la partida en_curso antes de pintar [D-100].
+      // Fact or Fake: sin modos ni cuenta atrás; main.js guarda la partida en_curso antes de pintar [D-100].
       return {
         ...estado,
         ...LIMPIO,
@@ -245,8 +271,8 @@ export function transicion(estado, evento) {
       if (MODOS[estado.modo] === null) return estado;
       return { ...estado, tapada: true };
     case 'VOLVIO':
-      // Solo Headlines: una ausencia de más de OCULTA_MAX_MS es fallo [D-101, D-115].
-      if (estado.reto !== 'titulares' || pantalla !== 'caso' || fase !== 'pregunta' || !estado.activo) return estado;
+      // Solo Fact or Fake: una ausencia de más de OCULTA_MAX_MS es fallo [D-101, D-115].
+      if (estado.reto !== 'afirmaciones' || pantalla !== 'caso' || fase !== 'pregunta' || !estado.activo) return estado;
       if (evento.indice !== estado.indice || !ocultacionEsFallo(evento.ocultoMs)) return estado;
       return resolverPrueba(estado, 'F', 'oculta');
     case 'SIGUIENTE':
@@ -262,7 +288,7 @@ export function transicion(estado, evento) {
           motivo: null,
           activo: false,
           tapada: false,
-          texto: estado.reto === 'titulares' ? textoDe(estado, indice) : null
+          texto: estado.reto === 'afirmaciones' ? textoDe(estado, indice) : null
         };
       }
       return {
