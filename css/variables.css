@@ -34,6 +34,8 @@
   --color-fallo: #c4302b;
   --color-hecho: #14532d;        /* sello de afirmacion verdadera sobre papel: 7:1 */
 
+  --color-sobre-estado: #ffffff; /* texto sobre franjas de acierto/fallo: 5.4:1 y 8.1:1 */
+
   /* Cinta de no pasar */
   --color-cinta: #f5c518;
   --color-cinta-negro: #15120a;
@@ -57,6 +59,9 @@
   --alto-boton: 4rem;
   --alto-sello: 2.75rem;         /* banda superior de la tarjeta de afirmacion en el veredicto */
   --alto-ficha-reto: clamp(2.75rem, 8dvh, 4rem);
+  --alto-pie: 3.75rem;           /* pie de la ficha de revelacion: marca y boton Next en ordenador */
+  --ancho-ficha: clamp(15rem, 38vw, 26rem); /* columna de la ficha de Images en horizontal */
+  --ancho-tarjeta: 48rem;        /* tarjeta de Fact or Fake en horizontal */
 
   /* Radios */
   --radio-1: 2px;

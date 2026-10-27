@@ -39,7 +39,6 @@ import {
   elegirVariante,
   mensajeFinal,
   mensajesDelReto,
-  recortarFicha,
   retoDePrueba,
   votoDeTecla,
   teclaDeVoto,
@@ -103,6 +102,7 @@ let avisoCopiado = null;
 let testigoPrueba = 0;
 let botonDeFicha = null; // botón que abrió el diálogo, para devolverle el foco
 let ausencia = null; // Fact or Fake [D-115]: {perf, fecha, indice} desde que se oculta la pestaña
+let abridorAyuda = null; // botón que abrió la ayuda, para devolverle el foco
 let pasosDe = null; // reto cuyos pasos de Cómo jugar están pintados
 
 // Para el foco al cambiar de pantalla, fase o prueba.
@@ -147,6 +147,7 @@ function despachar(evento) {
   estado = nuevo;
   antesDeRender(previo, nuevo, evento);
   // Si cambia el contexto con la ficha abierta (p. ej. OTRA_PESTANA), se cierra antes de pintar.
+  if (nuevo.pantalla !== previo.pantalla) cerrarAyuda(false);
   if (fichaAbierta() && !(nuevo.pantalla === previo.pantalla && nuevo.fase === previo.fase)) {
     cerrarFicha(false);
   }
@@ -163,9 +164,6 @@ function antesDeRender(previo, nuevo, evento) {
   }
   if (evento.tipo === 'ELEGIR_RETO') {
     aplicar((d) => conAjustes(d, { reto: nuevo.reto }));
-  }
-  if (evento.tipo === 'EMPEZAR' && nuevo.pantalla !== 'portada') {
-    $('como-jugar').open = false;
   }
   if (previo.fase !== 'veredicto' && nuevo.fase === 'veredicto') {
     const codigo = nuevo.resultados[nuevo.indice];
@@ -526,8 +524,6 @@ function renderPortada(e) {
   for (const radio of app.querySelectorAll('input[name="modo"]')) radio.checked = radio.value === e.modo;
   for (const radio of app.querySelectorAll('input[name="reto"]')) radio.checked = radio.value === e.reto;
   for (const reto of RETOS) $(`reto-${reto}-estado`).textContent = estadoDeReto(e, reto);
-  $('portada-modos').hidden = e.reto === 'afirmaciones';
-  $('portada-regla').hidden = e.reto !== 'afirmaciones';
   ponerPasos(e.reto);
 
   const racha = calcularRacha(datos.retos[e.reto].partidas, fechaCarga ?? hoy());
@@ -535,9 +531,13 @@ function renderPortada(e) {
   elRacha.hidden = racha === 0;
   elRacha.textContent = racha === 0 ? '' : rellenar(TEXTOS.portada.racha, { racha });
 
-  const { caso: casoReto, jugado } = e.retos[e.reto];
-  $('portada-empezar-texto').textContent = jugado ? TEXTOS.portada.boton_ver_informe : TEXTOS.portada.boton_empezar;
-  app.querySelector('#pantalla-portada [data-accion="empezar"]').disabled = !casoReto;
+  for (const reto of RETOS) {
+    const { caso: casoReto, jugado } = e.retos[reto];
+    $(`portada-empezar-${reto}-texto`).textContent = jugado
+      ? TEXTOS.portada[`informe_${reto}`]
+      : TEXTOS.portada[`empezar_${reto}`];
+    app.querySelector(`#pantalla-portada [data-reto-boton="${reto}"]`).disabled = !casoReto;
+  }
 }
 
 // Detalles de una aclaración como <li> sin atributos; sin detalles, la lista queda vacía y oculta.
@@ -598,6 +598,13 @@ function renderCaso(e) {
     else boton.removeAttribute('aria-keyshortcuts');
   }
 
+  const casillas = $('caso-progreso').children;
+  for (let i = 0; i < casillas.length; i++) {
+    casillas[i].dataset.estado = estadoDeCodigo(e.resultados[i]) ?? (i === e.indice ? 'actual' : 'pendiente');
+  }
+  $('caso-modo').textContent = afirmaciones
+    ? ''
+    : rellenar(TEXTOS.partida.modo_etiqueta, { modo: nombreModo(e.modo) });
   $('caso-tema').textContent = e.tema ? rellenar(TEXTOS.partida.caso_del_dia, { tema: e.tema }) : '';
   $('caso-etiqueta').textContent = rellenar(grupo.etiqueta_prueba, { i: e.indice + 1 });
   $('caso-marcador').textContent = rellenar(TEXTOS.partida.marcador, {
@@ -605,9 +612,13 @@ function renderCaso(e) {
   });
   const veredicto = $('veredicto');
   const textoBoton = app.querySelector('[data-accion="siguiente"] .boton-texto');
-  textoBoton.textContent = e.indice === 4 ? TEXTOS.partida.boton_ver_resultado : TEXTOS.partida.boton_siguiente;
+  textoBoton.textContent =
+    e.indice === 4
+      ? TEXTOS.partida.boton_ver_resultado
+      : afirmaciones
+        ? TEXTOS.afirmaciones.boton_siguiente
+        : TEXTOS.partida.boton_siguiente;
   const confesion = $('veredicto-confesion-texto');
-  const leerEntera = app.querySelector('[data-accion="leer-confesion"]');
   $('veredicto-confesion').hidden = afirmaciones;
   const aclaracion = $('veredicto-aclaracion');
   const aclaracionTexto = $('veredicto-aclaracion-texto');
@@ -619,21 +630,29 @@ function renderCaso(e) {
     veredicto.dataset.verdad = e.revelada === 1 ? 'generada' : 'autentica';
     $('veredicto-sello').textContent = selloDe(e.reto, e.revelada);
     $('veredicto-texto').textContent = textoVeredicto;
+    const acierto = estadoDeCodigo(e.resultados[e.indice]) === 'acierto';
+    const dijo = acierto ? e.revelada : 1 - e.revelada;
+    const claveBanda = e.motivo === 'oculta' ? 'banda_oculta' : acierto ? 'banda_acierto' : 'banda_fallo';
+    $('veredicto-banda-texto').textContent = rellenar(TEXTOS.revelacion[claveBanda], {
+      voto: grupo[dijo === 1 ? 'voto_generada' : 'voto_autentica']
+    });
+    if (afirmaciones) {
+      $('veredicto-resumen').textContent = '';
+      $('prueba-etiqueta').textContent = '';
+      $('prueba-sello').textContent = '';
+    } else {
+      $('veredicto-resumen').textContent =
+        TEXTOS.revelacion[`resumen_${e.revelada === 1 ? 'generada' : 'autentica'}`];
+      $('prueba-etiqueta').textContent = rellenar(TEXTOS.revelacion.etiqueta_prueba, { i: e.indice + 1 });
+      $('prueba-sello').textContent = $('veredicto-sello').textContent;
+    }
     // La ficha, la aclaración y los detalles solo existen en el DOM a partir de aquí (ya respondida).
     if (afirmaciones) {
       pintarAclaracion(aclaracion, aclaracionTexto, detalles, e.ficha);
       confesion.textContent = '';
-      leerEntera.hidden = true;
     } else {
       vaciarAclaracion(aclaracion, aclaracionTexto, detalles);
-      if (typeof e.ficha === 'string') {
-        const corte = recortarFicha(e.ficha);
-        confesion.textContent = corte.texto;
-        leerEntera.hidden = !corte.recortada;
-      } else {
-        confesion.textContent = TEXTOS.confesion.no_disponible;
-        leerEntera.hidden = true;
-      }
+      confesion.textContent = typeof e.ficha === 'string' ? e.ficha : TEXTOS.confesion.no_disponible;
     }
   } else {
     vaciarVeredicto();
@@ -648,7 +667,10 @@ function vaciarVeredicto() {
   $('veredicto-sello').textContent = '';
   $('veredicto-texto').textContent = '';
   $('veredicto-confesion-texto').textContent = '';
-  app.querySelector('[data-accion="leer-confesion"]').hidden = true;
+  $('veredicto-banda-texto').textContent = '';
+  $('veredicto-resumen').textContent = '';
+  $('prueba-etiqueta').textContent = '';
+  $('prueba-sello').textContent = '';
   vaciarAclaracion($('veredicto-aclaracion'), $('veredicto-aclaracion-texto'), $('veredicto-detalles'));
 }
 
@@ -851,6 +873,23 @@ $('ficha').addEventListener('close', () => {
   if (boton && boton.isConnected && !boton.closest('[hidden]')) ponerFoco(boton);
 });
 
+// ---- Ayuda (diálogo modal) ----
+// conFoco: devolver el foco al botón que la abrió.
+function cerrarAyuda(conFoco) {
+  const dialogo = $('como-jugar');
+  const opener = abridorAyuda;
+  abridorAyuda = null;
+  if (dialogo.open) dialogo.close();
+  if (conFoco && opener && opener.isConnected) ponerFoco(opener);
+}
+
+// Escape cierra de forma nativa: también devuelve el foco.
+$('como-jugar').addEventListener('close', () => {
+  const opener = abridorAyuda;
+  abridorAyuda = null;
+  if (opener && opener.isConnected && !opener.closest('[hidden]')) ponerFoco(opener);
+});
+
 // ---- Bloqueo de copia en la afirmación (freno casual) [D-102] ----
 for (const tipo of ['copy', 'cut', 'contextmenu', 'dragstart', 'selectstart']) {
   $('afirmacion').addEventListener(tipo, (ev) => ev.preventDefault());
@@ -942,16 +981,25 @@ app.addEventListener('click', (e) => {
     if (modoPrueba && select) location.assign(`?prueba=1&dia=${select.value}&reto=${estado.reto}`);
     return;
   }
+  if (accion === 'abrir-ayuda') {
+    abridorAyuda = boton;
+    if (!$('como-jugar').open) $('como-jugar').showModal();
+    return;
+  }
+  if (accion === 'cerrar-ayuda') {
+    cerrarAyuda(true);
+    return;
+  }
   if (accion === 'empezar') {
+    const reto = boton.dataset.retoBoton;
+    if (RETOS.includes(reto) && reto !== estado.reto) {
+      despachar({ tipo: 'ELEGIR_RETO', reto });
+    }
     empezar();
     return;
   }
   if (accion === 'compartir') {
     if (estado.pantalla === 'resultado' || estado.pantalla === 'ya-jugado') accionCompartir();
-    return;
-  }
-  if (accion === 'leer-confesion') {
-    abrirFicha(estado.indice, false, boton);
     return;
   }
   if (accion === 'ver-ficha') {
@@ -971,7 +1019,10 @@ app.addEventListener('click', (e) => {
 });
 
 app.addEventListener('change', (e) => {
-  if (e.target.matches('input[name="modo"]')) despachar({ tipo: 'ELEGIR_MODO', modo: e.target.value });
+  if (e.target.matches('input[name="modo"]')) {
+    if (estado.reto !== 'imagenes') despachar({ tipo: 'ELEGIR_RETO', reto: 'imagenes' });
+    despachar({ tipo: 'ELEGIR_MODO', modo: e.target.value });
+  }
   else if (e.target.matches('input[name="reto"]')) despachar({ tipo: 'ELEGIR_RETO', reto: e.target.value });
 });
 

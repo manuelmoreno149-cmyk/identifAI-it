@@ -7,18 +7,27 @@ const CLAVES = {
     'titulo', 'lema', 'elige_reto', 'reto_imagenes', 'reto_afirmaciones', 'estado_pendiente', 'estado_jugado',
     'estado_en_curso', 'estado_sin_caso', 'boton_ver_informe', 'regla_afirmaciones', 'elige_modo',
     'modo_investigador', 'modo_normal', 'modo_perro', 'desc_investigador', 'desc_normal', 'desc_perro',
-    'boton_empezar', 'etiqueta_caso', 'tema', 'racha', 'enlace_creditos'
+    'boton_empezar', 'etiqueta_caso', 'tema', 'racha', 'enlace_creditos',
+    'expediente_imagenes', 'expediente_afirmaciones', 'desc_reto_imagenes', 'desc_reto_afirmaciones',
+    'empezar_imagenes', 'empezar_afirmaciones', 'informe_imagenes', 'informe_afirmaciones',
+    'tiempo_investigador', 'tiempo_normal', 'tiempo_perro'
   ],
   como_jugar: ['titulo', 'pasos', 'pasos_afirmaciones'],
   cargando: ['texto'],
   cuenta_atras: ['aviso'],
   partida: [
     'caso_del_dia', 'etiqueta_prueba', 'marcador', 'alt_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica',
-    'sello_generada', 'quedan', 'boton_siguiente', 'boton_ver_resultado', 'sobre_texto', 'sobre_anuncio'
+    'sello_generada', 'quedan', 'boton_siguiente', 'boton_ver_resultado', 'sobre_texto', 'sobre_anuncio',
+    'modo_etiqueta', 'voto_autentica', 'voto_generada'
   ],
   afirmaciones: [
     'etiqueta_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica', 'sello_generada', 'marca', 'oculta',
-    'aviso_oculta', 'no_disponible', 'aclaracion_no_disponible', 'estado_prueba'
+    'aviso_oculta', 'no_disponible', 'aclaracion_no_disponible', 'estado_prueba',
+    'voto_autentica', 'voto_generada', 'boton_siguiente'
+  ],
+  revelacion: [
+    'titulo_afirmacion', 'titulo_imagenes', 'titulo_afirmaciones', 'resumen_autentica', 'resumen_generada',
+    'etiqueta_prueba', 'banda_acierto', 'banda_fallo', 'banda_oculta'
   ],
   veredictos: ['acierto', 'fallo'],
   confesion: ['titulo', 'leer_entera', 'no_disponible'],
@@ -50,6 +59,7 @@ function cadenas(valor, ruta = '') {
 const masLargo = (lista) => lista.reduce((m, c) => ([...c].length > [...m].length ? c : m));
 const RELLENO = {
   aciertos: '5',
+  voto: 'Fake',
   i: '5',
   n: '999',
   caso: '999',

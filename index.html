@@ -14,72 +14,82 @@
 <body data-pagina="juego">
 <main id="app" data-pantalla="portada" data-reto="imagenes" data-modo="normal">
 
-  <!-- Portada -->
+  <!-- Portada: dos expedientes -->
   <section class="pantalla" id="pantalla-portada" hidden>
     <div class="cinta-peligro" aria-hidden="true"></div>
     <header class="portada-cabecera">
-      <h1 tabindex="-1" data-texto="portada.titulo">[[portada.titulo]]</h1>
-      <p class="portada-lema" data-texto="portada.lema">[[portada.lema]]</p>
+      <div class="portada-marca">
+        <h1 tabindex="-1" data-foco data-texto="portada.titulo">[[portada.titulo]]</h1>
+        <p class="portada-lema" data-texto="portada.lema">[[portada.lema]]</p>
+      </div>
       <p id="portada-caso"></p>
+      <p id="portada-tema"></p>
+      <button type="button" class="boton-ayuda" data-accion="abrir-ayuda" aria-haspopup="dialog">
+        <span class="icono-ayuda" aria-hidden="true"></span>
+        <span class="boton-ayuda-texto" data-texto="como_jugar.titulo">[[como_jugar.titulo]]</span>
+      </button>
     </header>
     <fieldset id="portada-retos">
       <legend data-texto="portada.elige_reto">[[portada.elige_reto]]</legend>
       <div class="retos">
+
         <div class="reto">
-          <input type="radio" name="reto" id="reto-imagenes" value="imagenes">
-          <label for="reto-imagenes">
-            <span class="reto-nombre" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
-            <span class="reto-estado" id="reto-imagenes-estado"></span>
-          </label>
+          <input type="radio" name="reto" id="reto-imagenes" class="reto-radio" value="imagenes" aria-describedby="reto-imagenes-desc reto-imagenes-estado">
+          <div class="reto-cabecera">
+            <p class="reto-expediente" data-texto="portada.expediente_imagenes">[[portada.expediente_imagenes]]</p>
+            <p class="reto-estado" id="reto-imagenes-estado"></p>
+          </div>
+          <label class="reto-nombre" for="reto-imagenes" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</label>
+          <p class="reto-desc" id="reto-imagenes-desc" data-texto="portada.desc_reto_imagenes">[[portada.desc_reto_imagenes]]</p>
+          <div class="reto-accion">
+            <fieldset id="portada-modos">
+              <legend class="solo-lectores" data-texto="portada.elige_modo">[[portada.elige_modo]]</legend>
+              <div class="modos">
+                <div class="modo">
+                  <input type="radio" name="modo" id="modo-investigador" value="investigador">
+                  <label for="modo-investigador">
+                    <span class="modo-nombre" data-texto="portada.modo_investigador">[[portada.modo_investigador]]</span>
+                    <span class="modo-desc" data-texto="portada.tiempo_investigador">[[portada.tiempo_investigador]]</span>
+                  </label>
+                </div>
+                <div class="modo">
+                  <input type="radio" name="modo" id="modo-normal" value="normal">
+                  <label for="modo-normal">
+                    <span class="modo-nombre" data-texto="portada.modo_normal">[[portada.modo_normal]]</span>
+                    <span class="modo-desc" data-texto="portada.tiempo_normal">[[portada.tiempo_normal]]</span>
+                  </label>
+                </div>
+                <div class="modo">
+                  <input type="radio" name="modo" id="modo-perro" value="perro">
+                  <label for="modo-perro">
+                    <span class="modo-nombre" data-texto="portada.modo_perro">[[portada.modo_perro]]</span>
+                    <span class="modo-desc" data-texto="portada.tiempo_perro">[[portada.tiempo_perro]]</span>
+                  </label>
+                </div>
+              </div>
+            </fieldset>
+            <button type="button" class="boton boton-primario" data-accion="empezar" data-reto-boton="imagenes"><span class="boton-texto" id="portada-empezar-imagenes-texto" data-texto="portada.empezar_imagenes">[[portada.empezar_imagenes]]</span></button>
+          </div>
         </div>
+
         <div class="reto">
-          <input type="radio" name="reto" id="reto-afirmaciones" value="afirmaciones">
-          <label for="reto-afirmaciones">
-            <span class="reto-nombre" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
-            <span class="reto-estado" id="reto-afirmaciones-estado"></span>
-          </label>
+          <input type="radio" name="reto" id="reto-afirmaciones" class="reto-radio" value="afirmaciones" aria-describedby="reto-afirmaciones-desc reto-afirmaciones-estado">
+          <div class="reto-cabecera">
+            <p class="reto-expediente" data-texto="portada.expediente_afirmaciones">[[portada.expediente_afirmaciones]]</p>
+            <p class="reto-estado" id="reto-afirmaciones-estado"></p>
+          </div>
+          <label class="reto-nombre" for="reto-afirmaciones" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</label>
+          <p class="reto-desc" id="reto-afirmaciones-desc" data-texto="portada.desc_reto_afirmaciones">[[portada.desc_reto_afirmaciones]]</p>
+          <div class="reto-accion">
+            <p id="portada-regla" data-texto="portada.regla_afirmaciones">[[portada.regla_afirmaciones]]</p>
+            <button type="button" class="boton boton-primario" data-accion="empezar" data-reto-boton="afirmaciones"><span class="boton-texto" id="portada-empezar-afirmaciones-texto" data-texto="portada.empezar_afirmaciones">[[portada.empezar_afirmaciones]]</span></button>
+          </div>
         </div>
+
       </div>
     </fieldset>
-    <p id="portada-tema"></p>
-    <fieldset id="portada-modos">
-      <legend data-texto="portada.elige_modo">[[portada.elige_modo]]</legend>
-      <div class="modos">
-        <div class="modo">
-          <input type="radio" name="modo" id="modo-investigador" value="investigador">
-          <label for="modo-investigador">
-            <span class="modo-nombre" data-texto="portada.modo_investigador">[[portada.modo_investigador]]</span>
-            <span class="modo-desc" data-texto="portada.desc_investigador">[[portada.desc_investigador]]</span>
-          </label>
-        </div>
-        <div class="modo">
-          <input type="radio" name="modo" id="modo-normal" value="normal">
-          <label for="modo-normal">
-            <span class="modo-nombre" data-texto="portada.modo_normal">[[portada.modo_normal]]</span>
-            <span class="modo-desc" data-texto="portada.desc_normal">[[portada.desc_normal]]</span>
-          </label>
-        </div>
-        <div class="modo">
-          <input type="radio" name="modo" id="modo-perro" value="perro">
-          <label for="modo-perro">
-            <span class="modo-nombre" data-texto="portada.modo_perro">[[portada.modo_perro]]</span>
-            <span class="modo-desc" data-texto="portada.desc_perro">[[portada.desc_perro]]</span>
-          </label>
-        </div>
-      </div>
-    </fieldset>
-    <p id="portada-regla" data-texto="portada.regla_afirmaciones" hidden>[[portada.regla_afirmaciones]]</p>
-    <p id="portada-racha" hidden></p>
-    <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="empezar" data-foco><span class="boton-texto" id="portada-empezar-texto" data-texto="portada.boton_empezar">[[portada.boton_empezar]]</span></button>
-    </div>
-    <details id="como-jugar">
-      <summary id="como-jugar-resumen"><span data-texto="como_jugar.titulo">[[como_jugar.titulo]]</span></summary>
-      <div id="como-jugar-panel" tabindex="0" role="region" aria-labelledby="como-jugar-resumen">
-        <ol id="como-jugar-pasos"></ol>
-      </div>
-    </details>
     <footer id="portada-pie">
+      <p id="portada-racha" hidden></p>
       <a id="portada-creditos" href="creditos.html" data-texto="portada.enlace_creditos">[[portada.enlace_creditos]]</a>
     </footer>
   </section>
@@ -103,53 +113,85 @@
   <!-- Caso -->
   <section class="pantalla" id="pantalla-caso" data-fase="pregunta" data-tapada="no" hidden>
     <header id="caso-cabecera">
-      <p id="caso-tema"></p>
-      <p id="caso-etiqueta" tabindex="-1" data-foco></p>
-      <p id="caso-marcador"></p>
+      <div id="caso-titulo">
+        <p id="caso-reto">
+          <span data-reto-nombre="imagenes" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
+          <span data-reto-nombre="afirmaciones" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
+        </p>
+        <p id="caso-tema"></p>
+      </div>
+      <p id="caso-etiqueta" class="solo-lectores" tabindex="-1" data-foco></p>
+      <ol id="caso-progreso" aria-hidden="true">
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+      </ol>
+      <div id="caso-puntuacion">
+        <p id="caso-modo"></p>
+        <p id="caso-marcador"></p>
+      </div>
       <p id="caso-aviso" data-texto="afirmaciones.aviso_oculta" hidden>[[afirmaciones.aviso_oculta]]</p>
     </header>
     <div id="caso-escena">
-      <figure id="prueba-marco"></figure>
-      <div id="prueba-sobre" hidden aria-hidden="true">
-        <p id="prueba-sobre-texto" data-texto="partida.sobre_texto">[[partida.sobre_texto]]</p>
+      <!-- Images: la foto, el sobre sellado y, en la revelacion, la etiqueta y el sello sobre sus esquinas -->
+      <div id="prueba-vitrina">
+        <div id="prueba-caja">
+          <figure id="prueba-marco"></figure>
+          <div id="prueba-sobre" hidden aria-hidden="true">
+            <p id="prueba-sobre-texto" data-texto="partida.sobre_texto">[[partida.sobre_texto]]</p>
+          </div>
+          <p id="prueba-etiqueta" aria-hidden="true"></p>
+          <p id="prueba-sello" aria-hidden="true"></p>
+        </div>
       </div>
-      <article id="afirmacion" hidden aria-labelledby="caso-etiqueta">
-        <p id="afirmacion-texto"></p>
-        <p id="afirmacion-marca" aria-hidden="true" data-texto="afirmaciones.marca">[[afirmaciones.marca]]</p>
-      </article>
-      <div id="veredicto" role="status" aria-live="polite" hidden>
-        <p id="veredicto-sello"></p>
-        <div id="veredicto-pie">
+      <!-- Ficha de papel: la afirmacion (Fact or Fake) y la revelacion de los dos retos -->
+      <div id="caso-tarjeta">
+        <div id="veredicto-banda" role="status">
           <span id="veredicto-icono" aria-hidden="true"></span>
-          <p id="veredicto-texto"></p>
+          <div id="veredicto-banda-cuerpo">
+            <p id="veredicto-banda-texto"></p>
+            <p id="veredicto-texto"></p>
+          </div>
         </div>
-        <div id="veredicto-aclaracion" hidden>
-          <p id="veredicto-aclaracion-texto"></p>
-          <ul id="veredicto-detalles"></ul>
-        </div>
-        <div id="veredicto-confesion">
-          <p id="veredicto-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</p>
-          <p id="veredicto-confesion-texto"></p>
-          <button type="button" class="boton" data-accion="leer-confesion" aria-haspopup="dialog" hidden>
-            <span class="boton-texto" data-texto="confesion.leer_entera">[[confesion.leer_entera]]</span>
-          </button>
+        <article id="afirmacion" hidden aria-labelledby="caso-etiqueta">
+          <p id="afirmacion-titulo" aria-hidden="true" data-texto="revelacion.titulo_afirmacion">[[revelacion.titulo_afirmacion]]</p>
+          <p id="afirmacion-texto"></p>
+          <p id="afirmacion-marca" aria-hidden="true" data-texto="afirmaciones.marca">[[afirmaciones.marca]]</p>
+        </article>
+        <div id="veredicto" role="status" aria-live="polite" hidden>
+          <p id="veredicto-sello"></p>
+          <p id="veredicto-titulo">
+            <span data-reto-nombre="imagenes" data-texto="revelacion.titulo_imagenes">[[revelacion.titulo_imagenes]]</span>
+            <span data-reto-nombre="afirmaciones" data-texto="revelacion.titulo_afirmaciones">[[revelacion.titulo_afirmaciones]]</span>
+          </p>
+          <p id="veredicto-resumen"></p>
+          <div id="veredicto-aclaracion" hidden>
+            <p id="veredicto-aclaracion-texto"></p>
+            <ul id="veredicto-detalles"></ul>
+          </div>
+          <div id="veredicto-confesion">
+            <p id="veredicto-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</p>
+            <blockquote id="veredicto-confesion-texto"></blockquote>
+          </div>
         </div>
       </div>
-    </div>
-    <div id="temporizador" data-nivel="normal" aria-hidden="true">
-      <div id="temporizador-cinta"></div>
-    </div>
-    <p id="temporizador-anuncio" class="solo-lectores" aria-live="polite"></p>
-    <div id="caso-botones">
-      <button type="button" class="boton boton-voto" data-voto="autentica" aria-keyshortcuts="R">
-        <span class="boton-texto" id="voto-autentica-texto"></span>
-        <kbd id="voto-autentica-tecla" aria-hidden="true"></kbd>
-      </button>
-      <button type="button" class="boton boton-voto" data-voto="generada" aria-keyshortcuts="I">
-        <span class="boton-texto" id="voto-generada-texto"></span>
-        <kbd id="voto-generada-tecla" aria-hidden="true"></kbd>
-      </button>
-      <button type="button" class="boton boton-primario" data-accion="siguiente"><span class="boton-texto" data-texto="partida.boton_siguiente">[[partida.boton_siguiente]]</span></button>
+      <div id="temporizador" data-nivel="normal" aria-hidden="true">
+        <div id="temporizador-cinta"></div>
+      </div>
+      <p id="temporizador-anuncio" class="solo-lectores" aria-live="polite"></p>
+      <div id="caso-botones">
+        <button type="button" class="boton boton-voto" data-voto="autentica" aria-keyshortcuts="R">
+          <span class="boton-texto" id="voto-autentica-texto"></span>
+          <kbd id="voto-autentica-tecla" aria-hidden="true"></kbd>
+        </button>
+        <button type="button" class="boton boton-voto" data-voto="generada" aria-keyshortcuts="I">
+          <span class="boton-texto" id="voto-generada-texto"></span>
+          <kbd id="voto-generada-tecla" aria-hidden="true"></kbd>
+        </button>
+        <button type="button" class="boton boton-primario" data-accion="siguiente"><span class="boton-texto" data-texto="partida.boton_siguiente">[[partida.boton_siguiente]]</span></button>
+      </div>
     </div>
   </section>
 
@@ -211,6 +253,15 @@
   <label for="compartir-manual" class="solo-lectores" data-texto="compartir.manual">[[compartir.manual]]</label>
   <p id="aviso-almacen" role="status" hidden data-texto="avisos.sin_guardar">[[avisos.sin_guardar]]</p>
   <p id="aviso-previsualizacion" role="status" hidden></p>
+
+  <!-- Como jugar: dialogo modal que abre el boton de la cabecera de la portada -->
+  <dialog id="como-jugar" aria-labelledby="como-jugar-titulo">
+    <h2 id="como-jugar-titulo" data-texto="como_jugar.titulo">[[como_jugar.titulo]]</h2>
+    <ol id="como-jugar-pasos"></ol>
+    <button type="button" id="como-jugar-cerrar" class="boton" data-accion="cerrar-ayuda" autofocus>
+      <span class="boton-texto" data-texto="ficha.cerrar">[[ficha.cerrar]]</span>
+    </button>
+  </dialog>
 
   <dialog id="ficha" aria-labelledby="ficha-titulo">
     <h2 id="ficha-titulo"></h2>
