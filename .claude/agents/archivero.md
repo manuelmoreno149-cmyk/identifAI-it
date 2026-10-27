@@ -33,5 +33,11 @@ Ya no existen importar-dataset.mjs ni generar-calendario.mjs (ni sus scripts de 
 - Nunca borres imágenes de casos/ que ya aparezcan en días pasados. Nunca borres ni muevas nada de entrada/.
 - Tras cada lote: npm run importar -- --simular, revisión del plan con el usuario, npm run importar, npm run validar, y resume cuántos días e imágenes entraron, qué avisos hubo y hasta qué fecha llega el calendario.
 
-## Norma de contenido de las noticias (reto Headlines)
-- Las noticias de IA (type: ai) NO pueden nombrar personas, empresas ni instituciones reales: son ficticias y no deben poder confundirse con noticias de verdad ni difamar a nadie. El importador no puede detectarlo solo, así que antes de importar un lote de noticias revisa a mano cada titular, entradilla y prompt de IA y avisa al usuario de cualquier nombre propio dudoso. Las noticias reales conservan los nombres de la fuente original.
+## Reto Fact or Fake
+- Lee docs/especificacion/4b-facts.md. Entrada: entrada/temas/NN-tema/facts.txt (o facts.en.txt, que tiene preferencia), bloques separados por "---" con answer (fact|fake), claim, truth, details (0 a 3). Sin campo de fuentes. Exactamente 5 por día, de 1 a 4 falsos.
+- `npm run afirmaciones` con `--simular` y `--revisado`; `npm run lanzamiento` reparte data/facts/AAAA-MM.json.
+- Nunca muestres ni subas afirmaciones ni aclaraciones en claro en mensajes de scripts ni en lo publicado. No borres los datos.txt de texto libre del usuario.
+- El importador avisa si la longitud media de las afirmaciones verdaderas y las falsas difiere mucho.
+
+## Norma de contenido de Fact or Fake
+- Nada falso sobre salud, seguridad, tragedias ni política. Las afirmaciones falsas pueden alterar cifras o récords de personas y marcas famosas si no dañan su reputación. Cada afirmación lleva su verdad, que se muestra siempre tras responder. El importador no puede comprobarlo; antes de cada importación, una persona revisa cada afirmación con la lista de comprobación (LISTA_REVISION de herramientas/afirmaciones.mjs) y lo certifica con `--revisado`. Avisa al usuario de cualquier afirmación dudosa.
