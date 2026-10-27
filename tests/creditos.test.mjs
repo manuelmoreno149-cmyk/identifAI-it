@@ -49,6 +49,19 @@ test('80 determinista, LF y un salto final', () => {
   assert.ok(!a.includes('\r'));
 });
 
+test('203 sección fija de afirmaciones, sin medios ni fuentes', () => {
+  const html = creditosParaBanco(banco);
+  assert.ok(html.includes(
+    `  <section id="creditos-afirmaciones">\n    <h2>${TEXTOS.creditos.afirmaciones}</h2>\n    <p>${TEXTOS.creditos.afirmaciones_texto}</p>\n  </section>\n</main>`
+  ));
+  assert.equal(TEXTOS.creditos.afirmaciones_texto, 'Claims are written for this game from public sources. The fakes are invented and always debunked after you answer.');
+  assert.ok(html.includes(`<p>${TEXTOS.creditos.intro}</p>`));
+  for (const id of ['creditos-noticias', 'creditos-medios', 'creditos-ficcion']) assert.ok(!html.includes(id), id);
+  // La sección es la misma con banco vacío o lleno y no depende de data/facts/.
+  const vacio = creditosParaBanco({ version: 2, imagenes: [] });
+  assert.ok(vacio.includes('id="creditos-afirmaciones"'));
+});
+
 test('81 ids sin palabras prohibidas', () => {
   const html = creditosParaBanco(banco);
   for (const id of ['creditos', 'creditos-tipografias', 'creditos-imagenes', 'creditos-lista', 'creditos-pie', 'creditos-volver']) {
