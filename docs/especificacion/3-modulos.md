@@ -37,7 +37,7 @@ Grafo de importaciones, sin ciclos:
 | `avisos` | Los de la 1.3 y `prueba` (2.0). |
 | `prueba` | Sin cambios. |
 | `compartir` | `boton`, `copiado`, `manual`, `plantilla` (Images) y [2.1] `plantilla_afirmaciones`, exactamente las de la sección 7 [D-128]. |
-| `creditos` | Los de la 1.3 y [2.1] `afirmaciones` ("Fact or Fake") y `afirmaciones_texto`, **exacto**: "Claims are written for this game from public sources. The fakes are invented and always debunked after you answer." (113 caracteres) [D-129, D-132]. |
+| `creditos` | Los de la 1.3 y [2.1] `afirmaciones` ("Fact or Fake") y `afirmaciones_texto`, **exacto**: "Claims are written for this game from public sources. The fakes are invented and always debunked after you answer." (114 caracteres) [D-129, D-132]. |
 
 Reglas:
 - [D-118] **Cómo se mide**: en puntos de código (`[...s].length`) sobre el texto **ya rellenado** con los valores de relleno de esta tabla. Los tests definen una constante con exactamente estos valores; un marcador que no esté aquí hace fallar el test.

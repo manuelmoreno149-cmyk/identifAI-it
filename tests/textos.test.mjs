@@ -4,28 +4,28 @@ import { TEXTOS } from '../js/textos.js';
 
 const CLAVES = {
   portada: [
-    'titulo', 'lema', 'elige_reto', 'reto_imagenes', 'reto_titulares', 'estado_pendiente', 'estado_jugado',
-    'estado_en_curso', 'estado_sin_caso', 'boton_ver_informe', 'regla_titulares', 'elige_modo',
+    'titulo', 'lema', 'elige_reto', 'reto_imagenes', 'reto_afirmaciones', 'estado_pendiente', 'estado_jugado',
+    'estado_en_curso', 'estado_sin_caso', 'boton_ver_informe', 'regla_afirmaciones', 'elige_modo',
     'modo_investigador', 'modo_normal', 'modo_perro', 'desc_investigador', 'desc_normal', 'desc_perro',
     'boton_empezar', 'etiqueta_caso', 'tema', 'racha', 'enlace_creditos'
   ],
-  como_jugar: ['titulo', 'pasos', 'pasos_titulares'],
+  como_jugar: ['titulo', 'pasos', 'pasos_afirmaciones'],
   cargando: ['texto'],
   cuenta_atras: ['aviso'],
   partida: [
     'caso_del_dia', 'etiqueta_prueba', 'marcador', 'alt_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica',
     'sello_generada', 'quedan', 'boton_siguiente', 'boton_ver_resultado', 'sobre_texto', 'sobre_anuncio'
   ],
-  titulares: [
-    'etiqueta_prueba', 'sello_autentica', 'sello_generada', 'marca', 'oculta', 'aviso_oculta', 'fuente_titulo',
-    'fuente_enlace', 'nueva_pestana', 'fuente_no_disponible', 'no_disponible', 'estado_prueba'
+  afirmaciones: [
+    'etiqueta_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica', 'sello_generada', 'marca', 'oculta',
+    'aviso_oculta', 'no_disponible', 'aclaracion_no_disponible', 'estado_prueba'
   ],
   veredictos: ['acierto', 'fallo'],
   confesion: ['titulo', 'leer_entera', 'no_disponible'],
   ficha: ['cerrar'],
   fichas: ['autentica', 'sin_prompt'],
   final: [
-    'alt_prueba', 'reto', 'boton_volver', 'mensajes', 'aciertos', 'racha', 'mejor_racha', 'era', 'cuadros_etiqueta',
+    'alt_prueba', 'reto', 'boton_volver', 'mensajes', 'mensajes_afirmaciones', 'aciertos', 'racha', 'mejor_racha', 'era', 'cuadros_etiqueta',
     'estado_prueba', 'estados'
   ],
   ya_jugado: ['titulo', 'texto', 'proximo', 'modo'],
@@ -33,10 +33,10 @@ const CLAVES = {
   errores: ['calendario', 'imagenes', 'boton_reintentar'],
   avisos: ['sin_guardar', 'otra_pestana', 'previsualizacion', 'prueba'],
   prueba: ['etiqueta', 'opcion', 'boton'],
-  compartir: ['boton', 'copiado', 'manual', 'plantilla', 'plantilla_titulares'],
+  compartir: ['boton', 'copiado', 'manual', 'plantilla', 'plantilla_afirmaciones'],
   creditos: [
     'titulo_pagina', 'titulo', 'intro', 'tipografias', 'imagenes', 'imagenes_intro', 'sin_imagenes',
-    'noticias', 'noticias_intro', 'sin_noticias', 'ficcion', 'ver_licencia', 'volver'
+    'afirmaciones', 'afirmaciones_texto', 'ver_licencia', 'volver'
   ]
 };
 
@@ -56,17 +56,16 @@ const RELLENO = {
   racha: '999',
   s: '9',
   tiempo: '00:00:00',
-  medio: 'abcdefghijklmnopqrstuvwxyz.com',
   tema: 'x'.repeat(30),
   fecha: 'Nov 30, 2026',
   modo: masLargo(['modo_investigador', 'modo_normal', 'modo_perro'].map((k) => TEXTOS.portada[k])),
-  reto: masLargo(['reto_imagenes', 'reto_titulares'].map((k) => TEXTOS.portada[k])),
+  reto: masLargo(['reto_imagenes', 'reto_afirmaciones'].map((k) => TEXTOS.portada[k])),
   estado: masLargo(Object.values(TEXTOS.final.estados)),
   sello: masLargo([
     TEXTOS.partida.sello_autentica,
     TEXTOS.partida.sello_generada,
-    TEXTOS.titulares.sello_autentica,
-    TEXTOS.titulares.sello_generada
+    TEXTOS.afirmaciones.sello_autentica,
+    TEXTOS.afirmaciones.sello_generada
   ])
 };
 
@@ -95,9 +94,10 @@ test('38. están todas las claves de 3.1 y los valores exactos', () => {
   }
   assert.equal(TEXTOS.portada.enlace_creditos, 'Credits');
   assert.equal(TEXTOS.portada.reto_imagenes, 'Images');
-  assert.equal(TEXTOS.portada.reto_titulares, 'Headlines');
+  assert.equal(TEXTOS.portada.reto_afirmaciones, 'Fact or Fake');
+  assert.equal(TEXTOS.portada.lema, 'Two cases a day. Spot the fake.');
   assert.equal(TEXTOS.portada.estado_en_curso, 'In another tab');
-  assert.equal(TEXTOS.portada.regla_titulares, "No timer. Leave for more than a few seconds and it's a miss.");
+  assert.equal(TEXTOS.portada.regla_afirmaciones, "No timer. Leave for more than a few seconds and it's a miss.");
   assert.equal(TEXTOS.portada.modo_investigador, 'Investigator');
   assert.equal(TEXTOS.portada.modo_normal, 'Normal');
   assert.equal(TEXTOS.portada.modo_perro, 'Bloodhound');
@@ -106,14 +106,18 @@ test('38. están todas las claves de 3.1 y los valores exactos', () => {
   assert.equal(TEXTOS.portada.desc_perro, '1 second to examine');
   assert.equal(TEXTOS.confesion.titulo, "The suspect's confession");
   assert.equal(TEXTOS.fichas.autentica, 'Real photograph');
-  assert.equal(TEXTOS.titulares.sello_generada, 'AI-GENERATED · NOT A REAL STORY');
-  assert.equal(TEXTOS.titulares.aviso_oculta, 'Leaving the page for more than a few seconds counts as a miss.');
-  assert.equal(TEXTOS.titulares.no_disponible, "This clipping can't be read. Try reloading the page.");
-  assert.ok(Array.isArray(TEXTOS.titulares.oculta) && TEXTOS.titulares.oculta.length >= 2);
+  assert.equal(TEXTOS.afirmaciones.boton_autentica, 'FACT');
+  assert.equal(TEXTOS.afirmaciones.boton_generada, 'FAKE');
+  assert.equal(TEXTOS.afirmaciones.sello_autentica, 'FACT');
+  assert.equal(TEXTOS.afirmaciones.sello_generada, 'FAKE');
+  assert.equal(TEXTOS.afirmaciones.marca, 'identifAI-it · Fact or Fake?');
+  assert.equal(TEXTOS.afirmaciones.aviso_oculta, 'Leaving the page for more than a few seconds counts as a miss.');
+  assert.ok(Array.isArray(TEXTOS.afirmaciones.oculta) && TEXTOS.afirmaciones.oculta.length >= 2);
   assert.equal(
-    TEXTOS.creditos.noticias_intro,
-    'Headlines adapted from the original publishers; summaries written for this game. Links go to the original stories.'
+    TEXTOS.creditos.afirmaciones_texto,
+    'Claims are written for this game from public sources. The fakes are invented and always debunked after you answer.'
   );
+  assert.equal(TEXTOS.creditos.afirmaciones, 'Fact or Fake');
   assert.equal(TEXTOS.sin_casos.sin_lanzamiento, 'The precinct opens soon. No cases on file yet.');
   assert.equal(TEXTOS.final.reto, '{reto} · Case #{n}');
   assert.equal(TEXTOS.avisos.prueba, 'Test mode · Day {n}: nothing gets saved.');
@@ -122,7 +126,19 @@ test('38. están todas las claves de 3.1 y los valores exactos', () => {
   assert.equal(TEXTOS.creditos.sin_imagenes, 'No images published yet.');
   assert.equal(TEXTOS.final.mensajes.length, 6);
   assert.equal(TEXTOS.como_jugar.pasos.length, 4);
-  assert.equal(TEXTOS.como_jugar.pasos_titulares.length, 4);
+  assert.equal(TEXTOS.como_jugar.pasos_afirmaciones.length, 4);
+  assert.deepEqual(TEXTOS.final.mensajes_afirmaciones, [
+    'The paperwork beat you. Not one call survived. The file goes in the drawer, face down.',
+    'One call held up. The other lies were sharper than you. Check the sources.',
+    'Two right calls. A fake in a good suit got past you. Check the source before you sign.',
+    'Three right calls. Solid instincts, but two lies still slipped past your desk.',
+    "Four right calls. One lie got away. Read every claim like a suspect's alibi.",
+    'Every fact confirmed, every fake exposed. No loose ends in this file.'
+  ]);
+  TEXTOS.final.mensajes_afirmaciones.forEach((m, i) => {
+    assert.notEqual(m, TEXTOS.final.mensajes[i]);
+    assert.equal(/(AI|images?|photos?|pictures?)/i.test(m), false, m);
+  });
   assert.equal(TEXTOS.final.estado_prueba, 'Evidence {i}: {estado}');
   assert.deepEqual(TEXTOS.final.estados, { acierto: 'correct', fallo: 'wrong' });
   assert.ok(TEXTOS.veredictos.acierto.length >= 4);
@@ -147,8 +163,8 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado', () => {
     if (ruta.startsWith('fichas.') || esPlantillaCompartir(ruta)) continue;
     const largo = [...valor].length;
     if (ruta.startsWith('como_jugar.pasos')) assert.ok(largo <= 80, `${ruta} mide ${largo}`);
-    else if (ruta === 'creditos.noticias_intro') {
-      assert.equal(largo, 114);
+    else if (ruta === 'creditos.afirmaciones_texto') {
+      assert.equal(largo, 114); // la spec dice 113, pero el texto exacto mide 114
       assert.ok(largo <= 120);
     } else assert.ok(largo <= 90, `${ruta} mide ${largo}`);
   }
@@ -157,16 +173,18 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado', () => {
     'portada.desc_investigador': 26, 'portada.desc_normal': 26, 'portada.desc_perro': 26,
     'partida.sobre_texto': 16, 'confesion.titulo': 30, 'confesion.leer_entera': 24, 'ficha.cerrar': 16,
     'prueba.opcion': 50,
-    'portada.reto_imagenes': 12, 'portada.reto_titulares': 12,
+    'portada.reto_imagenes': 12, 'portada.reto_afirmaciones': 12,
     'portada.estado_pendiente': 18, 'portada.estado_jugado': 18, 'portada.estado_en_curso': 18,
-    'portada.estado_sin_caso': 18, 'portada.regla_titulares': 70, 'portada.boton_ver_informe': 16,
-    'final.boton_volver': 16, 'titulares.etiqueta_prueba': 16, 'titulares.sello_autentica': 32,
-    'titulares.marca': 40, 'titulares.fuente_enlace': 54, 'avisos.prueba': 70
+    'portada.estado_sin_caso': 18, 'portada.regla_afirmaciones': 70, 'portada.boton_ver_informe': 16,
+    'final.boton_volver': 16, 'afirmaciones.etiqueta_prueba': 16,
+    'afirmaciones.boton_autentica': 12, 'afirmaciones.boton_generada': 12,
+    'afirmaciones.sello_autentica': 12, 'afirmaciones.sello_generada': 12,
+    'afirmaciones.marca': 40, 'avisos.prueba': 70
   };
   for (const [ruta, limite] of Object.entries(max)) {
     assert.ok(medida(ruta) <= limite, `${ruta} mide ${medida(ruta)} (máx. ${limite})`);
   }
-  TEXTOS.titulares.oculta.forEach((t, i) => assert.ok([...t].length <= 90, `oculta[${i}]`));
+  TEXTOS.afirmaciones.oculta.forEach((t, i) => assert.ok([...t].length <= 90, `oculta[${i}]`));
   assert.equal(medida('portada.estado_jugado'), [...'Filed · 5/5'].length);
   assert.equal(rellena('x', TEXTOS.avisos.prueba), 'Test mode · Day 999: nothing gets saved.');
   for (const k of ['autentica', 'sin_prompt']) {
@@ -198,17 +216,17 @@ test('40. las plantillas de compartir son exactamente las de la sección 7', () 
     'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
   );
   assert.equal(
-    TEXTOS.compartir.plantilla_titulares,
-    'identifAI-it Headlines #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
+    TEXTOS.compartir.plantilla_afirmaciones,
+    'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
   );
 });
 
-test('180. Headlines dice "more than a few seconds"; Images no habla de salir de la página', () => {
+test('180. Fact or Fake dice "more than a few seconds"; Images no habla de salir de la página', () => {
   const frase = /more than a few seconds/i;
-  assert.ok(TEXTOS.como_jugar.pasos_titulares.some((t) => frase.test(t)));
-  assert.ok(frase.test(TEXTOS.portada.regla_titulares));
-  for (const t of TEXTOS.titulares.oculta) assert.ok(frase.test(t), t);
-  assert.ok(frase.test(TEXTOS.titulares.aviso_oculta));
+  assert.ok(TEXTOS.como_jugar.pasos_afirmaciones.some((t) => frase.test(t)));
+  assert.ok(frase.test(TEXTOS.portada.regla_afirmaciones));
+  for (const t of TEXTOS.afirmaciones.oculta) assert.ok(frase.test(t), t);
+  assert.ok(frase.test(TEXTOS.afirmaciones.aviso_oculta));
   const images = [
     ...TEXTOS.como_jugar.pasos, TEXTOS.portada.desc_investigador, TEXTOS.portada.desc_normal,
     TEXTOS.portada.desc_perro, TEXTOS.partida.sobre_anuncio

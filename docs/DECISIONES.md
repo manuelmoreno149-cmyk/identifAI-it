@@ -246,7 +246,7 @@ Para cambiar una decisión:
   - DP-53: la afirmación se oculta en el veredicto solo con `max-height: 420px` (R16).
   - DP-54: una línea `details:` por punto (hasta 3); `claim:` y `truth:` en una sola línea cada uno.
   - DP-55: umbral del aviso de longitud del 20 %, por día y en todo el reto (confirmado por D-140: sigue siendo aviso, nunca error).
-  - DP-56: sección fija de créditos, con `creditos.afirmaciones_texto` **exacto** "Claims are written for this game from public sources. The fakes are invented and always debunked after you answer." (113 caracteres medidos con `[...s].length`; límite 120).
+  - DP-56: sección fija de créditos, con `creditos.afirmaciones_texto` **exacto** "Claims are written for this game from public sources. The fakes are invented and always debunked after you answer." (114 caracteres medidos con `[...s].length`; límite 120).
   - DP-58: solo F y K en Fact or Fake (R e I no son alias).
   - DP-59: la norma solo prohíbe falsas sobre personas reales, salud, seguridad, tragedias y política; el punto 7 de la lista de revisión **solo advierte** de evitar también verdaderas sobre esos temas. (**AJUSTADA por D-136 y D-137**: las personas y marcas famosas ya no están prohibidas en las falsas si solo se alteran cifras o récords sin dañar su reputación; el punto que advierte es ahora el 8 y habla de los temas de los puntos 2 a 5.)
 - D-133 · (resuelve DP-57 con la alternativa) Lema de la portada, común a los dos retos y exacto: `portada.lema` = "Two cases a day. Spot the fake." (sustituye a "Five pieces of evidence. One shot. Real or AI?"). No cambia al elegir reto. Alcance: 2.3, 3.1, criterios 38, 193 y 237, tarea 82.
