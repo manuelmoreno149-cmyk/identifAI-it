@@ -1,6 +1,6 @@
 // npm run lanzamiento [-- AAAA-MM-DD | -- --sin-fecha]
 // Muestra o cambia la fecha de lanzamiento (spec 4.2.1) [D-95, D-96, D-116].
-// Migra una sola vez el calendario 3 -> 4 y el banco 2 -> 3, y reparte data/titulares/ por mes.
+// Migra una sola vez el calendario 3 -> 4 y el banco 2 -> 3, y reparte data/facts/ por mes.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,7 +12,7 @@ import {
   migrarCalendario,
   migrarBanco
 } from './temas.mjs';
-import { unirMeses, repartirPorMes, leerTitularesMensuales, escribirTitularesMensuales } from './titulares.mjs';
+import { unirMeses, repartirPorMes, leerAfirmacionesMensuales, escribirAfirmacionesMensuales } from './afirmaciones.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const json = (obj) => JSON.stringify(obj, null, 2) + '\n';
@@ -29,7 +29,7 @@ export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date())
 
   const rutaCalendario = path.join(raiz, 'data', 'calendario.json');
   const rutaBanco = path.join(raiz, 'herramientas', 'banco.json');
-  const dirTitulares = path.join(raiz, 'data', 'titulares');
+  const dirFacts = path.join(raiz, 'data', 'facts');
 
   const args = analizarArgumentosLanzamiento(argv);
   if (args.errores.length > 0) {
@@ -45,11 +45,11 @@ export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date())
     return fallo(`data/calendario.json no es JSON válido (${e.message}).`);
   }
 
-  // Titulares (todos los meses), sin comprobar el mes: el reparto actual puede ser el antiguo [D-116].
-  const archivos = leerTitularesMensuales(dirTitulares);
+  // Afirmaciones (todos los meses), sin comprobar el mes: el reparto actual puede ser el antiguo [D-116].
+  const archivos = leerAfirmacionesMensuales(dirFacts);
   const unidos = unirMeses(archivos, { comprobarMes: false });
-  if (unidos.errores.length > 0) return fallo([...unidos.errores, 'No se ha escrito nada. Revisa data/titulares/ con npm run validar.']);
-  const diasTitulares = unidos.dias;
+  if (unidos.errores.length > 0) return fallo([...unidos.errores, 'No se ha escrito nada. Revisa data/facts/ con npm run validar.']);
+  const diasFacts = unidos.dias;
 
   if (args.accion === 'mostrar') {
     const lanz = bruto?.lanzamiento ?? null;
@@ -57,7 +57,7 @@ export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date())
     decir(`Lanzamiento: ${lanz ?? 'sin fecha'}${bruto?.version === 4 ? '' : ` (calendario de la versión ${bruto?.version}: conviértelo con npm run lanzamiento -- ${lanz ?? '--sin-fecha'})`}`);
     const ultimo = (n) => (lanz && n > 0 ? ` (último día: ${fechaDelDia(lanz, n)})` : '');
     decir(`Images: ${nImg} días${ultimo(nImg)}`);
-    decir(`Headlines: ${diasTitulares.length} días en ${archivos.length} archivos mensuales${ultimo(diasTitulares.length)}`);
+    decir(`Fact or Fake: ${diasFacts.length} días en ${archivos.length} archivos mensuales${ultimo(diasFacts.length)}`);
     return { codigo: 0, mensajes };
   }
 
@@ -91,16 +91,16 @@ export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date())
     decir('AVISO: no hay herramientas/banco.json; solo se migra el calendario.');
   }
 
-  // Reparto de titulares por mes (puede lanzar si algún mes no se calcula: antes de escribir).
+  // Reparto de afirmaciones por mes (puede lanzar si algún mes no se calcula: antes de escribir).
   let reparto;
   try {
-    reparto = repartirPorMes(diasTitulares, nuevo);
+    reparto = repartirPorMes(diasFacts, nuevo);
   } catch (e) {
-    return fallo(`No se pudo repartir Headlines por meses (${e.message}).`);
+    return fallo(`No se pudo repartir Fact or Fake por meses (${e.message}).`);
   }
 
-  // Escritura, en orden: titulares (nuevos y borrado de sobrantes), calendario, banco.
-  const r = escribirTitularesMensuales(dirTitulares, reparto, { borrarSobrantes: true });
+  // Escritura, en orden: afirmaciones (nuevos y borrado de sobrantes), calendario, banco.
+  const r = escribirAfirmacionesMensuales(dirFacts, reparto, { borrarSobrantes: true });
   const calendario = { ...calendarioActual, lanzamiento: nuevo };
   const textoCalendario = json(calendario);
   const calendarioCambia = !fs.existsSync(rutaCalendario) || fs.readFileSync(rutaCalendario, 'utf8') !== textoCalendario;
@@ -114,11 +114,11 @@ export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date())
   decir(`Lanzamiento: ${nuevo ?? 'sin fecha'}${calendarioCambia ? '' : ' (sin cambios)'}`);
   if (migrado.calendario !== bruto) decir('Calendario migrado de la versión 3 a la 4 (sin fecha en los días).');
   if (bancoCambia) decir('Banco migrado a la versión 3 (sin fecha en las imágenes).');
-  if (r.escritos.length) decir(`data/titulares/: escritos ${r.escritos.join(', ')}.`);
-  if (r.borrados.length) decir(`data/titulares/: borrados ${r.borrados.join(', ')}.`);
-  if (!r.escritos.length && !r.borrados.length && diasTitulares.length > 0) decir('data/titulares/: sin cambios.');
+  if (r.escritos.length) decir(`data/facts/: escritos ${r.escritos.join(', ')}.`);
+  if (r.borrados.length) decir(`data/facts/: borrados ${r.borrados.join(', ')}.`);
+  if (!r.escritos.length && !r.borrados.length && diasFacts.length > 0) decir('data/facts/: sin cambios.');
   if (nuevo !== null) decir(`Antes del ${nuevo}: PRUEBAS_ABIERTAS = false en js/main.js (tarea 44), npm run validar -- --estricto y publicar.`);
-  if (r.escritos.length || r.borrados.length) decir('Incluye data/titulares/ en el commit (archivos añadidos y borrados).');
+  if (r.escritos.length || r.borrados.length) decir('Incluye data/facts/ en el commit (archivos añadidos y borrados).');
   return { codigo: 0, mensajes };
 }
 
