@@ -48,7 +48,7 @@ import {
 } from './temporizador.js';
 import { rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from './compartir.js';
 
-const PRUEBAS_ABIERTAS = true; // Modo prueba [D-71]: poner false antes del 2026-11-01.
+const PRUEBAS_ABIERTAS = true; // Modo prueba [D-71]: poner false antes de la fecha de lanzamiento.
 
 // Previsualización local [D-68]: fecha fija y almacenes en memoria (undefined = los del navegador).
 const fechaFija = fechaPrevisualizada(location.search, location.hostname);
