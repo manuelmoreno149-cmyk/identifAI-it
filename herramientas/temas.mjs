@@ -7,6 +7,8 @@ export const UMBRAL_PESO = 0.25;
 const RE_CARPETA = /^(\d{2,})-([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)$/u;
 const EXT_IMAGEN = /\.(jpe?g|png|webp)$/i;
 const EXT_FICHA = /\.txt$/i;
+// [2.1, D-139] Archivos de la raíz de la carpeta del día que Images ignora y nunca abre (nombres exactos, en minúsculas).
+export const ARCHIVOS_IGNORADOS_RAIZ = ['facts.txt', 'facts.en.txt', 'datos.txt', 'datos.original.txt'];
 const EXT_FICHA_EN = /\.en\.txt$/i; // [D-93] X.en.txt es el prompt en inglés de X.jpg; X.txt es el original en español.
 
 // ---------- Fechas (Date.UTC, sin importar nada) ----------
@@ -125,6 +127,24 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
   }
 
   const hijos = analizadas.filter((a) => a.n > ultimoDia);
+  // [2.1, 4.4.1] Carpeta sin ia/ ni real/ (solo afirmaciones o notas): aún no tiene Images.
+  const sinImagenes = (a) => (a.c.subcarpetas ?? []).length === 0;
+  let ultimaConImagenes = -1;
+  hijos.forEach((a, i) => {
+    if (!sinImagenes(a)) ultimaConImagenes = i;
+  });
+  const pendientes = [];
+  hijos.forEach((a, i) => {
+    if (!sinImagenes(a)) return;
+    const raiz = (a.c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s));
+    if (raiz.length > 0) errores.push(`${a.c.nombre} contiene archivos o carpetas no admitidos: ${raiz.join(', ')}.`);
+    if (i > ultimaConImagenes) pendientes.push(a.n);
+    else errores.push(`${a.c.nombre} no tiene imágenes (ia/ y real/) pero hay carpetas posteriores que sí: hueco en Images.`);
+  });
+  if (pendientes.length > 0) {
+    const primera = hijos.find((a) => a.n === pendientes[0]);
+    avisos.push(`${primera.c.nombre} y siguientes no tienen imágenes: Images se queda en el día ${pendientes[0] - 1}.`);
+  }
   for (const a of analizadas) if (a.n <= ultimoDia) omitidos.push(a.n);
   if (hijos.length > 0 && hijos[0].n !== ultimoDia + 1) {
     errores.push(
@@ -133,6 +153,7 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
   }
 
   for (const a of hijos) {
+    if (sinImagenes(a)) continue;
     const { c, n, tema } = a;
     const nom = c.nombre;
     // [2.0] Sin lanzamiento (null) no hay fecha: tampoco se comprueba que sea posterior a hoy.
@@ -148,8 +169,9 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
       estructuraOk = false;
       errores.push(`${nom} debe contener exactamente las subcarpetas ia/ y real/ (tiene: ${subs.join(', ') || 'ninguna'}).`);
     }
-    if ((c.sueltos ?? []).length > 0) {
-      errores.push(`${nom} contiene archivos o carpetas no admitidos: ${c.sueltos.join(', ')}.`);
+    const sueltos = (c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s));
+    if (sueltos.length > 0) {
+      errores.push(`${nom} contiene archivos o carpetas no admitidos: ${sueltos.join(', ')}.`);
     }
     if (nIa + nReal !== 5) {
       errores.push(
@@ -243,7 +265,7 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     nuevos.push({ n, fecha, tema, carpeta: nom, imagenes });
   }
 
-  return { nuevos, omitidos, errores, avisos };
+  return { nuevos, omitidos, pendientes, errores, avisos };
 }
 
 // ---------- Fichas [D-85, D-87] ----------

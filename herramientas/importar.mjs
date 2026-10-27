@@ -4,7 +4,7 @@ import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import sharp from 'sharp';
-import { ofuscar, sumarDias, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES } from '../js/diario.js';
+import { ofuscar, sumarDias, fechaDelDia, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES } from '../js/diario.js';
 import { TEXTOS } from '../js/textos.js';
 import {
   analizarCarpeta,
@@ -34,7 +34,6 @@ const RUTA_BANCO = join(RAIZ, 'herramientas', 'banco.json');
 const RUTA_BANCO_ANTERIOR = join(RAIZ, 'herramientas', 'banco.anterior.json');
 const RUTA_LOTE = join(RAIZ, 'herramientas', 'lote.json');
 const RUTA_CALENDARIO = join(RAIZ, 'data', 'calendario.json');
-const LANZAMIENTO = '2026-11-01';
 
 const IGNORADOS = new Set(['thumbs.db', 'desktop.ini']);
 const aleatorio = () => randomInt(2 ** 32) / 2 ** 32;
@@ -130,7 +129,12 @@ async function main() {
   let banco;
   if (existsSync(RUTA_BANCO)) {
     banco = JSON.parse(readFileSync(RUTA_BANCO, 'utf8'));
-    if (banco.version !== 2) {
+    if (banco.version === 2) {
+      salir(
+        'herramientas/banco.json es de la versión 2: conviértelo con npm run lanzamiento (no cambia la fecha si repites la actual o usas --sin-fecha).'
+      );
+    }
+    if (banco.version !== 3) {
       salir(
         'herramientas/banco.json es de la versión 1 (anterior a los temas por día). Bórralo junto con casos/ y data/calendario.json y vuelve a importar.'
       );
@@ -138,7 +142,7 @@ async function main() {
   }
 
   // 3. Calendario
-  let calendario = { version: 3, lanzamiento: LANZAMIENTO, dias: [] };
+  let calendario = { version: 4, lanzamiento: null, dias: [] };
   if (existsSync(RUTA_CALENDARIO)) {
     const c = JSON.parse(readFileSync(RUTA_CALENDARIO, 'utf8'));
     if (reimportar) {
@@ -147,11 +151,13 @@ async function main() {
           'data/calendario.json no es un calendario definitivo (¿datos de prueba de D-46?). Bórralo junto con las imágenes de casos/ antes de importar.'
         );
       }
-    } else if (c?.version === 2 && c.lanzamiento === LANZAMIENTO) {
+    } else if (c?.version === 2) {
       salir(
         'data/calendario.json es de la versión 2 (sin fichas). Regenera todos los días con npm run importar -- --reimportar --confirmar (solo antes del lanzamiento).'
       );
-    } else if (c?.version !== 3 || c.lanzamiento !== LANZAMIENTO || !validarCalendario(c)) {
+    } else if (c?.version === 3) {
+      salir('data/calendario.json es de la versión 3 (con fechas): conviértelo con npm run lanzamiento.');
+    } else if (!validarCalendario(c)) {
       salir(
         'data/calendario.json no es un calendario definitivo (¿datos de prueba de D-46?). Bórralo junto con las imágenes de casos/ antes de importar.'
       );
@@ -168,13 +174,13 @@ async function main() {
     const previos = comprobarReimportacion({ calendario, nombresCarpetas: carpetas.map((c) => c.nombre), hoyISO: hoy });
     if (previos.length > 0) salir(previos);
     if (!banco) console.log('No hay herramientas/banco.json; la reimportación crea uno nuevo.');
-    banco = { version: 2, imagenes: [] }; // el banco anterior se sustituye: sus dHash no cuentan
+    banco = { version: 3, imagenes: [] }; // el banco anterior se sustituye: sus dHash no cuentan
   } else if (!banco) {
     if (casosExistentes.length === 0 && calendario.dias.length === 0) {
-      banco = { version: 2, imagenes: [] };
+      banco = { version: 3, imagenes: [] };
       console.log('No hay banco: se crea uno nuevo vacío.');
     } else if (bancoNuevo) {
-      banco = { version: 2, imagenes: [] };
+      banco = { version: 3, imagenes: [] };
       console.log('Se crea un banco nuevo vacío (--banco-nuevo); los días publicados quedan fuera del banco.');
     } else {
       salir(
@@ -190,6 +196,8 @@ async function main() {
 
   // 5. Plan
   const ultimoDia = reimportar ? 0 : calendario.dias.length;
+  const textoFecha = (f) => f ?? 'sin fecha de lanzamiento';
+  const fechaDe = (n) => (calendario.lanzamiento ? fechaDelDia(calendario.lanzamiento, n) : null);
   const plan = planificar({ carpetas, ultimoDia, hoyISO: hoy, lanzamiento: calendario.lanzamiento, sumarDias, temaValido });
   errores.push(...plan.errores);
   avisos.push(...plan.avisos);
@@ -330,7 +338,7 @@ async function main() {
     for (const d of plan.nuevos) {
       const g = d.imagenes.filter((i) => i.tipo === 'generada').length;
       const fuentes = [...new Set(d.imagenes.map((i) => i.fuente))].join(', ');
-      console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema} · ia: ${g}, real: ${5 - g} · ${fuentes} · fichas: ${frase(resumenFichas.get(d.n))}`);
+      console.log(`  ${dos(d.n)} · ${textoFecha(d.fecha)} · ${d.tema} · ia: ${g}, real: ${5 - g} · ${fuentes} · fichas: ${frase(resumenFichas.get(d.n))}`);
     }
     if (manuales.length > 0) {
       console.log('  Recortes manuales (lote.json):');
@@ -340,7 +348,7 @@ async function main() {
     }
     for (const a of avisos) console.log(`  AVISO: ${a}`);
     console.log('  Antes de importar, revisa a mano que ninguna imagen generada conserve la marca o el logo de Gemini.');
-    if (reimportar) console.log(mensajeReimportacion({ dias: calendario.dias, borradas: antiguas.size }));
+    if (reimportar) console.log(mensajeReimportacion({ dias: calendario.dias.map((d) => ({ ...d, fecha: fechaDe(d.n) })), borradas: antiguas.size }));
     return;
   }
   if (plan.nuevos.length === 0) {
@@ -371,7 +379,7 @@ async function main() {
     const verdades = orden.map((i) => (i.tipo === 'generada' ? 1 : 0));
     const clave = ofuscar(verdades, d.n);
     const fichas = orden.map((img, i) => ofuscarFicha(textosFicha.get(img.ruta), clave, d.n, i, aleatorio));
-    diasNuevos.push({ n: d.n, fecha: d.fecha, tema: d.tema, pruebas: ids, clave, fichas });
+    diasNuevos.push({ n: d.n, tema: d.tema, pruebas: ids, clave, fichas });
     orden.forEach((img, i) => {
       const recorte = recortes[img.ruta] ?? 'atencion';
       trabajos.push({ id: ids[i], origen: join(RUTA_TEMAS, img.ruta), recorte });
@@ -379,7 +387,6 @@ async function main() {
         id: ids[i],
         tipo: img.tipo,
         dia: d.n,
-        fecha: d.fecha,
         tema: d.tema,
         fuente: img.fuente,
         licencia: img.licencia,
@@ -401,8 +408,8 @@ async function main() {
     await comprobarArchivo(destino);
   }
 
-  const nuevoBanco = { version: 2, imagenes: [...banco.imagenes, ...entradasBanco] };
-  const nuevoCalendario = { version: 3, lanzamiento: calendario.lanzamiento, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
+  const nuevoBanco = { version: 3, imagenes: [...banco.imagenes, ...entradasBanco] };
+  const nuevoCalendario = { version: 4, lanzamiento: calendario.lanzamiento, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
   if (!validarCalendario(nuevoCalendario)) salir('El calendario resultante no es válido; no se escribe.');
   writeFileSync(RUTA_BANCO, json(nuevoBanco), 'utf8');
   writeFileSync(RUTA_CALENDARIO, json(nuevoCalendario), 'utf8');
@@ -420,7 +427,7 @@ async function main() {
 
   // Informe
   console.log(reimportar ? 'Días reimportados:' : 'Días añadidos:');
-  for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema}`);
+  for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${textoFecha(fechaDe(d.n))} · ${d.tema}`);
   console.log(`Recortes manuales (lote.json): ${manuales.length}. El resto usa el recorte por atención.`);
   console.log(`Fichas: ${frase({ con: sumaFichas('con'), sin: sumaFichas('sin'), recortadas: sumaFichas('recortadas'), sinIngles: sumaFichas('sinIngles') })}.`);
   for (const a of avisos) console.log(`AVISO: ${a}`);

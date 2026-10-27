@@ -449,3 +449,52 @@ test('152 migrarCalendario y migrarBanco', () => {
   assert.equal(migrarBanco({ version: 1, imagenes: [] }).errores.length, 1);
   assert.equal(migrarBanco(null).errores.length, 1);
 });
+
+// ---------- 224 planificar: archivos ignorados y carpetas sin imágenes [D-139] ----------
+
+const sinImgs = (nombre, sueltos = ['facts.txt']) => ({ nombre, subcarpetas: [], sueltos, ia: [], real: [] });
+
+test('224 planificar: facts.txt, facts.en.txt, datos.txt y datos.original.txt se ignoran sin errores ni avisos', () => {
+  const c = { ...carpeta('01-fireworks'), sueltos: ['facts.txt', 'facts.en.txt', 'datos.txt', 'datos.original.txt'] };
+  const r = planificar({ ...base, carpetas: [c] });
+  assert.deepEqual(r.errores, []);
+  // Los únicos avisos posibles son los de «sin ficha» de las generadas; ninguno menciona los archivos ignorados.
+  assert.ok(r.avisos.every((x) => /no tiene ficha/.test(x) && !/facts|datos/.test(x)));
+  assert.deepEqual(r.pendientes, []);
+  assert.equal(r.nuevos.length, 1);
+});
+
+test('224 planificar: otros archivos sueltos siguen siendo error', () => {
+  for (const nombre of ['Datos.txt', 'notas.txt', 'FACTS.TXT']) {
+    const r = planificar({ ...base, carpetas: [{ ...carpeta('01-fireworks'), sueltos: ['datos.txt', nombre] }] });
+    assert.ok(r.errores.some((e) => e.includes('no admitidos') && e.includes(nombre)), nombre);
+  }
+});
+
+test('224 planificar: carpetas finales sin imágenes quedan pendientes con aviso', () => {
+  let r = planificar({ ...base, carpetas: [carpeta('01-dogs'), carpeta('02-cats'), sinImgs('03-birds'), sinImgs('04-fish', ['datos.txt', 'datos.original.txt'])] });
+  assert.deepEqual(r.errores, []);
+  assert.deepEqual(r.nuevos.map((d) => d.n), [1, 2]);
+  assert.deepEqual(r.pendientes, [3, 4]);
+  assert.ok(r.avisos.includes('03-birds y siguientes no tienen imágenes: Images se queda en el día 2.'));
+  r = planificar({ ...base, carpetas: [sinImgs('01-dogs')] });
+  assert.deepEqual(r.errores, []);
+  assert.deepEqual(r.pendientes, [1]);
+  assert.equal(r.nuevos.length, 0);
+});
+
+test('224 planificar: carpeta sin imágenes seguida de otra con imágenes es un hueco; con solo ia/ es error', () => {
+  let r = planificar({ ...base, carpetas: [carpeta('01-dogs'), sinImgs('02-cats'), carpeta('03-birds')] });
+  assert.ok(r.errores.some((e) => e.includes('02-cats') && /hueco/.test(e)));
+  assert.deepEqual(r.pendientes, []);
+  r = planificar({ ...base, carpetas: [{ ...carpeta('01-dogs'), subcarpetas: ['ia'], real: [] }] });
+  assert.ok(r.errores.length > 0);
+  r = planificar({ ...base, carpetas: [sinImgs('01-dogs', ['facts.txt', 'notas.txt'])] });
+  assert.ok(r.errores.some((e) => e.includes('notas.txt')));
+});
+
+test('92 planificar: sin lanzamiento (null) los días no tienen fecha ni error de fecha', () => {
+  const r = planificar({ ...base, lanzamiento: null, hoyISO: '2099-01-01', carpetas: carpetas() });
+  assert.deepEqual(r.errores, []);
+  assert.ok(r.nuevos.every((d) => d.fecha === null));
+});
