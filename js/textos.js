@@ -4,16 +4,16 @@
 export const TEXTOS = {
   portada: {
     titulo: 'identifAI-it',
-    lema: 'Five pieces of evidence. One shot. Real or AI?',
+    lema: 'Two cases a day. Spot the fake.',
     elige_reto: 'Choose your case file',
     reto_imagenes: 'Images',
-    reto_titulares: 'Headlines',
+    reto_afirmaciones: 'Fact or Fake',
     estado_pendiente: 'Open case',
     estado_jugado: 'Filed · {aciertos}/5',
     estado_en_curso: 'In another tab',
     estado_sin_caso: 'No case today',
     boton_ver_informe: 'View report',
-    regla_titulares: 'No timer. Leave for more than a few seconds and it\'s a miss.',
+    regla_afirmaciones: 'No timer. Leave for more than a few seconds and it\'s a miss.',
     elige_modo: 'Choose your investigation mode',
     modo_investigador: 'Investigator',
     modo_normal: 'Normal',
@@ -36,11 +36,11 @@ export const TEXTOS = {
       'Time runs out? The evidence gets sealed. Answer at your leisure.',
       'One attempt a day, whatever the mode. Choose wisely.'
     ],
-    pasos_titulares: [
-      'Two challenges a day, one try each. This one is Headlines.',
-      'Read the headline and the lede, then call it: REAL or AI. No timer.',
+    pasos_afirmaciones: [
+      'Two challenges a day, one try each. This one is Fact or Fake.',
+      'Read the claim, then call it: FACT or FAKE. No timer.',
       'Leave the page for more than a few seconds and it counts as a miss.',
-      'After you answer, you get the source or the suspect\'s confession.'
+      'After you answer, you get the truth and the details.'
     ]
   },
 
@@ -66,6 +66,24 @@ export const TEXTOS = {
     boton_ver_resultado: 'See result',
     sobre_texto: 'SEALED EVIDENCE',
     sobre_anuncio: 'Observation time is up. The evidence is sealed: answer whenever you like.'
+  },
+
+  afirmaciones: {
+    etiqueta_prueba: 'Claim {i}/5',
+    boton_autentica: 'FACT',
+    boton_generada: 'FAKE',
+    sello_autentica: 'FACT',
+    sello_generada: 'FAKE',
+    marca: 'identifAI-it · Fact or Fake?',
+    oculta: [
+      'You were away from the file for more than a few seconds. That\'s a miss.',
+      'The suspect slipped out while you were gone. More than a few seconds: miss.',
+      'Too long off the case. Gone more than a few seconds means a miss.'
+    ],
+    aviso_oculta: 'Leaving the page for more than a few seconds counts as a miss.',
+    no_disponible: 'This file can\'t be read. Try reloading the page.',
+    aclaracion_no_disponible: 'The record on this claim got lost in the paperwork.',
+    estado_prueba: 'Claim {i}: {estado}'
   },
 
   veredictos: {
@@ -98,25 +116,6 @@ export const TEXTOS = {
     sin_prompt: 'The suspect refuses to confess. Make of that what you will.'
   },
 
-  titulares: {
-    etiqueta_prueba: 'Story {i}/5',
-    sello_autentica: 'REAL · PUBLISHED STORY',
-    sello_generada: 'AI-GENERATED · NOT A REAL STORY',
-    marca: 'identifAI-it · Real or AI?',
-    oculta: [
-      'You were away from the file for more than a few seconds. That\'s a miss.',
-      'The suspect slipped out while you were gone. More than a few seconds: miss.',
-      'Too long off the case. Gone more than a few seconds means a miss.'
-    ],
-    aviso_oculta: 'Leaving the page for more than a few seconds counts as a miss.',
-    fuente_titulo: 'The source',
-    fuente_enlace: 'Read it at {medio}',
-    nueva_pestana: '(opens in a new tab)',
-    fuente_no_disponible: 'The source is no longer on file.',
-    no_disponible: 'This clipping can\'t be read. Try reloading the page.',
-    estado_prueba: 'Story {i}: {estado}'
-  },
-
   final: {
     alt_prueba: 'Evidence {n}',
     reto: '{reto} · Case #{n}',
@@ -128,6 +127,14 @@ export const TEXTOS = {
       'Three hits. Good work, though the suspect still has a secret or two.',
       'Four hits. Almost clean: one piece of evidence slipped through your fingers.',
       'Five for five. Not even the AI fooled you. Case closed, file spotless.'
+    ],
+    mensajes_afirmaciones: [
+      'The paperwork beat you. Not one call survived. The file goes in the drawer, face down.',
+      'One call held up. The other lies were sharper than you. Check the sources.',
+      'Two right calls. A fake in a good suit got past you. Check the source before you sign.',
+      'Three right calls. Solid instincts, but two lies still slipped past your desk.',
+      'Four right calls. One lie got away. Read every claim like a suspect\'s alibi.',
+      'Every fact confirmed, every fake exposed. No loose ends in this file.'
     ],
     aciertos: '{aciertos}/5',
     racha: 'Streak: {racha}',
@@ -177,21 +184,19 @@ export const TEXTOS = {
     copiado: 'Copied to clipboard',
     manual: 'Copy this text:',
     plantilla: 'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}',
-    plantilla_titulares: 'identifAI-it Headlines #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
+    plantilla_afirmaciones: 'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
   },
 
   creditos: {
     titulo_pagina: 'Credits · identifAI-it',
     titulo: 'Credits',
-    intro: 'Free fonts and the photo sources cited below.',
+    intro: 'Free fonts and the sources cited below.',
     tipografias: 'Fonts',
     imagenes: 'Images',
     imagenes_intro: 'The evidence comes from these sources. The list doesn\'t say which image came from where.',
     sin_imagenes: 'No images published yet.',
-    noticias: 'News',
-    noticias_intro: 'Headlines adapted from the original publishers; summaries written for this game. Links go to the original stories.',
-    sin_noticias: 'No news sources credited yet.',
-    ficcion: 'Stories marked AI are fiction written for this game.',
+    afirmaciones: 'Fact or Fake',
+    afirmaciones_texto: 'Claims are written for this game from public sources. The fakes are invented and always debunked after you answer.',
     ver_licencia: 'license',
     volver: 'Back to the front page'
   }
