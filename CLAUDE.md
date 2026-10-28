@@ -35,7 +35,7 @@ Juego web diario (estilo Wordle) con dos retos: Images (cada día se muestran 5 
 - docs/ESPECIFICACION.md y docs/especificacion/ (fuente de verdad técnica) y docs/DECISIONES.md.
 
 ## Anti-trampas (obligatorio)
-- Nunca "real", "ia", "ai", "fake" ni la respuesta en nombres de archivo, rutas, alt, clases, ids ni atributos data-*.
+- Nunca "real", "ia", "ai", "fake" ni la respuesta en nombres de archivo, rutas, alt, clases, ids ni atributos data-*. Única excepción: data-verdad (veredicto y miniaturas del resultado) puede llevar la verdad de un caso, y solo después de que el jugador lo haya respondido.
 - Imágenes publicadas sin metadatos (EXIF, XMP, C2PA), todas en WebP, 1080 x 1350, misma calidad.
 - Norma de contenido de Fact or Fake: nada falso sobre salud, seguridad, tragedias ni política. Las afirmaciones falsas pueden alterar cifras o récords de personas y marcas famosas si no dañan su reputación. Cada afirmación lleva su verdad, que se muestra siempre tras responder. El importador no puede comprobarlo; antes de cada importación, una persona revisa cada afirmación con la lista de comprobación y lo certifica con `--revisado`. El importador avisa si la longitud media de las verdaderas y las falsas difiere mucho.
 - La respuesta, la ficha y el prompt de un caso no existen en el DOM hasta que el jugador responde. Durante la partida solo la afirmación actual está en el DOM; únicamente en la pantalla de resultado pueden estar las 5 pruebas ya contestadas (se vacían al salir). Las afirmaciones, aclaraciones y prompts nunca se publican en claro: van ofuscados y con la misma longitud.
