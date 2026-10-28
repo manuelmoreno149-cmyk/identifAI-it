@@ -541,6 +541,33 @@
   }
 }
 
+/* Vertical hasta 740 px (360 x 640 con barra de prueba): leyenda solo para lectores y tarjetas mas compactas */
+@media (orientation: portrait) and (max-height: 740px) {
+  #portada-retos legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .reto {
+    padding: 10px 12px;
+    gap: 2px;
+  }
+
+  .reto-nombre {
+    font-size: clamp(1.5rem, min(9vw, 4.8dvh), 3.5rem);
+  }
+
+  #portada-pie,
+  #portada-creditos {
+    min-height: var(--tactil-min);
+  }
+}
+
 /* Modo prueba (selector de dias): ocupa sitio, asi que se quita la descripcion en vertical */
 @media (orientation: portrait) {
   #pantalla-portada:has(#selector-prueba) .reto-desc {
@@ -573,6 +600,26 @@
 
   .reto-nombre {
     font-size: clamp(1.75rem, min(5.2vw, 7.5dvh), 3.5rem);
+  }
+}
+
+/* Tarjetas lado a lado y estrechas (640 a 899 px): nombres de modo mas pequenos para que quepan en su caja */
+@media (min-width: 640px) and (max-width: 899px) {
+  .modos {
+    gap: 4px;
+  }
+
+  .modo label {
+    padding-inline: 2px;
+  }
+
+  .modo-nombre {
+    font-size: 0.75rem;
+    letter-spacing: 0;
+  }
+
+  .modo-desc {
+    font-size: 0.75rem;
   }
 }
 
@@ -879,11 +926,27 @@
 }
 
 @media (min-width: 640px) {
+  /* 640 a 899 px: titulo y puntuacion en dos lineas para que nada se trunque ni se pise */
   #caso-cabecera {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
       "titulo progreso puntos"
       "aviso aviso aviso";
+  }
+
+  #caso-progreso li {
+    flex: none;
+    width: 2rem;
+  }
+
+  #caso-puntuacion {
+    justify-self: end;
+  }
+}
+
+@media (min-width: 900px) {
+  #caso-cabecera {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   }
 
   #caso-titulo {
@@ -899,14 +962,12 @@
   }
 
   #caso-progreso li {
-    flex: none;
     width: 2.5rem;
   }
 
   #caso-puntuacion {
     flex-direction: row;
     align-items: baseline;
-    justify-self: end;
   }
 
   #caso-modo:not(:empty)::after {
@@ -2327,18 +2388,36 @@
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
-    gap: var(--espacio-5);
+    gap: var(--espacio-3);
   }
 
   #resultado-rachas {
     flex: 1 1 auto;
     max-width: 30rem;
-    gap: var(--espacio-4);
+    gap: var(--espacio-3);
   }
 
   #resultado-pie .acciones {
     flex: none;
     width: auto;
+    grid-template-columns: repeat(2, minmax(7.5rem, 11rem));
+  }
+
+  .dato-valor {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 900px) {
+  #resultado-pie {
+    gap: var(--espacio-5);
+  }
+
+  #resultado-rachas {
+    gap: var(--espacio-4);
+  }
+
+  #resultado-pie .acciones {
     grid-template-columns: repeat(2, minmax(8.5rem, 11rem));
   }
 
