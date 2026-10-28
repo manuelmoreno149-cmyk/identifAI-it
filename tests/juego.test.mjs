@@ -8,6 +8,8 @@ import {
   corregir,
   contarAciertos,
   estadoDeCodigo,
+  votoDicho,
+  etiquetaResultado,
   elegirVariante,
   mensajeFinal,
   recortarFicha,
@@ -696,3 +698,20 @@ test('mensajesDelReto [D-134]', () => {
   for (const f of [null, undefined, 'x', 5, []]) assert.equal(mensajesDelReto('imagenes', f), null);
 });
 
+
+test('votoDicho: acierto = la verdad, fallo (o ausencia) = la contraria', () => {
+  assert.equal(votoDicho(0, 'A'), 0);
+  assert.equal(votoDicho(1, 'A'), 1);
+  assert.equal(votoDicho(0, 'F'), 1);
+  assert.equal(votoDicho(1, 'F'), 0);
+  assert.equal(votoDicho(1, '-'), null);
+  assert.equal(votoDicho(undefined, 'A'), null);
+  assert.equal(votoDicho(2, 'A'), null);
+});
+
+test('etiquetaResultado: une con " · " y salta partes vacías', () => {
+  assert.equal(etiquetaResultado(['Images', 'Case #7', 'Dogs', 'Normal']), 'Images · Case #7 · Dogs · Normal');
+  assert.equal(etiquetaResultado(['Fact or Fake', 'Case #7', '', null]), 'Fact or Fake · Case #7');
+  assert.equal(etiquetaResultado(['Images', undefined, '  ', 'Normal']), 'Images · Normal');
+  assert.equal(etiquetaResultado([]), '');
+});

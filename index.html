@@ -201,17 +201,39 @@
   <!-- Resultado -->
   <section class="pantalla" id="pantalla-resultado" hidden>
     <div class="cinta-peligro" aria-hidden="true"></div>
-    <div class="tarjeta">
-      <p id="resultado-reto"></p>
+    <!-- Franja: puntuacion, etiqueta del caso y mensaje, sello -->
+    <header id="resultado-franja">
       <p id="resultado-aciertos" tabindex="-1" data-foco></p>
-      <p id="resultado-mensaje"></p>
+      <div id="resultado-datos">
+        <p id="resultado-reto"></p>
+        <p id="resultado-mensaje"></p>
+      </div>
+      <p id="resultado-sello" aria-hidden="true" data-texto="resultado.sello_cerrado">[[resultado.sello_cerrado]]</p>
+    </header>
+    <!-- Tablon: las cinco pruebas (las crea main.js) y su nota -->
+    <div id="resultado-tablon">
+      <ol id="resultado-revision"></ol>
+      <p id="resultado-nota">
+        <span data-reto-nombre="imagenes" data-texto="resultado.nota_imagenes">[[resultado.nota_imagenes]]</span>
+        <span data-reto-nombre="afirmaciones" data-texto="resultado.nota_afirmaciones">[[resultado.nota_afirmaciones]]</span>
+      </p>
     </div>
-    <ol id="resultado-revision"></ol>
-    <p id="resultado-rachas"><span id="resultado-racha"></span> <span id="resultado-mejor-racha"></span></p>
-    <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="compartir"><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
-      <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">[[final.boton_volver]]</span></button>
-    </div>
+    <!-- Pie: rachas y cuenta atras a la izquierda, botones a la derecha -->
+    <footer id="resultado-pie">
+      <div id="resultado-rachas">
+        <p class="dato"><span class="dato-etiqueta" data-texto="resultado.etiqueta_racha">[[resultado.etiqueta_racha]]</span><span class="dato-valor" id="resultado-racha"></span></p>
+        <p class="dato"><span class="dato-etiqueta" data-texto="resultado.etiqueta_mejor_racha">[[resultado.etiqueta_mejor_racha]]</span><span class="dato-valor" id="resultado-mejor-racha"></span></p>
+        <p class="dato" id="resultado-proximo"><span class="dato-etiqueta" data-texto="resultado.siguiente_caso">[[resultado.siguiente_caso]]</span><span class="dato-valor dato-ambar" id="resultado-cuenta-atras" aria-live="off"></span></p>
+        <div id="resultado-nuevo-caso" hidden>
+          <p data-texto="resultado.nuevo_caso">[[resultado.nuevo_caso]]</p>
+          <button type="button" class="boton boton-primario" data-accion="volver-portada"><span class="boton-texto" data-texto="resultado.boton_nuevo_caso">[[resultado.boton_nuevo_caso]]</span></button>
+        </div>
+      </div>
+      <div class="acciones">
+        <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">[[final.boton_volver]]</span></button>
+        <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
+      </div>
+    </footer>
   </section>
 
   <!-- Ya jugado -->
@@ -227,7 +249,7 @@
       <p id="ya-jugado-cuenta-atras" aria-live="off"></p>
     </div>
     <div class="acciones">
-      <button type="button" class="boton boton-primario" data-accion="compartir"><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
+      <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
       <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">[[final.boton_volver]]</span></button>
     </div>
   </section>

@@ -179,6 +179,18 @@ export const TEXTOS = {
     }
   },
 
+  resultado: {
+    sello_cerrado: 'CASE CLOSED',
+    nota_imagenes: 'Tap a photo to see its file',
+    nota_afirmaciones: 'Tap a claim to read the truth again',
+    etiqueta_racha: 'Streak',
+    etiqueta_mejor_racha: 'Best streak',
+    siguiente_caso: 'Next case in',
+    nuevo_caso: 'New case available',
+    boton_nuevo_caso: 'Play',
+    dijiste: 'You said {voto}'
+  },
+
   ya_jugado: {
     titulo: 'Case closed',
     texto: 'You\'ve already filed today\'s case. Come back tomorrow. Crime never sleeps.',
@@ -211,7 +223,7 @@ export const TEXTOS = {
   },
 
   compartir: {
-    boton: 'Share',
+    boton: 'Share result',
     copiado: 'Copied to clipboard',
     manual: 'Copy this text:',
     plantilla: 'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}',

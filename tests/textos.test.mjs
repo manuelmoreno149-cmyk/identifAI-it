@@ -37,6 +37,10 @@ const CLAVES = {
     'alt_prueba', 'reto', 'boton_volver', 'mensajes', 'mensajes_afirmaciones', 'aciertos', 'racha', 'mejor_racha', 'era', 'cuadros_etiqueta',
     'estado_prueba', 'estados'
   ],
+  resultado: [
+    'sello_cerrado', 'nota_imagenes', 'nota_afirmaciones', 'etiqueta_racha', 'etiqueta_mejor_racha',
+    'siguiente_caso', 'nuevo_caso', 'boton_nuevo_caso', 'dijiste'
+  ],
   ya_jugado: ['titulo', 'texto', 'proximo', 'modo'],
   sin_casos: ['texto', 'sin_lanzamiento'],
   errores: ['calendario', 'imagenes', 'boton_reintentar'],
@@ -157,6 +161,16 @@ test('38. están todas las claves de 3.1 y los valores exactos', () => {
   assert.equal(TEXTOS.portada.tema, 'Case of the day: {tema}');
   assert.equal(TEXTOS.partida.caso_del_dia, 'Case of the day: {tema}');
   assert.equal(TEXTOS.final.cuadros_etiqueta, '{aciertos} out of 5 correct');
+  assert.equal(TEXTOS.compartir.boton, 'Share result');
+  assert.equal(TEXTOS.resultado.sello_cerrado, 'CASE CLOSED');
+  assert.equal(TEXTOS.resultado.nota_imagenes, 'Tap a photo to see its file');
+  assert.equal(TEXTOS.resultado.nota_afirmaciones, 'Tap a claim to read the truth again');
+  assert.equal(TEXTOS.resultado.etiqueta_racha, 'Streak');
+  assert.equal(TEXTOS.resultado.etiqueta_mejor_racha, 'Best streak');
+  assert.equal(TEXTOS.resultado.siguiente_caso, 'Next case in');
+  assert.equal(TEXTOS.resultado.nuevo_caso, 'New case available');
+  assert.equal(TEXTOS.resultado.boton_nuevo_caso, 'Play');
+  assert.equal(TEXTOS.resultado.dijiste, 'You said {voto}');
 });
 
 test('38. las claves eliminadas en la 1.3 no existen', () => {

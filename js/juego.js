@@ -90,6 +90,21 @@ export function estadoDeCodigo(codigo) {
   return typeof codigo === 'string' && Object.hasOwn(ESTADOS_CODIGO, codigo) ? ESTADOS_CODIGO[codigo] : null;
 }
 
+// Voto que dijo el jugador (0 = autentica/fact, 1 = generada/fake) a partir de la verdad y el código A/F.
+// Un fallo (incluida la ausencia) es el voto contrario a la verdad. Sin dato válido: null.
+export function votoDicho(verdad, codigo) {
+  if (verdad !== 0 && verdad !== 1) return null;
+  const estado = estadoDeCodigo(codigo);
+  if (estado === 'acierto') return verdad;
+  if (estado === 'fallo') return 1 - verdad;
+  return null;
+}
+
+// Etiqueta de la pantalla de resultado: partes unidas con " · ", saltando las vacías.
+export function etiquetaResultado(partes) {
+  return partes.filter((p) => typeof p === 'string' && p.trim() !== '').join(' · ');
+}
+
 export function elegirVariante(lista, aleatorio = Math.random) {
   return lista[Math.floor(aleatorio() * lista.length)];
 }

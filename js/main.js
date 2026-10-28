@@ -36,6 +36,8 @@ import {
   transicion,
   contarAciertos,
   estadoDeCodigo,
+  votoDicho,
+  etiquetaResultado,
   elegirVariante,
   mensajeFinal,
   mensajesDelReto,
@@ -183,13 +185,13 @@ function antesDeRender(previo, nuevo, evento) {
 // Efectos asíncronos o que dependen de que la pantalla ya esté pintada.
 function despuesDeRender(previo, nuevo) {
   if (previo.pantalla === 'cuenta-atras' && nuevo.pantalla !== 'cuenta-atras') detenerCuentaAtras();
-  if (previo.pantalla === 'ya-jugado' && nuevo.pantalla !== 'ya-jugado') detenerBucleMedianoche();
+  if (esConCuentaAtras(previo.pantalla) && !esConCuentaAtras(nuevo.pantalla)) detenerBucleMedianoche();
   if (nuevo.pantalla !== 'resultado' && nuevo.pantalla !== 'ya-jugado') ocultarCompartirManual();
 
   if (nuevo.pantalla === 'iniciando' && previo.pantalla !== 'iniciando') cargarDia();
   if (nuevo.pantalla === 'cargando' && previo.pantalla !== 'cargando') hacerPrecarga();
   if (nuevo.pantalla === 'cuenta-atras' && previo.pantalla !== 'cuenta-atras') iniciarCuentaAtras();
-  if (nuevo.pantalla === 'ya-jugado' && previo.pantalla !== 'ya-jugado') iniciarBucleMedianoche();
+  if (esConCuentaAtras(nuevo.pantalla) && previo.pantalla !== nuevo.pantalla) iniciarBucleMedianoche();
 
   if (nuevo.fase === 'veredicto' && previo.fase !== 'veredicto') {
     if (temporizador) temporizador.detener();
@@ -680,14 +682,31 @@ function limpiarCaso() {
   vaciarVeredicto();
 }
 
-// Cinco miniaturas (Images) o cinco botones numerados (Fact or Fake) que abren la ficha.
-// Se crean solo al llegar a resultado [D-89, D-126].
+function crearSpan(clase, contenido, oculto = true) {
+  const span = document.createElement('span');
+  span.className = clase;
+  if (contenido !== undefined) span.textContent = contenido;
+  if (oculto) span.setAttribute('aria-hidden', 'true');
+  return span;
+}
+
+// Cinco tarjetas del tablón: fotos (Images) o afirmaciones (Fact or Fake) que abren la ficha.
+// Se crean solo al llegar a resultado [D-89, D-126]; la verdad se descifra aquí, ya contestadas las cinco.
 function crearMiniaturas(e) {
   const lista = $('resultado-revision');
   lista.replaceChildren();
   const afirmaciones = e.reto === 'afirmaciones';
+  const grupoReto = afirmaciones ? TEXTOS.afirmaciones : TEXTOS.partida;
   for (let i = 0; i < 5; i++) {
-    const estadoPrueba = estadoDeCodigo(e.resultados[i]);
+    const codigo = e.resultados[i];
+    const estadoPrueba = estadoDeCodigo(codigo);
+    let verdad = null;
+    try {
+      verdad = desofuscar(e.clave, e.n, i);
+    } catch {
+      verdad = null;
+    }
+    const dijo = votoDicho(verdad, codigo);
     const li = document.createElement('li');
     const boton = document.createElement('button');
     boton.type = 'button';
@@ -695,24 +714,39 @@ function crearMiniaturas(e) {
     boton.dataset.accion = 'ver-ficha';
     boton.dataset.prueba = String(i + 1);
     boton.dataset.estado = estadoPrueba;
+    if (verdad !== null) boton.dataset.verdad = verdad === 1 ? 'generada' : 'autentica';
     boton.setAttribute('aria-haspopup', 'dialog');
     const lector = document.createElement('span');
     lector.className = 'solo-lectores';
     const grupoEstado = afirmaciones ? TEXTOS.afirmaciones.estado_prueba : TEXTOS.final.estado_prueba;
     lector.textContent = rellenar(grupoEstado, { i: i + 1, estado: TEXTOS.final.estados[estadoPrueba] });
+    const sello = verdad === null ? '' : selloDe(e.reto, verdad);
+    const pie = crearSpan('mini-pie');
+    if (dijo !== null) {
+      const voto = grupoReto[dijo === 1 ? 'voto_generada' : 'voto_autentica'];
+      pie.append(crearSpan('mini-voto', rellenar(TEXTOS.resultado.dijiste, { voto }), false));
+    }
     if (afirmaciones) {
-      const numero = document.createElement('span');
-      numero.className = 'miniatura-numero';
-      numero.setAttribute('aria-hidden', 'true');
-      numero.textContent = String(i + 1);
-      boton.append(numero, lector);
+      const cabecera = crearSpan('mini-cabecera');
+      cabecera.append(crearSpan('mini-numero', `#${i + 1}`, false), crearSpan('mini-sello', sello, false));
+      const afirmacion = Array.isArray(e.textos) ? desofuscarAfirmacion(e.textos[i], e.clave, e.n, i) : null;
+      const cuerpo = crearSpan('mini-texto', afirmacion ?? TEXTOS.afirmaciones.no_disponible);
+      boton.append(lector, cabecera, cuerpo, pie);
     } else {
+      const foto = crearSpan('mini-foto');
       const img = document.createElement('img');
+      img.className = 'mini-img';
       img.src = rutaPrueba(e.pruebas[i]);
       img.alt = '';
       img.width = 1080;
       img.height = 1350;
-      boton.append(img, lector);
+      foto.append(img, crearSpan('mini-sello', sello, false));
+      pie.prepend(crearSpan('mini-numero', `#${i + 1}`, false));
+      boton.append(lector, foto, pie);
+    }
+    // Todo menos el nombre accesible queda fuera del árbol de accesibilidad.
+    for (const hijo of boton.querySelectorAll('.mini-foto, .mini-cabecera, .mini-texto, .mini-pie')) {
+      hijo.setAttribute('aria-hidden', 'true');
     }
     li.append(boton);
     lista.append(li);
@@ -722,11 +756,19 @@ function crearMiniaturas(e) {
 function renderResultado(e) {
   const aciertos = contarAciertos(e.resultados);
   const retoDatos = datos.retos[e.reto];
-  $('resultado-reto').textContent = rellenar(TEXTOS.final.reto, { reto: nombreReto(e.reto), n: e.n });
+  const afirmaciones = e.reto === 'afirmaciones';
+  $('resultado-reto').textContent = etiquetaResultado([
+    nombreReto(e.reto),
+    rellenar(TEXTOS.portada.etiqueta_caso, { n: e.n }),
+    e.tema,
+    afirmaciones ? '' : nombreModo(e.modo)
+  ]);
   $('resultado-aciertos').textContent = rellenar(TEXTOS.final.aciertos, { aciertos });
   $('resultado-mensaje').textContent = mensajeFinal(aciertos, mensajesDelReto(e.reto, TEXTOS.final));
-  $('resultado-racha').textContent = rellenar(TEXTOS.final.racha, { racha: retoDatos.racha });
-  $('resultado-mejor-racha').textContent = rellenar(TEXTOS.final.mejor_racha, { racha: retoDatos.mejorRacha });
+  $('resultado-racha').textContent = String(retoDatos.racha);
+  $('resultado-mejor-racha').textContent = String(retoDatos.mejorRacha);
+  $('resultado-proximo').hidden = false;
+  $('resultado-nuevo-caso').hidden = true;
   crearMiniaturas(e);
 }
 
@@ -762,6 +804,7 @@ function render(e) {
   app.dataset.modo = e.modo;
 
   if (e.pantalla !== 'caso') limpiarCaso();
+  if (e.pantalla !== 'resultado') $('resultado-revision').replaceChildren();
   if (e.pantalla === 'portada') renderPortada(e);
   if (e.pantalla === 'caso') renderCaso(e);
   if (e.pantalla === 'resultado') renderResultado(e);
@@ -895,17 +938,31 @@ for (const tipo of ['copy', 'cut', 'contextmenu', 'dragstart', 'selectstart']) {
   $('afirmacion').addEventListener(tipo, (ev) => ev.preventDefault());
 }
 
-// ---- Ya jugado: cuenta atrás hasta medianoche ----
+// Bloqueo de copia también en el tablón de resultado (las 5 afirmaciones conviven ahí, ya contestadas).
+for (const tipo of ['copy', 'cut', 'contextmenu', 'dragstart', 'selectstart']) {
+  $('resultado-revision').addEventListener(tipo, (ev) => ev.preventDefault());
+}
+
+// ---- Resultado y ya jugado: cuenta atrás hasta medianoche ----
+const esConCuentaAtras = (pantalla) => pantalla === 'ya-jugado' || pantalla === 'resultado';
+
 function iniciarBucleMedianoche() {
   detenerBucleMedianoche();
+  const enResultado = estado.pantalla === 'resultado';
   const tic = () => {
     const ahora = new Date();
-    $('ya-jugado-cuenta-atras').textContent = rellenar(TEXTOS.ya_jugado.proximo, {
-      tiempo: formatearCuentaAtras(msHastaMedianoche(ahora))
-    });
+    const tiempo = formatearCuentaAtras(msHastaMedianoche(ahora));
+    if (enResultado) $('resultado-cuenta-atras').textContent = tiempo;
+    else $('ya-jugado-cuenta-atras').textContent = rellenar(TEXTOS.ya_jugado.proximo, { tiempo });
     if (hoy() !== fechaCarga) {
       bucleMedianoche = null;
-      despachar({ tipo: 'MEDIANOCHE' });
+      if (enResultado) {
+        // La tabla de transiciones no procesa MEDIANOCHE en resultado: solo se ofrece el nuevo caso.
+        $('resultado-proximo').hidden = true;
+        $('resultado-nuevo-caso').hidden = false;
+      } else {
+        despachar({ tipo: 'MEDIANOCHE' });
+      }
       return;
     }
     bucleMedianoche = setTimeout(tic, 1000);
@@ -1015,7 +1072,12 @@ app.addEventListener('click', (e) => {
     return;
   }
   const tipo = EVENTOS_ACCION[accion];
-  if (tipo) despachar({ tipo });
+  if (tipo) {
+    const desdeResultado = estado.pantalla === 'resultado';
+    despachar({ tipo });
+    // Pasada la medianoche con el resultado abierto, la portada recarga el día nuevo.
+    if (tipo === 'VOLVER_PORTADA' && desdeResultado && hoy() !== fechaCarga) despachar({ tipo: 'MEDIANOCHE' });
+  }
 });
 
 app.addEventListener('change', (e) => {

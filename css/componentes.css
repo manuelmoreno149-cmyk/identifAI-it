@@ -61,10 +61,40 @@
   font-size: clamp(1.125rem, 4dvh, 1.5rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 2px solid var(--color-tinta);
+  /* Boton base = contorno ambar sobre fondo oscuro (ambar sobre #0a0f17: 9:1). Antes quedaba el gris del
+     navegador con texto claro (1,1:1). Los primarios y de voto sobreescriben color, fondo y borde. */
+  color: var(--color-ambar);
+  background: transparent;
+  border: 2px solid var(--color-ambar);
   border-radius: var(--radio-2);
+  box-shadow: none;
+  transition: transform var(--duracion-corta), box-shadow var(--duracion-corta), filter var(--duracion-corta), background-color var(--duracion-corta);
+}
+
+.boton-primario,
+.boton-voto {
+  border-color: var(--color-tinta);
   box-shadow: var(--sombra-boton);
-  transition: transform var(--duracion-corta), box-shadow var(--duracion-corta), filter var(--duracion-corta);
+}
+
+.icono-compartir {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  background: url("../img/ui/compartir.svg") no-repeat center / contain;
+}
+
+@media (hover: hover) {
+  .boton:not(.boton-primario):not(.boton-voto):hover {
+    background: var(--color-ambar-suave);
+  }
+}
+
+/* Botones sueltos dentro de papel (selector del modo prueba) */
+#selector-prueba .boton {
+  color: var(--color-tinta);
+  background: var(--color-papel-2);
+  border-color: var(--color-tinta);
 }
 
 .boton:active {
@@ -294,6 +324,11 @@
 .reto:has(.reto-radio:focus-visible) {
   outline: 3px solid var(--color-foco);
   outline-offset: 4px;
+}
+
+/* Foco de los botones que viven sobre papel: el amarillo del foco no se ve sobre papel (1,4:1) */
+.reto .boton:focus-visible {
+  outline-color: var(--color-tinta);
 }
 
 .reto-radio {
@@ -678,6 +713,8 @@
   margin-top: var(--espacio-2);
   color: var(--color-tinta);
   background: var(--color-ambar);
+  border-color: var(--color-tinta);
+  box-shadow: var(--sombra-boton);
 }
 
 /* ---------- Caso ---------- */
@@ -1266,7 +1303,7 @@
 #app[data-reto="imagenes"] #veredicto-titulo {
   font-size: 0.75rem;
   letter-spacing: 0.14em;
-  color: #6b6352;
+  color: var(--color-nota);
 }
 
 #app[data-reto="imagenes"] #veredicto-resumen {
@@ -1322,7 +1359,7 @@
   font-family: var(--fuente-cuerpo);
   font-size: 0.875rem;
   line-height: 1.3;
-  color: #6b6352;
+  color: var(--color-nota);
 }
 
 #veredicto-marca {
@@ -1332,7 +1369,7 @@
   font-family: var(--fuente-datos);
   font-size: 0.75rem;
   line-height: 1.2;
-  color: #6b6352;
+  color: var(--color-nota);
 }
 
 /* Fact or Fake: la tarjeta es la afirmacion; en la revelacion baja la aclaracion bajo una linea discontinua */
@@ -1803,148 +1840,514 @@
   }
 }
 
-/* ---------- Resultado (R9) ---------- */
-#pantalla-resultado .tarjeta {
+/* ---------- Resultado: tablon de pruebas ---------- */
+#pantalla-resultado:not([hidden]) {
+  max-width: 64rem;
+}
+
+/* Franja de papel: puntuacion | etiqueta y mensaje | sello (el sello solo desde 640 px) */
+#resultado-franja {
   flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--espacio-4);
+  padding: clamp(6px, 1.5dvh, var(--espacio-4)) var(--espacio-4);
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+  border-radius: var(--radio-1);
+  box-shadow: var(--sombra-papel);
 }
 
 #resultado-aciertos {
   font-family: var(--fuente-titulos);
   font-weight: 600;
-  font-size: clamp(3rem, 12dvh, 5rem);
+  font-size: clamp(2.5rem, 11dvh, 6rem);
   line-height: 1;
   color: var(--color-sello);
 }
 
+#resultado-datos {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#resultado-reto {
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-nota);
+}
+
 #resultado-mensaje {
   font-family: var(--fuente-datos);
-  font-size: clamp(1rem, 2.6dvh + 0.5rem, var(--texto-grande));
-  line-height: 1.3;
+  font-size: clamp(0.9375rem, 2.2dvh + 0.4rem, 1.375rem);
+  line-height: 1.25;
+  color: var(--color-tinta);
+}
+
+#resultado-sello {
+  display: none;
+  --giro: -8deg;
+  padding: 0.1em 0.5em;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 4.5dvh, 2.25rem);
+  line-height: 1.1;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--color-sello);
+  border: 4px solid var(--color-sello);
+  border-radius: var(--radio-1);
+  box-shadow: inset 0 0 0 2px var(--color-papel), inset 0 0 0 3px var(--color-sello);
+  opacity: 0.9;
+  transform: rotate(var(--giro));
+  pointer-events: none;
+  animation: estampar var(--duracion-sello) var(--curva-estampa) 250ms both;
+}
+
+/* Tablon: superficie oscura donde se clavan las pruebas */
+#resultado-tablon {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: clamp(4px, 1dvh, var(--espacio-3)) clamp(6px, 2vw, var(--espacio-4));
+  background: var(--color-fondo-2);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio-2);
+  box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.55);
 }
 
 #resultado-revision {
-  flex: none;
+  flex: 1 1 0;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(4px, 1.5vw, 12px);
-  align-items: center;
+  grid-template-rows: minmax(0, 1fr);
+  align-content: center;
+  gap: clamp(8px, 2dvh, 16px) clamp(8px, 2vw, 18px);
+  padding: 8px 4px 4px;
+  /* Bloqueo de copia casual de las afirmaciones del tablon */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
+/* Cada prueba: un li de tamano de contenedor (con inclinacion y chincheta) y dentro el boton */
 #resultado-revision li {
-  width: 100%;
-  max-width: 7rem;
-  justify-self: center;
-}
-
-.miniatura {
   position: relative;
-  display: block;
+  container-type: size;
+  align-self: center;
   width: 100%;
-  min-width: var(--tactil-min);
-  aspect-ratio: 4 / 5;
-  padding: 0;
-  background: var(--color-fondo-2);
-  border: 3px solid var(--color-papel);
-  border-radius: var(--radio-1);
-  box-shadow: var(--sombra-foto);
+  max-height: 100%;
+  aspect-ratio: 5 / 8;
+  transform: rotate(var(--giro-prueba, 0deg));
   transition: transform var(--duracion-corta);
 }
 
-.miniatura[data-estado="acierto"] {
-  border-color: var(--color-acierto);
+#resultado-revision li:nth-child(1) { --giro-prueba: -1.6deg; }
+#resultado-revision li:nth-child(2) { --giro-prueba: 1.2deg; }
+#resultado-revision li:nth-child(3) { --giro-prueba: -0.7deg; }
+#resultado-revision li:nth-child(4) { --giro-prueba: 1.8deg; }
+#resultado-revision li:nth-child(5) { --giro-prueba: -1.1deg; }
+
+#app[data-reto="afirmaciones"] #resultado-revision li {
+  aspect-ratio: 4 / 5;
+}
+
+/* Chincheta decorativa */
+#resultado-revision li::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: -6px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle at 35% 30%, #ff9b8f 0 12%, #c4302b 45%, #6e1414 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  #resultado-revision li:hover {
+    transform: rotate(var(--giro-prueba, 0deg)) translateY(-3px);
+  }
+}
+
+.miniatura {
+  --pie: 2.6rem;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+  /* Borde de 4 px siempre (transparente salvo fallo): la tarjeta no cambia de tamano */
+  border: 4px solid transparent;
+  border-radius: var(--radio-1);
+  box-shadow: var(--sombra-foto);
+  text-align: center;
 }
 
 .miniatura[data-estado="fallo"] {
   border-color: var(--color-fallo);
 }
 
-.miniatura img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+@container (min-width: 11rem) {
+  .miniatura {
+    --pie: 1.6rem;
+  }
 }
 
-/* Icono de acierto o fallo en la esquina: el estado no depende solo del color */
-.miniatura::after {
+/* Sello pequeno: verde en autentica, rojo en generada; el texto lo pone main.js */
+.mini-sello {
+  --giro: 7deg;
+  padding: 0 0.35em;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(0.75rem, 11cqw, 1.125rem);
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-verdad);
+  background: var(--color-papel);
+  border: 2px solid var(--color-verdad);
+  border-radius: var(--radio-1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: rotate(var(--giro));
+}
+
+.miniatura[data-verdad="generada"] .mini-sello {
+  color: var(--color-sello);
+  border-color: var(--color-sello);
+}
+
+.mini-numero {
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1rem, 11cqw, 1.5rem);
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+}
+
+.mini-voto {
+  font-family: var(--fuente-datos);
+  font-size: clamp(0.6875rem, 8cqw, 1rem);
+  line-height: 1.2;
+}
+
+.mini-pie {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+}
+
+/* Images: foto 4:5 completa, con sello arriba a la derecha y marca de acierto abajo a la izquierda */
+.mini-foto {
+  position: relative;
+  flex: none;
+  width: min(100cqw - 16px, (100cqh - 16px - var(--pie) - 4px) * 0.8);
+  aspect-ratio: 4 / 5;
+  background: var(--color-fondo);
+}
+
+.mini-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mini-foto .mini-sello {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.mini-foto::after {
   content: "";
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 1.375rem;
-  height: 1.375rem;
+  left: 4px;
+  bottom: 4px;
+  width: clamp(1.25rem, 22cqw, 1.75rem);
+  height: clamp(1.25rem, 22cqw, 1.75rem);
   background: no-repeat center / contain;
 }
 
-.miniatura[data-estado="acierto"]::after {
+.miniatura[data-estado="acierto"] .mini-foto::after {
   background-image: url("../img/ui/icono-acierto.svg");
 }
 
-.miniatura[data-estado="fallo"]::after {
+.miniatura[data-estado="fallo"] .mini-foto::after {
   background-image: url("../img/ui/icono-fallo.svg");
 }
 
-@media (hover: hover) {
-  .miniatura:hover {
-    transform: translateY(-2px);
+/* Cuando cabe, numero y voto van en una linea: "#1 · You said Real" */
+@container (min-width: 11rem) {
+  .mini-foto + .mini-pie {
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.4em;
   }
+
+  .mini-foto + .mini-pie .mini-numero::after {
+    content: "\00a0\00b7";
+  }
+}
+
+/* Fact or Fake: numero y sello arriba, afirmacion, voto y marca abajo */
+.mini-cabecera {
+  flex: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.mini-texto {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--lineas, 3);
+  line-clamp: var(--lineas, 3);
+  overflow: hidden;
+  font-family: var(--fuente-datos);
+  font-size: clamp(0.75rem, 7cqw, 1.125rem);
+  line-height: 1.25;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.miniatura[data-verdad="generada"] .mini-texto {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-sello);
+  text-decoration-thickness: 0.12em;
+}
+
+.mini-texto + .mini-pie {
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.mini-texto + .mini-pie::after {
+  content: "";
+  flex: none;
+  width: clamp(1.25rem, 14cqw, 1.75rem);
+  height: clamp(1.25rem, 14cqw, 1.75rem);
+  background: no-repeat center / contain;
+}
+
+.miniatura[data-estado="acierto"] .mini-texto + .mini-pie::after {
+  background-image: url("../img/ui/icono-acierto.svg");
+}
+
+.miniatura[data-estado="fallo"] .mini-texto + .mini-pie::after {
+  background-image: url("../img/ui/icono-fallo.svg");
+}
+
+/* Nota bajo las pruebas */
+#resultado-nota {
+  flex: none;
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--color-texto-suave);
+}
+
+/* Pie: tres datos y dos botones */
+#resultado-pie {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 1.2dvh, var(--espacio-3));
 }
 
 #resultado-rachas {
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  column-gap: var(--espacio-4);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--espacio-2);
   font-family: var(--fuente-datos);
-  text-align: center;
 }
 
-#pantalla-resultado .acciones {
+.dato {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dato-etiqueta {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-texto-suave);
+}
+
+.dato-valor {
+  font-size: 1.125rem;
+  line-height: 1.25;
+  color: var(--color-texto);
+}
+
+.dato-ambar {
+  color: var(--color-ambar);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "New case available": sustituye a la cuenta atras; ocupa las dos columnas de la derecha */
+#resultado-nuevo-caso {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+#resultado-nuevo-caso p {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  color: var(--color-ambar);
+}
+
+#resultado-nuevo-caso .boton {
   flex: none;
-  margin-top: auto;
+  min-height: var(--tactil-min);
+  padding-inline: var(--espacio-4);
+  font-size: 1rem;
 }
 
+#resultado-pie .acciones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+#resultado-pie .acciones .boton {
+  max-width: none;
+  padding-inline: var(--espacio-3);
+}
+
+/* Vertical (portada del movil y tabletas): 3 + 2 en Images, 2 + 2 + 1 en Fact or Fake */
+@media (orientation: portrait) {
+  #resultado-revision {
+    --lineas: 3;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  #resultado-revision li {
+    grid-column: span 2;
+  }
+
+  #resultado-revision li:nth-child(4) {
+    grid-column: 2 / 4;
+  }
+
+  #resultado-revision li:nth-child(5) {
+    grid-column: 4 / 6;
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision li:nth-child(4) {
+    grid-column: span 2;
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision li:nth-child(5) {
+    grid-column: 2 / 4;
+  }
+}
+
+@media (orientation: portrait) and (min-height: 740px) {
+  #resultado-revision {
+    --lineas: 6;
+  }
+}
+
+/* Horizontal o ancho: cinco en fila, sello y pie en una sola fila */
 @media (orientation: landscape) {
-  #pantalla-resultado:not([hidden]) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto auto auto 1fr;
-    column-gap: clamp(16px, 4vw, 48px);
-    align-content: start;
-  }
-
-  #pantalla-resultado > .cinta-peligro {
-    grid-column: 1 / -1;
-  }
-
-  #pantalla-resultado > .tarjeta {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  #pantalla-resultado > #resultado-rachas {
-    grid-column: 1;
-    grid-row: 3;
-    justify-content: flex-start;
-    text-align: left;
-  }
-
-  #pantalla-resultado > .acciones {
-    grid-column: 1;
-    grid-row: 4;
-    align-self: start;
-    margin-top: 0;
-  }
-
-  #pantalla-resultado > #resultado-revision {
-    grid-column: 2;
-    grid-row: 2 / 5;
-    align-self: center;
+  #resultado-revision {
+    --lineas: 7;
   }
 }
 
-/* Resultado y ya jugado de afirmaciones (R17): reto en cabecera, botones numerados y acciones en una fila */
-#resultado-reto,
+@media (orientation: landscape) and (min-height: 600px) {
+  #resultado-revision {
+    --lineas: 9;
+  }
+}
+
+@media (min-width: 640px) {
+  #resultado-franja {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: var(--espacio-5);
+  }
+
+  #resultado-datos {
+    text-align: center;
+  }
+
+  #resultado-reto {
+    font-size: 0.9375rem;
+  }
+
+  #resultado-sello {
+    display: block;
+  }
+
+  #resultado-pie {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--espacio-5);
+  }
+
+  #resultado-rachas {
+    flex: 1 1 auto;
+    max-width: 30rem;
+    gap: var(--espacio-4);
+  }
+
+  #resultado-pie .acciones {
+    flex: none;
+    width: auto;
+    grid-template-columns: repeat(2, minmax(8.5rem, 11rem));
+  }
+
+  .dato-valor {
+    font-size: 1.25rem;
+  }
+}
+
+/* Resultado y ya jugado de afirmaciones (R17): acciones del ya jugado en una fila */
 #ya-jugado-reto {
   font-family: var(--fuente-datos);
   font-size: 0.9375rem;
@@ -1953,34 +2356,10 @@
   color: var(--color-tinta-suave);
 }
 
-.miniatura:has(.miniatura-numero) {
-  display: grid;
-  place-items: center;
-  min-height: var(--tactil-min);
-  aspect-ratio: 1;
-  color: var(--color-tinta);
-  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
-}
-
-.miniatura-numero {
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: clamp(1.5rem, 8vw, 2.25rem);
-  line-height: 1;
-  transform: translate(-2px, -3px);
-}
-
-.miniatura:has(.miniatura-numero)::after {
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
-#app[data-reto="afirmaciones"] #pantalla-resultado .acciones,
 #app[data-reto="afirmaciones"] #pantalla-ya-jugado .acciones {
   flex-direction: row;
 }
 
-#app[data-reto="afirmaciones"] #pantalla-resultado .acciones .boton,
 #app[data-reto="afirmaciones"] #pantalla-ya-jugado .acciones .boton {
   flex: 1 1 0;
   min-width: 0;
