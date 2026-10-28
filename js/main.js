@@ -42,8 +42,7 @@ import {
   retoDePrueba,
   votoDeTecla,
   teclaDeVoto,
-  medirOculta,
-  indiceConsejo
+  medirOculta
 } from './juego.js';
 import {
   CLAVE,
@@ -655,9 +654,6 @@ function renderCaso(e) {
       vaciarAclaracion(aclaracion, aclaracionTexto, detalles);
       confesion.textContent = typeof e.ficha === 'string' ? e.ficha : TEXTOS.confesion.no_disponible;
     }
-    // Consejo del detective: solo Images, igual para reales y de IA (no revela nada).
-    const idxConsejo = afirmaciones ? null : indiceConsejo(e.n, e.indice, TEXTOS.consejo.lista.length);
-    $('veredicto-consejo-texto').textContent = idxConsejo === null ? '' : TEXTOS.consejo.lista[idxConsejo];
   } else {
     vaciarVeredicto();
   }
@@ -675,7 +671,6 @@ function vaciarVeredicto() {
   $('veredicto-resumen').textContent = '';
   $('prueba-etiqueta').textContent = '';
   $('prueba-sello').textContent = '';
-  $('veredicto-consejo-texto').textContent = '';
   vaciarAclaracion($('veredicto-aclaracion'), $('veredicto-aclaracion-texto'), $('veredicto-detalles'));
 }
 

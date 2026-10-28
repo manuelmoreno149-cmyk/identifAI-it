@@ -53,15 +53,6 @@ export function teclaDeVoto(reto, voto) {
   return par ? par[0].toUpperCase() : null;
 }
 
-// Índice del consejo del detective para el caso n y la prueba indice (0..4), o null si no es válido.
-// 3 es coprimo con 20: las 5 pruebas de un día siempre usan consejos distintos.
-export function indiceConsejo(n, indice, total = 20) {
-  if (!Number.isInteger(n) || n < 1) return null;
-  if (!Number.isInteger(indice) || indice < 0 || indice > 4) return null;
-  if (!Number.isInteger(total) || total < 5) return null;
-  return (n * 7 + indice * 3) % total;
-}
-
 // Conjunto de mensajes finales del reto [D-134].
 export function mensajesDelReto(reto, final) {
   if (!retoValido(reto) || final === null || typeof final !== 'object' || Array.isArray(final)) return null;

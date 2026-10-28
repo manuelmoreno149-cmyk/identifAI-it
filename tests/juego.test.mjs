@@ -696,25 +696,3 @@ test('mensajesDelReto [D-134]', () => {
   for (const f of [null, undefined, 'x', 5, []]) assert.equal(mensajesDelReto('imagenes', f), null);
 });
 
-test('indiceConsejo: los 5 consejos de un día son distintos y están en rango', async () => {
-  const { indiceConsejo } = await import('../js/juego.js');
-  for (let n = 1; n <= 400; n++) {
-    const indices = [0, 1, 2, 3, 4].map((i) => indiceConsejo(n, i));
-    assert.equal(new Set(indices).size, 5, `caso ${n}`);
-    for (const x of indices) assert.ok(Number.isInteger(x) && x >= 0 && x < 20, `caso ${n}`);
-  }
-});
-
-test('indiceConsejo: es determinista', async () => {
-  const { indiceConsejo } = await import('../js/juego.js');
-  assert.equal(indiceConsejo(12, 3), indiceConsejo(12, 3));
-  assert.equal(indiceConsejo(1, 0), 7);
-  assert.equal(indiceConsejo(3, 2), (21 + 6) % 20);
-});
-
-test('indiceConsejo: entradas inválidas devuelven null', async () => {
-  const { indiceConsejo } = await import('../js/juego.js');
-  for (const [n, i, t] of [[0, 0], [-1, 0], [1.5, 0], ['1', 0], [NaN, 0], [1, -1], [1, 5], [1, 1.2], [1, '2'], [1, undefined], [1, 0, 0], [1, 0, 2.5]]) {
-    assert.equal(indiceConsejo(n, i, t), null, JSON.stringify([n, i, t]));
-  }
-});

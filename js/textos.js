@@ -65,6 +65,7 @@ export const TEXTOS = {
 
   partida: {
     caso_del_dia: 'Case of the day: {tema}',
+    marca: 'identifAI-it · Real or AI?',
     etiqueta_prueba: 'Evidence {i}/5',
     marcador: 'Correct: {aciertos}',
     alt_prueba: 'Evidence {i} of 5',
@@ -132,6 +133,7 @@ export const TEXTOS = {
 
   confesion: {
     titulo: 'The suspect\'s confession',
+    nota: 'The prompt used to create this image.',
     leer_entera: 'Read full confession',
     no_disponible: 'The confession got lost in the paperwork. Convenient.'
   },
@@ -228,31 +230,5 @@ export const TEXTOS = {
     afirmaciones_texto: 'Claims are written for this game from public sources. The fakes are invented and always debunked after you answer.',
     ver_licencia: 'license',
     volver: 'Back to the front page'
-  },
-
-  consejo: {
-    titulo: 'DETECTIVE\'S TIP',
-    lista: [
-      'Count the fingers. Extra, fused, or bent-backward digits often give the game away.',
-      'Look where fingers meet a cup or a phone. Blurred or melted joins may point to a generator.',
-      'Read every sign and label. Letters that dissolve into gibberish are a common giveaway.',
-      'Check mirrors and windows. The reflection may show a room, or a person, that isn\'t there.',
-      'Follow the shadows. Several light sources, or shadows falling the wrong way, may be a clue.',
-      'Look where the background melts into hair or a door frame. Smeared edges are often a tell.',
-      'Skin that looks airbrushed, with no pores or fine lines, may be a generator\'s signature.',
-      'Count the teeth and check their edges. Rows that blur or vary oddly often raise suspicion.',
-      'Compare both ears and any earrings. Mismatched lobes, or jewelry that sinks into skin, may be a tell.',
-      'Faces and rooms that mirror too neatly are suspicious. Life is rarely that tidy.',
-      'Stray hairs that float or merge into the background are a frequent tell. Look at the outline.',
-      'Tiles, bricks, or crowd faces that repeat too exactly often betray a copied pattern.',
-      'Check whether lines converge at one vanishing point. Crooked railings may give it away.',
-      'Check the geometry of doors, windows, and tables. Legs that don\'t match may be a clue.',
-      'Compare both pupils. Uneven catchlights or double light sources may betray a generated face.',
-      'Look into the eyes. The reflected scene should match what stands in front of the subject.',
-      'Look for cups, bags, or straps that merge into a hand or a table. Fused objects are a clue.',
-      'Study the background for nonsense: signs with no words, doors that open onto blank walls.',
-      'Check buttons, zippers, and seams. Stitches that wander or vanish may hint at a synthetic image.',
-      'Zoom in before you decide. A quick glance misses what a close look reveals.'
-    ]
   }
 };
