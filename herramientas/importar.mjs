@@ -4,7 +4,7 @@ import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import sharp from 'sharp';
-import { ofuscar, sumarDias, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES } from '../js/diario.js';
+import { ofuscar, sumarDias, fechaDelDia, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES } from '../js/diario.js';
 import { TEXTOS } from '../js/textos.js';
 import {
   analizarCarpeta,
@@ -14,11 +14,17 @@ import {
   calendarioAnteriorValido,
   normalizarFicha,
   mensajeReimportacion,
+  borrarAntiguas,
   planificar,
   barajar,
   nuevoId,
   distanciaHamming,
   analizarPesos,
+  buscarCalidad,
+  PESO_MIN_KB,
+  PESO_MAX_KB,
+  CALIDAD_MIN,
+  CALIDAD_MAX,
   mensajePeso,
   avisosMezcla,
   POSICIONES_RECORTE,
@@ -34,7 +40,6 @@ const RUTA_BANCO = join(RAIZ, 'herramientas', 'banco.json');
 const RUTA_BANCO_ANTERIOR = join(RAIZ, 'herramientas', 'banco.anterior.json');
 const RUTA_LOTE = join(RAIZ, 'herramientas', 'lote.json');
 const RUTA_CALENDARIO = join(RAIZ, 'data', 'calendario.json');
-const LANZAMIENTO = '2026-11-01';
 
 const IGNORADOS = new Set(['thumbs.db', 'desktop.ini']);
 const aleatorio = () => randomInt(2 ** 32) / 2 ** 32;
@@ -130,7 +135,12 @@ async function main() {
   let banco;
   if (existsSync(RUTA_BANCO)) {
     banco = JSON.parse(readFileSync(RUTA_BANCO, 'utf8'));
-    if (banco.version !== 2) {
+    if (banco.version === 2) {
+      salir(
+        'herramientas/banco.json es de la versión 2: conviértelo con npm run lanzamiento (no cambia la fecha si repites la actual o usas --sin-fecha).'
+      );
+    }
+    if (banco.version !== 3) {
       salir(
         'herramientas/banco.json es de la versión 1 (anterior a los temas por día). Bórralo junto con casos/ y data/calendario.json y vuelve a importar.'
       );
@@ -138,7 +148,7 @@ async function main() {
   }
 
   // 3. Calendario
-  let calendario = { version: 3, lanzamiento: LANZAMIENTO, dias: [] };
+  let calendario = { version: 4, lanzamiento: null, dias: [] };
   if (existsSync(RUTA_CALENDARIO)) {
     const c = JSON.parse(readFileSync(RUTA_CALENDARIO, 'utf8'));
     if (reimportar) {
@@ -147,11 +157,13 @@ async function main() {
           'data/calendario.json no es un calendario definitivo (¿datos de prueba de D-46?). Bórralo junto con las imágenes de casos/ antes de importar.'
         );
       }
-    } else if (c?.version === 2 && c.lanzamiento === LANZAMIENTO) {
+    } else if (c?.version === 2) {
       salir(
         'data/calendario.json es de la versión 2 (sin fichas). Regenera todos los días con npm run importar -- --reimportar --confirmar (solo antes del lanzamiento).'
       );
-    } else if (c?.version !== 3 || c.lanzamiento !== LANZAMIENTO || !validarCalendario(c)) {
+    } else if (c?.version === 3) {
+      salir('data/calendario.json es de la versión 3 (con fechas): conviértelo con npm run lanzamiento.');
+    } else if (!validarCalendario(c)) {
       salir(
         'data/calendario.json no es un calendario definitivo (¿datos de prueba de D-46?). Bórralo junto con las imágenes de casos/ antes de importar.'
       );
@@ -168,13 +180,13 @@ async function main() {
     const previos = comprobarReimportacion({ calendario, nombresCarpetas: carpetas.map((c) => c.nombre), hoyISO: hoy });
     if (previos.length > 0) salir(previos);
     if (!banco) console.log('No hay herramientas/banco.json; la reimportación crea uno nuevo.');
-    banco = { version: 2, imagenes: [] }; // el banco anterior se sustituye: sus dHash no cuentan
+    banco = { version: 3, imagenes: [] }; // el banco anterior se sustituye: sus dHash no cuentan
   } else if (!banco) {
     if (casosExistentes.length === 0 && calendario.dias.length === 0) {
-      banco = { version: 2, imagenes: [] };
+      banco = { version: 3, imagenes: [] };
       console.log('No hay banco: se crea uno nuevo vacío.');
     } else if (bancoNuevo) {
-      banco = { version: 2, imagenes: [] };
+      banco = { version: 3, imagenes: [] };
       console.log('Se crea un banco nuevo vacío (--banco-nuevo); los días publicados quedan fuera del banco.');
     } else {
       salir(
@@ -190,6 +202,8 @@ async function main() {
 
   // 5. Plan
   const ultimoDia = reimportar ? 0 : calendario.dias.length;
+  const textoFecha = (f) => f ?? 'sin fecha de lanzamiento';
+  const fechaDe = (n) => (calendario.lanzamiento ? fechaDelDia(calendario.lanzamiento, n) : null);
   const plan = planificar({ carpetas, ultimoDia, hoyISO: hoy, lanzamiento: calendario.lanzamiento, sumarDias, temaValido });
   errores.push(...plan.errores);
   avisos.push(...plan.avisos);
@@ -330,7 +344,7 @@ async function main() {
     for (const d of plan.nuevos) {
       const g = d.imagenes.filter((i) => i.tipo === 'generada').length;
       const fuentes = [...new Set(d.imagenes.map((i) => i.fuente))].join(', ');
-      console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema} · ia: ${g}, real: ${5 - g} · ${fuentes} · fichas: ${frase(resumenFichas.get(d.n))}`);
+      console.log(`  ${dos(d.n)} · ${textoFecha(d.fecha)} · ${d.tema} · ia: ${g}, real: ${5 - g} · ${fuentes} · fichas: ${frase(resumenFichas.get(d.n))}`);
     }
     if (manuales.length > 0) {
       console.log('  Recortes manuales (lote.json):');
@@ -340,7 +354,7 @@ async function main() {
     }
     for (const a of avisos) console.log(`  AVISO: ${a}`);
     console.log('  Antes de importar, revisa a mano que ninguna imagen generada conserve la marca o el logo de Gemini.');
-    if (reimportar) console.log(mensajeReimportacion({ dias: calendario.dias, borradas: antiguas.size }));
+    if (reimportar) console.log(mensajeReimportacion({ dias: calendario.dias.map((d) => ({ ...d, fecha: fechaDe(d.n) })), borradas: antiguas.size }));
     return;
   }
   if (plan.nuevos.length === 0) {
@@ -371,15 +385,14 @@ async function main() {
     const verdades = orden.map((i) => (i.tipo === 'generada' ? 1 : 0));
     const clave = ofuscar(verdades, d.n);
     const fichas = orden.map((img, i) => ofuscarFicha(textosFicha.get(img.ruta), clave, d.n, i, aleatorio));
-    diasNuevos.push({ n: d.n, fecha: d.fecha, tema: d.tema, pruebas: ids, clave, fichas });
+    diasNuevos.push({ n: d.n, tema: d.tema, pruebas: ids, clave, fichas });
     orden.forEach((img, i) => {
       const recorte = recortes[img.ruta] ?? 'atencion';
-      trabajos.push({ id: ids[i], origen: join(RUTA_TEMAS, img.ruta), recorte });
+      trabajos.push({ id: ids[i], origen: join(RUTA_TEMAS, img.ruta), ruta: img.ruta, recorte });
       entradasBanco.push({
         id: ids[i],
         tipo: img.tipo,
         dia: d.n,
-        fecha: d.fecha,
         tema: d.tema,
         fuente: img.fuente,
         licencia: img.licencia,
@@ -390,40 +403,60 @@ async function main() {
       });
     });
   }
+  // Calidad WebP variable (D-149): el recorte se calcula una sola vez y se busca la calidad que deja el peso en la franja común.
+  const avisosPeso = [];
+  const calidades = [];
   for (const t of barajar(trabajos, aleatorio)) {
     const destino = join(RUTA_CASOS, `${t.id}.webp`);
     const position = t.recorte === 'atencion' ? sharp.strategy.attention : POSICIONES_RECORTE[t.recorte];
-    await sharp(t.origen)
+    const { data, info } = await sharp(t.origen)
       .rotate()
       .resize(1080, 1350, { fit: 'cover', position })
-      .webp({ quality: 80, effort: 6 })
-      .toFile(destino);
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const codificar = (quality) =>
+      sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
+        .webp({ quality, effort: 6 })
+        .toBuffer();
+    const r = await buscarCalidad(codificar);
+    writeFileSync(destino, r.buffer);
+    calidades.push(r.calidad);
+    if (r.fuera) {
+      avisosPeso.push(
+        `${t.ruta} pesa ${(r.buffer.length / 1024).toFixed(0)} KB con calidad ${r.calidad}, ${r.fuera === 'alto' ? 'por encima' : 'por debajo'} de la franja de ${PESO_MIN_KB}-${PESO_MAX_KB} KB (calidad permitida ${CALIDAD_MIN}-${CALIDAD_MAX}); se usa el límite más cercano.`
+      );
+    }
     await comprobarArchivo(destino);
   }
 
-  const nuevoBanco = { version: 2, imagenes: [...banco.imagenes, ...entradasBanco] };
-  const nuevoCalendario = { version: 3, lanzamiento: calendario.lanzamiento, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
+  const nuevoBanco = { version: 3, imagenes: [...banco.imagenes, ...entradasBanco] };
+  const nuevoCalendario = { version: 4, lanzamiento: calendario.lanzamiento, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
   if (!validarCalendario(nuevoCalendario)) salir('El calendario resultante no es válido; no se escribe.');
   writeFileSync(RUTA_BANCO, json(nuevoBanco), 'utf8');
   writeFileSync(RUTA_CALENDARIO, json(nuevoCalendario), 'utf8');
   escribirCreditos({ banco: nuevoBanco });
 
   let borradas = 0;
+  let fallidas = [];
   if (reimportar) {
     const nuevosIds = new Set(diasNuevos.flatMap((d) => d.pruebas));
-    for (const f of antiguas) {
-      if (nuevosIds.has(f.replace(/\.webp$/, ''))) continue;
-      unlinkSync(join(RUTA_CASOS, f));
-      borradas++;
-    }
+    const r = borrarAntiguas({
+      antiguas,
+      nuevosIds,
+      borrar: (f) => unlinkSync(join(RUTA_CASOS, f)),
+      existe: (f) => existsSync(join(RUTA_CASOS, f))
+    });
+    borradas = r.borradas;
+    fallidas = r.fallidas;
   }
 
   // Informe
   console.log(reimportar ? 'Días reimportados:' : 'Días añadidos:');
-  for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${d.fecha} · ${d.tema}`);
+  for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${textoFecha(fechaDe(d.n))} · ${d.tema}`);
   console.log(`Recortes manuales (lote.json): ${manuales.length}. El resto usa el recorte por atención.`);
+  if (calidades.length > 0) console.log(`Calidad WebP usada: de ${Math.min(...calidades)} a ${Math.max(...calidades)} (franja ${PESO_MIN_KB}-${PESO_MAX_KB} KB).`);
   console.log(`Fichas: ${frase({ con: sumaFichas('con'), sin: sumaFichas('sin'), recortadas: sumaFichas('recortadas'), sinIngles: sumaFichas('sinIngles') })}.`);
-  for (const a of avisos) console.log(`AVISO: ${a}`);
+  for (const a of [...avisos, ...avisosPeso]) console.log(`AVISO: ${a}`);
   const gen = nuevoCalendario.dias.map((d) => d.pruebas.reduce((s, _, i) => s + desofuscar(d.clave, d.n, i), 0));
   for (const a of avisosMezcla(gen)) console.log(a);
   const tamanos = new Map();
@@ -433,8 +466,9 @@ async function main() {
   console.log('Los originales y los .txt (y .en.txt) siguen en entrada/temas/; el importador no los mueve ni los borra. Puedes archivarlos a mano.');
   if (reimportar) {
     console.log(
-      `Reimportados ${diasNuevos.length} días; borradas ${borradas} imágenes antiguas de casos/. Copia del banco anterior en herramientas/banco.anterior.json.`
+      `Reimportados ${diasNuevos.length} días; borradas ${borradas} de ${antiguas.size} imágenes antiguas de casos/. Copia del banco anterior en herramientas/banco.anterior.json.`
     );
+    for (const f of fallidas) console.log(`AVISO: no se pudo borrar ${f}`);
   }
   console.log('Guarda una copia privada de herramientas/banco.json fuera del repositorio.');
 }

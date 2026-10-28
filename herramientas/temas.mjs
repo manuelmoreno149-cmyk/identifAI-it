@@ -7,6 +7,8 @@ export const UMBRAL_PESO = 0.25;
 const RE_CARPETA = /^(\d{2,})-([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)$/u;
 const EXT_IMAGEN = /\.(jpe?g|png|webp)$/i;
 const EXT_FICHA = /\.txt$/i;
+// [2.1, D-139] Archivos de la raíz de la carpeta del día que Images ignora y nunca abre (nombres exactos, en minúsculas).
+export const ARCHIVOS_IGNORADOS_RAIZ = ['facts.txt', 'facts.en.txt', 'datos.txt', 'datos.original.txt'];
 const EXT_FICHA_EN = /\.en\.txt$/i; // [D-93] X.en.txt es el prompt en inglés de X.jpg; X.txt es el original en español.
 
 // ---------- Fechas (Date.UTC, sin importar nada) ----------
@@ -22,6 +24,11 @@ function sumarDiasISO(iso, dias) {
 
 function diasEntreISO(desde, hasta) {
   return Math.round((aUTC(hasta) - aUTC(desde)) / 86400000);
+}
+
+// Fecha ISO real (AAAA-MM-DD que sobrevive a ida y vuelta por Date.UTC).
+function esFechaISO(x) {
+  return typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) && sumarDiasISO(x, 0) === x;
 }
 
 // ---------- Palabras prohibidas ----------
@@ -120,6 +127,24 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
   }
 
   const hijos = analizadas.filter((a) => a.n > ultimoDia);
+  // [2.1, 4.4.1] Carpeta sin ia/ ni real/ (solo afirmaciones o notas): aún no tiene Images.
+  const sinImagenes = (a) => (a.c.subcarpetas ?? []).length === 0;
+  let ultimaConImagenes = -1;
+  hijos.forEach((a, i) => {
+    if (!sinImagenes(a)) ultimaConImagenes = i;
+  });
+  const pendientes = [];
+  hijos.forEach((a, i) => {
+    if (!sinImagenes(a)) return;
+    const raiz = (a.c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s));
+    if (raiz.length > 0) errores.push(`${a.c.nombre} contiene archivos o carpetas no admitidos: ${raiz.join(', ')}.`);
+    if (i > ultimaConImagenes) pendientes.push(a.n);
+    else errores.push(`${a.c.nombre} no tiene imágenes (ia/ y real/) pero hay carpetas posteriores que sí: hueco en Images.`);
+  });
+  if (pendientes.length > 0) {
+    const primera = hijos.find((a) => a.n === pendientes[0]);
+    avisos.push(`${primera.c.nombre} y siguientes no tienen imágenes: Images se queda en el día ${pendientes[0] - 1}.`);
+  }
   for (const a of analizadas) if (a.n <= ultimoDia) omitidos.push(a.n);
   if (hijos.length > 0 && hijos[0].n !== ultimoDia + 1) {
     errores.push(
@@ -128,9 +153,11 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
   }
 
   for (const a of hijos) {
+    if (sinImagenes(a)) continue;
     const { c, n, tema } = a;
     const nom = c.nombre;
-    const fecha = sumarDias(lanzamiento, n - 1);
+    // [2.0] Sin lanzamiento (null) no hay fecha: tampoco se comprueba que sea posterior a hoy.
+    const fecha = lanzamiento === null || lanzamiento === undefined ? null : sumarDias(lanzamiento, n - 1);
     const ia = c.ia ?? [];
     const real = c.real ?? [];
     const nIa = ia.filter((f) => !EXT_FICHA.test(f)).length;
@@ -142,8 +169,9 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
       estructuraOk = false;
       errores.push(`${nom} debe contener exactamente las subcarpetas ia/ y real/ (tiene: ${subs.join(', ') || 'ninguna'}).`);
     }
-    if ((c.sueltos ?? []).length > 0) {
-      errores.push(`${nom} contiene archivos o carpetas no admitidos: ${c.sueltos.join(', ')}.`);
+    const sueltos = (c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s));
+    if (sueltos.length > 0) {
+      errores.push(`${nom} contiene archivos o carpetas no admitidos: ${sueltos.join(', ')}.`);
     }
     if (nIa + nReal !== 5) {
       errores.push(
@@ -153,7 +181,7 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     if (estructuraOk && (nIa < 1 || nIa > 4)) {
       errores.push(`${nom} tiene ${nIa} imágenes en ia/ y ${nReal} en real/. Cada día necesita entre 1 y 4 en ia/.`);
     }
-    if (diasEntre(hoyISO, fecha) < 1) {
+    if (fecha !== null && diasEntre(hoyISO, fecha) < 1) {
       errores.push(
         `El día ${String(n).padStart(2, '0')} (${fecha}) ya ha llegado o ha pasado; no se pueden añadir días de hoy ni del pasado.`
       );
@@ -237,7 +265,7 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     nuevos.push({ n, fecha, tema, carpeta: nom, imagenes });
   }
 
-  return { nuevos, omitidos, errores, avisos };
+  return { nuevos, omitidos, pendientes, errores, avisos };
 }
 
 // ---------- Fichas [D-85, D-87] ----------
@@ -258,10 +286,16 @@ export function normalizarFicha(texto, maxBytes) {
   return { texto: puntos.join('').trimEnd() + '…', vacia: false, truncada: true, bytesOriginales };
 }
 
+// [2.0] Acepta las versiones 2, 3 y 4. El lanzamiento es una fecha ISO válida (o null, solo en la 4).
+// Las versiones 2 y 3 llevan fecha en cada día; la 4 no.
 export function calendarioAnteriorValido(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-  if (obj.version !== 2 && obj.version !== 3) return false;
-  if (obj.lanzamiento !== '2026-11-01') return false;
+  if (obj.version !== 2 && obj.version !== 3 && obj.version !== 4) return false;
+  if (obj.lanzamiento === null) {
+    if (obj.version !== 4) return false;
+  } else if (!esFechaISO(obj.lanzamiento)) {
+    return false;
+  }
   if (!Array.isArray(obj.dias)) return false;
   return obj.dias.every(
     (d) =>
@@ -269,8 +303,7 @@ export function calendarioAnteriorValido(obj) {
       typeof d === 'object' &&
       Number.isInteger(d.n) &&
       d.n >= 1 &&
-      typeof d.fecha === 'string' &&
-      /^\d{4}-\d{2}-\d{2}$/.test(d.fecha) &&
+      (obj.version === 4 || esFechaISO(d.fecha)) &&
       Array.isArray(d.pruebas) &&
       d.pruebas.length === 5 &&
       d.pruebas.every((id) => typeof id === 'string')
@@ -350,9 +383,16 @@ export function comprobarReimportacion({ calendario, nombresCarpetas, hoyISO, di
     return errores;
   }
   const dosCifras = (n) => String(n).padStart(2, '0');
-  const llegado = dias.find((d) => diasEntre(hoyISO, d.fecha) < 1);
+  // [2.0] La fecha de cada día se deriva de calendario.lanzamiento; sin lanzamiento (null) ningún día ha llegado.
+  // Un calendario sin campo lanzamiento (versión 3 antigua) usa la fecha propia de cada día.
+  const fechaDe = (d) =>
+    calendario.lanzamiento === undefined ? d.fecha : calendario.lanzamiento === null ? null : sumarDiasISO(calendario.lanzamiento, d.n - 1);
+  const llegado = dias.find((d) => {
+    const f = fechaDe(d);
+    return f !== null && f !== undefined && diasEntre(hoyISO, f) < 1;
+  });
   if (llegado) {
-    errores.push(`El día ${dosCifras(llegado.n)} (${llegado.fecha}) ya ha llegado o ha pasado: después del lanzamiento no se reimporta ningún día.`);
+    errores.push(`El día ${dosCifras(llegado.n)} (${fechaDe(llegado)}) ya ha llegado o ha pasado: después del lanzamiento no se reimporta ningún día.`);
   }
   const numeros = new Set();
   for (const nombre of nombresCarpetas) {
@@ -368,9 +408,99 @@ export function comprobarReimportacion({ calendario, nombresCarpetas, hoyISO, di
   return errores;
 }
 
+// Borra las imágenes antiguas de una reimportación sin perder la cuenta real: nunca toca las que sigan en uso
+// (nuevosIds), no se detiene si una falla y comprueba con existe() que el archivo desapareció.
+export function borrarAntiguas({ antiguas, nuevosIds, borrar, existe }) {
+  const r = { borradas: 0, conservadas: 0, fallidas: [] };
+  for (const f of antiguas) {
+    if (nuevosIds.has(f.replace(/\.webp$/i, ''))) { r.conservadas++; continue; }
+    try {
+      borrar(f);
+      if (existe(f)) r.fallidas.push(`${f}: sigue en casos/ tras borrarla`);
+      else r.borradas++;
+    } catch (e) {
+      r.fallidas.push(`${f}: ${e.code ?? e.message}`);
+    }
+  }
+  return r;
+}
+
 export function mensajeReimportacion({ dias, borradas }) {
   if (dias.length === 0) return '';
-  return `Se regenerarían ${dias.length} días (${dias[0].fecha} a ${dias[dias.length - 1].fecha}) y se borrarían ${borradas} imágenes antiguas de casos/. Para hacerlo: npm run importar -- --reimportar --confirmar`;
+  const rango = dias[0].fecha ? `${dias[0].fecha} a ${dias[dias.length - 1].fecha}` : 'sin fecha de lanzamiento';
+  return `Se regenerarían ${dias.length} días (${rango}) y se borrarían ${borradas} imágenes antiguas de casos/. Para hacerlo: npm run importar -- --reimportar --confirmar`;
+}
+
+// ---------- Fecha de lanzamiento y migración de versiones (spec 4.2.1, 4.6) [D-95, D-96] ----------
+
+export function analizarArgumentosLanzamiento(argv) {
+  const lista = Array.isArray(argv) ? argv : [];
+  const r = { accion: 'mostrar', fecha: null, errores: [] };
+  if (lista.length === 0) return r;
+  if (lista.length > 1) {
+    r.errores.push(`Solo se admite un argumento (una fecha AAAA-MM-DD o --sin-fecha); recibidos ${lista.length}.`);
+    return r;
+  }
+  const [a] = lista;
+  if (a === '--sin-fecha') {
+    r.accion = 'quitar';
+  } else if (esFechaISO(a)) {
+    r.accion = 'fijar';
+    r.fecha = a;
+  } else {
+    r.errores.push(`Argumento no válido: ${a}. Usa una fecha AAAA-MM-DD válida, --sin-fecha o nada para solo mostrar.`);
+  }
+  return r;
+}
+
+// nuevo === null equivale a --sin-fecha.
+export function comprobarCambioLanzamiento({ actual, nuevo, hoyISO }) {
+  const errores = [];
+  if (nuevo !== null && nuevo !== undefined) {
+    if (!esFechaISO(nuevo)) {
+      errores.push(`La fecha ${JSON.stringify(nuevo)} no es una fecha válida AAAA-MM-DD.`);
+    } else if (diasEntreISO(hoyISO, nuevo) < 1) {
+      errores.push(`La fecha de lanzamiento (${nuevo}) debe ser posterior a hoy (${hoyISO}); como pronto, mañana.`);
+    }
+  }
+  if (actual !== null && actual !== undefined && esFechaISO(actual) && diasEntreISO(hoyISO, actual) < 1) {
+    errores.push(`El juego se lanzó el ${actual}: cambiar la fecha renumeraría los casos ya jugados y rompería las rachas.`);
+  }
+  return errores;
+}
+
+const sinFecha = ({ fecha, ...resto }) => resto;
+
+// Versión 3 -> 4: comprueba cada fecha y la quita. No muta.
+export function migrarCalendario(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { calendario: null, errores: ['El calendario no es un objeto.'] };
+  if (obj.version === 4) return { calendario: obj, errores: [] };
+  if (obj.version !== 3) {
+    return { calendario: null, errores: [`No sé migrar un calendario de la versión ${obj.version}; solo de la 3 a la 4.`] };
+  }
+  const errores = [];
+  if (!esFechaISO(obj.lanzamiento)) errores.push('El calendario de la versión 3 no tiene un lanzamiento válido.');
+  if (!Array.isArray(obj.dias)) errores.push('El calendario de la versión 3 no tiene días.');
+  if (errores.length > 0) return { calendario: null, errores };
+  for (const d of obj.dias) {
+    const esperada = sumarDiasISO(obj.lanzamiento, d.n - 1);
+    if (d.fecha !== esperada) {
+      errores.push(`El día ${d.n} tiene fecha ${d.fecha} y le corresponde ${esperada} (lanzamiento ${obj.lanzamiento}); no se migra.`);
+    }
+  }
+  if (errores.length > 0) return { calendario: null, errores };
+  return { calendario: { ...obj, version: 4, dias: obj.dias.map(sinFecha) }, errores: [] };
+}
+
+// Versión 2 -> 3: quita fecha de cada imagen. No muta.
+export function migrarBanco(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { banco: null, errores: ['El banco no es un objeto.'] };
+  if (obj.version === 3) return { banco: obj, errores: [] };
+  if (obj.version !== 2) {
+    return { banco: null, errores: [`No sé migrar un banco de la versión ${obj.version}; solo de la 2 a la 3.`] };
+  }
+  if (!Array.isArray(obj.imagenes)) return { banco: null, errores: ['El banco de la versión 2 no tiene imágenes.'] };
+  return { banco: { ...obj, version: 3, imagenes: obj.imagenes.map(sinFecha) }, errores: [] };
 }
 
 // ---------- Aleatorio, ids y hashes ----------
@@ -409,6 +539,41 @@ export function distanciaHamming(a, b) {
 }
 
 // ---------- Pesos y mezcla ----------
+
+// Franja común de peso de las imágenes publicadas y límites de calidad WebP (D-149).
+export const PESO_MIN_KB = 110;
+export const PESO_MAX_KB = 160;
+export const CALIDAD_MIN = 55;
+export const CALIDAD_MAX = 90;
+
+// Busca la calidad entera entre CALIDAD_MIN y CALIDAD_MAX cuyo peso caiga en la franja.
+// codificar(calidad) -> Promise<Buffer>. Devuelve { buffer, calidad, fuera: null|'bajo'|'alto' }.
+// Si ninguna calidad entra, usa la más cercana (el límite) y lo indica en fuera.
+export async function buscarCalidad(codificar, { minBytes = PESO_MIN_KB * 1024, maxBytes = PESO_MAX_KB * 1024, calidadMin = CALIDAD_MIN, calidadMax = CALIDAD_MAX } = {}) {
+  const memo = new Map();
+  const probar = async (q) => {
+    if (!memo.has(q)) memo.set(q, await codificar(q));
+    return memo.get(q);
+  };
+  const res = (q, buffer) => ({ buffer, calidad: q, fuera: buffer.length < minBytes ? 'bajo' : buffer.length > maxBytes ? 'alto' : null });
+  const alta = await probar(calidadMax);
+  if (alta.length <= maxBytes) return res(calidadMax, alta);
+  const baja = await probar(calidadMin);
+  if (baja.length >= maxBytes) return res(calidadMin, baja);
+  // Invariante: peso(lo) <= maxBytes < peso(hi)
+  let lo = calidadMin;
+  let hi = calidadMax;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if ((await probar(mid)).length <= maxBytes) lo = mid;
+    else hi = mid;
+  }
+  const mejor = await probar(lo);
+  if (mejor.length >= minBytes) return res(lo, mejor);
+  // Salto sobre la franja: se elige la calidad más cercana a ella.
+  const sobre = await probar(hi);
+  return sobre.length - maxBytes < minBytes - mejor.length ? res(hi, sobre) : res(lo, mejor);
+}
 
 const media = (l) => l.reduce((s, x) => s + x, 0) / l.length;
 
@@ -456,6 +621,48 @@ export function mensajePeso({ global, diasAfectados }) {
     `AVISO: las imágenes de un tipo pesan de media un ${pct} % más que las del otro (${kb(mayor)} frente a ${kb(menor)}; pesan más ${quien}). ` +
     `El tamaño de archivo podría delatar la respuesta. Días afectados: ${diasAfectados.length ? diasAfectados.join(', ') : 'ninguno por separado'}.`
   );
+}
+
+export const UMBRAL_PESO_DIA = 0.15;
+export const UMBRAL_MEDIANA = 1.5;
+
+const pesoDe = (tamanos, id) => (tamanos instanceof Map ? tamanos.get(id) : tamanos[id]);
+
+// Por día: aviso si el peso medio de las auténticas y el de las generadas difieren más de un 15 %.
+// No dice qué tipo pesa más: el texto no debe ser una pista si se copia.
+export function avisosPesoPorDia({ dias, tamanos, desofuscar }) {
+  const avisos = [];
+  for (const d of dias) {
+    const a = [];
+    const g = [];
+    d.pruebas.forEach((id, i) => {
+      const bytes = pesoDe(tamanos, id);
+      if (typeof bytes !== 'number') return;
+      (desofuscar(d.clave, d.n, i) === 1 ? g : a).push(bytes);
+    });
+    const c = compararPesos(a, g);
+    if (c && c.diferencia > UMBRAL_PESO_DIA) {
+      avisos.push(`Día ${d.n}: el peso medio de las imágenes de un tipo difiere un ${Math.round(c.diferencia * 100)} % del otro (más del ${Math.round(UMBRAL_PESO_DIA * 100)} %); el tamaño de archivo podría delatar la respuesta.`);
+    }
+  }
+  return avisos;
+}
+
+// Por día: aviso por cada imagen que pesa más de 1,5 veces la mediana de las de su día.
+export function avisosPesoMediana({ dias, tamanos }) {
+  const avisos = [];
+  for (const d of dias) {
+    const pesos = d.pruebas.map((id) => [id, pesoDe(tamanos, id)]).filter(([, b]) => typeof b === 'number');
+    if (pesos.length < 3) continue;
+    const orden = pesos.map(([, b]) => b).sort((x, y) => x - y);
+    const m = orden.length % 2 ? orden[(orden.length - 1) / 2] : (orden[orden.length / 2 - 1] + orden[orden.length / 2]) / 2;
+    for (const [id, bytes] of pesos) {
+      if (bytes > UMBRAL_MEDIANA * m) {
+        avisos.push(`Día ${d.n}: casos/${id}.webp pesa ${Math.round(bytes / 1024)} KB, más de 1,5 veces la mediana de su día (${Math.round(m / 1024)} KB): reexpórtala con menos calidad.`);
+      }
+    }
+  }
+  return avisos;
 }
 
 export function avisosMezcla(generadasPorDia) {

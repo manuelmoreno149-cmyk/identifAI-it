@@ -1,24 +1,30 @@
 # identifAI-it: especificación técnica
 
-**Versión 2.0, del 2026-10-25** [D-94], con los ajustes D-115 y D-116 del 2026-10-26 (decisiones del usuario sobre una 2.0 aún no implementada; no cambian el número de versión). Parte de la 1.3 (2026-10-23, con los ajustes D-92 y D-93) y añade un **segundo reto diario** a petición del usuario:
-- **Dos retos**: **Images** (`imagenes`, el juego de siempre, con sus tres modos) y **Headlines** (`titulares`: 5 noticias, titular + entradilla, sin modos ni temporizador). Cada uno tiene sus 5 casos, su intento, su racha, su `ya-jugado` y su texto de compartir. La portada es el centro: el jugador elige reto y ve el estado de cada uno [D-98, D-99, D-100].
-- **Lanzamiento aplazado y configurable**: `lanzamiento` de `data/calendario.json` puede valer `null` (sin fecha). Sin fecha, el juego normal muestra `sin-casos` y solo funciona el modo prueba. La fecha se cambia solo con `npm run lanzamiento` [D-95, D-97]. Los días ya no guardan `fecha` (se deriva de `n`): calendario **versión 4** y banco **versión 3** [D-96].
-- **Headlines**: ocultar la pestaña antes de responder cuenta como fallo **solo si sigue oculta más de 3 segundos seguidos** (`OCULTA_MAX_MS`, medido al volver) [D-101, D-115]; el texto no se puede seleccionar ni copiar (freno casual) [D-102]; titulares, entradillas, respuestas, fuentes y prompts van ofuscados y rellenados en **un archivo por mes**, `data/titulares/AAAA-MM.json` versión 1, y el juego solo carga el del mes de la fecha efectiva [D-103, D-116]; tras responder, enlace a la fuente original o sello "AI-GENERATED · NOT A REAL STORY" con la confesión [D-104].
-- **Almacén `identifaiit.v3`** con el progreso de cada reto por separado [D-109]. **Modo prueba** ampliado a los dos retos [D-110]. **Créditos** con la lista agregada de medios [D-111].
-- **Idioma** [D-93, sin cambios]: la interfaz está solo en inglés americano (en-US). Todo texto de interfaz que esta especificación cite en español es solo una referencia: el valor vigente es el de `js/textos.js`. Lo interno (spec, claves, ids, mensajes de las herramientas y commits) sigue en español.
+**Versión 2.1, del 2026-10-26** [D-120], con los ajustes del 2026-10-27 (D-131 a D-140) y los del diseño de la tarea 78 (D-141 a D-146, 2026-10-28), todos sin subir versión (D-44). Parte de la 2.0 (2026-10-25, con los ajustes D-115 a D-119) y **sustituye el segundo reto, Headlines, por Fact or Fake**, por decisión del usuario:
+- **Dos retos**: **Images** (`imagenes`, sin cambios, con sus tres modos) y **Fact or Fake** (`afirmaciones` [D-121]: 5 afirmaciones de una frase al día; el jugador decide FACT o FAKE, con las teclas F y K [D-122]; sin modos ni temporizador). Cada reto tiene sus 5 casos, su intento, su racha, su `ya-jugado`, su conjunto de mensajes finales [D-134, D-138] y su texto de compartir; la portada sigue siendo el centro, con un lema común [D-98, D-99, D-100, D-133].
+- **Un solo tema por día**, común a los dos retos: las afirmaciones van en `entrada/temas/NN-tema/facts.txt` (o `facts.en.txt`), junto a las imágenes [D-123].
+- **Datos**: afirmaciones y aclaraciones ofuscadas en bloques de longitud fija, en un archivo por mes, `data/facts/AAAA-MM.json` versión 1 (sustituye a `data/titulares/`); el juego normal solo carga el mes de la fecha efectiva y el modo prueba, todos [D-116, D-117, D-124]. **Sin fuentes**: Fact or Fake no tiene campo `source` ni banco privado; el usuario comprueba la veracidad él mismo [D-131].
+- **Tras responder**: sello FACT o FAKE, la frase con la verdad (`truth`) y de 0 a 3 detalles; sin enlaces [D-126]. Marca fija en la tarjeta: "identifAI-it · Fact or Fake?" [D-128].
+- **Se mantienen** de Headlines: la regla de la ausencia de más de 3 s seguidos (`OCULTA_MAX_MS`, medida al volver) y su aviso, el bloqueo de selección y copia, el intento que se gasta en Start y las 5 tarjetas del resultado que abren la ficha [D-101, D-102, D-115, D-145].
+- **Se eliminan** titulares, entradillas, fuentes visibles y enlaces, medios, créditos de medios, el sello "AI-GENERATED · NOT A REAL STORY" y la confesión de Headlines.
+- **Norma de contenido** nueva: nada falso sobre salud, seguridad, tragedias ni política; las falsas pueden alterar cifras o récords de personas y marcas famosas si no dañan su reputación (texto exacto y lista de revisión de 8 puntos en 4.13) [D-127, D-131, D-136, D-137].
+- **Diseño de la tarea 78** [D-141 a D-146]: portada "dos expedientes", cabecera del caso con progreso, revelación según el boceto, resultado como tablón de pruebas. Cambia el marcado de 2.3, no las reglas del juego.
+- Sin cambios: lanzamiento configurable y aplazado (`lanzamiento: null`), calendario versión 4, banco de imágenes versión 3, almacén `identifaiit.v3` (con `afirmaciones` en lugar de `titulares`), modo prueba e idioma (solo en-US en la interfaz) [D-93, D-95, D-96, D-109, D-110].
 
-La especificación se reparte en varios archivos de `docs/`, que forman un único documento con la misma versión [D-91, D-114]:
+La especificación se reparte en varios archivos de `docs/`, que forman un único documento con la misma versión [D-91, D-114, D-130]:
 
 | Archivo | Secciones |
 |---|---|
 | `docs/ESPECIFICACION.md` (este) | 0. Glosario y estructura · 1. Pantallas y estados · 2. Contrato HTML/CSS |
 | `docs/especificacion/3-modulos.md` | 3. Módulos JS |
 | `docs/especificacion/4-datos.md` | 4.1–4.6 Datos y herramientas de Images y del lanzamiento · 5. Algoritmo diario · 6. Almacenamiento · 7. Compartir |
-| `docs/especificacion/4b-titulares.md` | 4.7–4.14 Datos (archivos mensuales), carga, ofuscación, importador, validación, norma de contenido y créditos de Headlines |
+| `docs/especificacion/4b-facts.md` | 4.7–4.14 Datos (archivos mensuales), carga, ofuscación, entrada (con convenciones de contenido), importador, validación, norma de contenido y créditos de Fact or Fake |
 | `docs/especificacion/8-criterios.md` | 8. Criterios de aceptación |
-| `docs/especificacion/9-tareas.md` | 9. Plan de tareas, riesgos y cambios fuera de `docs/` |
+| `docs/especificacion/9-tareas.md` | 9. Plan de tareas (con las tareas hechas que hay que adaptar), riesgos y cambios fuera de `docs/` |
 
-Este documento es la fuente de verdad técnica. Si algo no está aquí, no se inventa: se pregunta o se registra en `docs/DECISIONES.md`. Las reglas de `CLAUDE.md` prevalecen. **Atención**: la 2.0 cambia reglas que hoy figuran en `CLAUDE.md` ("cada día se muestran 5 imágenes", "un solo intento al día", reglas de modos y pestaña de la 1.3, idioma). Hasta que el usuario actualice `CLAUDE.md` (lista en `9-tareas.md`, 9.6) y confirme la 2.0 en persona, nadie implementa las tareas 61 a 81 (DP-36, resuelta con su opción por defecto). La tarea 60 (aplazamiento provisional del juego publicado) es urgente y solo toca datos y una línea de `validar.mjs`.
+(`docs/especificacion/4b-titulares.md` está retirado y ya no existe en el repositorio.)
+
+Este documento es la fuente de verdad técnica. Si algo no está aquí, no se inventa: se pregunta o se registra en `docs/DECISIONES.md`. Las reglas de `CLAUDE.md` prevalecen. `CLAUDE.md` y `.claude/` ya recogen D-131 (sin `source`, sin fuentes privadas ni `herramientas/banco-afirmaciones.json`) y la norma de contenido de D-136, y `CLAUDE.md` recoge además el DOM del resultado de D-145: el requisito P6 está cumplido (9.3) y las tareas 82 a 77 están hechas (9.4.2).
 
 Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuando cambia el comportamiento del juego [D-44].
 
@@ -26,62 +32,68 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 
 | Término | Significado |
 |---|---|
-| Reto | Juego diario independiente. Ids internos: `imagenes` (texto visible "Images") y `titulares` ("Headlines") [D-98]. |
-| Caso del día | Las 5 pruebas de un reto en una fecha. Tiene un número `n` (Case #n), **común a los dos retos** (días desde el lanzamiento + 1) [D-99], y un tema propio de cada reto. |
+| Reto | Juego diario independiente. Ids internos: `imagenes` (texto visible "Images") y `afirmaciones` ("Fact or Fake") [D-98, D-121]. |
+| Caso del día | Las 5 pruebas de un reto en una fecha. Tiene un número `n` (Case #n), **común a los dos retos** (días desde el lanzamiento + 1) [D-99], y un **tema común** a los dos retos (el de la carpeta `entrada/temas/NN-tema/`) [D-123]. |
 | Lanzamiento | Fecha ISO del Caso #1 de los dos retos, o `null` mientras el usuario no la decide. Vive solo en `data/calendario.json` y solo se cambia con `npm run lanzamiento` [D-95]. |
-| Tema | Asunto común de las 5 pruebas de un reto en un día, del nombre de su carpeta de entrada. No revela la verdad [D-52, D-53]. |
-| Prueba | Cada uno de los 5 elementos del caso, índice `i` de 0 a 4. En Images es una imagen; en Headlines, una **noticia** (titular + entradilla). |
-| Titular / entradilla | Texto de una noticia: titular de 1 a 110 caracteres y entradilla de 1 a 280 (1 o 2 frases), sin medio ni fecha [D-105]. |
-| Fuente | URL `https` de la noticia original (solo noticias auténticas). Solo se muestra tras responder [D-104]. |
-| Verdad | `0` = auténtica, `1` = generada (IA). Solo en memoria y ofuscada en los datos. |
-| Voto | `"autentica"` (REAL, tecla R) o `"generada"` (AI, tecla I), igual en los dos retos. |
-| Código de resultado | `A` acierto, `F` fallo, `-` pendiente. En Headlines, una ausencia de más de `OCULTA_MAX_MS` da `F` (no hay código nuevo) [D-101, D-115]. |
-| Ausencia | Solo Headlines: tramo **seguido** en que `document.visibilityState` vale `'hidden'` empezado durante una pregunta con la noticia pintada y sin responder. Dura desde el `visibilitychange` a `hidden` hasta el siguiente a `visible`; se mide al volver con `medirOculta` y es fallo si `ocultacionEsFallo(ocultoMs)`, es decir, si supera `OCULTA_MAX_MS = 3000` ms. Las ausencias no se suman entre sí [D-115]. |
+| Tema | Asunto común de las pruebas de un día, del nombre de su carpeta de entrada. No revela la verdad [D-52, D-53]. |
+| Prueba | Cada uno de los 5 elementos del caso, índice `i` de 0 a 4. En Images es una imagen; en Fact or Fake, una **afirmación**. |
+| Afirmación | Frase única que el jugador juzga (campo `claim`), de 1 a 140 caracteres [D-124]. |
+| Aclaración | La frase con la verdad (campo `truth`, 1 a 160 caracteres) y sus **detalles** (campo `details`, de 0 a 3, de 1 a 80 caracteres cada uno). Solo se revela tras responder [D-126]. |
+| Verdad | `0` = auténtica (foto real en Images, **FACT** en Fact or Fake), `1` = generada (IA en Images, **FAKE** en Fact or Fake). Solo en memoria y ofuscada en los datos [D-122]. |
+| Voto | `"autentica"` o `"generada"`, igual en los dos retos. Botones y teclas: Images REAL (R) y AI (I); Fact or Fake FACT (F) y FAKE (K) [D-122]. |
+| Código de resultado | `A` acierto, `F` fallo, `-` pendiente. En Fact or Fake, una ausencia de más de `OCULTA_MAX_MS` da `F` [D-101, D-115]. |
+| Mensaje final | Frase policíaca del resultado según los aciertos (0 a 5). Cada reto tiene su conjunto: `final.mensajes` (Images) y `final.mensajes_afirmaciones` (Fact or Fake, valores exactos y aprobados en 3.1 [D-138]), elegido con `mensajesDelReto` [D-134]. |
+| Ausencia | Solo Fact or Fake: tramo **seguido** en que `document.visibilityState` vale `'hidden'` empezado durante una pregunta con la afirmación pintada y sin responder. Se mide al volver con `medirOculta` y es fallo si `ocultacionEsFallo(ocultoMs)` (más de `OCULTA_MAX_MS = 3000` ms). Las ausencias no se suman [D-115]. |
 | Sellado | Solo Images (`normal` y `perro`): al agotarse la observación la imagen se tapa y se responde sin límite [D-77]. |
-| Ficha | Lo que se revela tras responder. Images: prompt o "Real photograph" [D-85]. Headlines: `{tipo: 'fuente', texto: URL}` o `{tipo: 'prompt', texto}` [D-103]. Siempre ofuscada y rellenada. |
-| Recorte | Tarjeta de prensa del DOM (`#recorte`) que muestra titular y entradilla [D-105]. |
+| Ficha | Lo que se revela tras responder. Images: prompt o "Real photograph" [D-85]. Fact or Fake: `{aclaracion, detalles}` [D-124]. Siempre ofuscada y rellenada. |
+| Tarjeta | `article#afirmacion` del DOM, con la afirmación y la marca fija [D-126]. |
 | Fecha ISO | `AAAA-MM-DD` en hora **local**. |
-| Mes de datos | `AAAA-MM`. El de un día `n` es `mesDeNumero(lanzamiento, n)` (los 7 primeros caracteres de `fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); el que carga el juego es `mesDeFecha(fecha efectiva)`. Los datos de Headlines de ese mes están en `data/titulares/{mes}.json` [D-116]. |
+| Mes de datos | `AAAA-MM`. El de un día `n` es `mesDeNumero(lanzamiento, n)`; el que carga el juego normal (y la previsualización) es `mesDeFecha(fecha efectiva)`, y el modo prueba carga todos [D-117]. Los datos de Fact or Fake de ese mes están en `data/facts/{mes}.json` [D-124]. |
 | Modo | Solo Images: `investigador` (sin límite), `normal` (3000 ms), `perro` (1000 ms) [D-81]. |
 | Previsualización | Solo en `localhost`, `127.0.0.1` o `[::1]`: `?fecha=` fija la fecha efectiva y no se guarda nada [D-68]. Con `lanzamiento: null` lleva a `sin-casos`. |
-| Modo prueba | Con `?prueba=1` y `PRUEBAS_ABIERTAS = true`: selector de día (común a los dos retos), elección de reto, almacén en memoria [D-70, D-110]. Funciona aunque no haya lanzamiento. Se apaga antes del lanzamiento (tarea 44) [D-97]. |
-| Fecha efectiva | La de la previsualización; si no, la del día elegido en modo prueba (`fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); si no, `fechaLocal(new Date())`. Su mes decide qué archivo de titulares se carga [D-116]. |
+| Modo prueba | Con `?prueba=1` y `PRUEBAS_ABIERTAS = true`: selector de día (común a los dos retos), elección de reto, almacén en memoria [D-70, D-110]; carga todos los meses de `data/facts/` [D-117]. Funciona aunque no haya lanzamiento. Se apaga antes del lanzamiento (tarea 44) [D-97]. |
+| Fecha efectiva | La de la previsualización; si no, la del día elegido en modo prueba (`fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); si no, `fechaLocal(new Date())`. Fuera del modo prueba, su mes decide qué archivo de `data/facts/` se carga. |
+
+(Desaparece el término "Fuente" de la 2.1 original: Fact or Fake no registra fuentes, D-131.)
 
 ### 0.1 Convenciones obligatorias
 
-- **Palabras prohibidas.** `real`, `ia`, `ai` y `fake` no pueden aparecer en ids, clases, atributos `data-*` (nombres ni valores), nombres de archivo, rutas ni `alt` de nada publicado, ni en el `tema` de ningún día de ningún reto [D-53].
+- **Palabras prohibidas.** `real`, `ia`, `ai` y `fake` no pueden aparecer en ids, clases, atributos `data-*` (nombres ni valores), nombres de archivo, rutas ni `alt` de nada publicado, ni en el `tema` de ningún día [D-53].
   - Se comprueban **por palabra completa** sin distinguir mayúsculas (`contienePalabraProhibida` de `herramientas/temas.mjs`). Única excepción literal: `identifAI-it` [D-23].
-  - Aunque "noticia" pasaría la regla, los ids nuevos de Headlines usan `recorte`, `titular`, `entradilla` y `fuente` para no acercarse a ella [D-105].
-  - El texto visible ("REAL", "AI", "AI-GENERATED · NOT A REAL STORY", "Real photograph") no es un nombre ni una ruta. Fichas, titulares y entradillas nunca aparecen en claro en lo publicado.
-  - En `entrada/` (no publicada) sí aparecen `ia/`, `real/` y los campos `type: real|ai` de `noticias.txt`.
+  - `afirmaciones`, `afirmacion`, `aclaracion`, `detalles` y la carpeta `data/facts/` ("facts" no es "fake") cumplen la regla [D-121].
+  - El texto visible ("REAL", "AI", "FACT", "FAKE", "Fact or Fake", "Real photograph", el lema "Two cases a day. Spot the fake.") no es un nombre ni una ruta. Fichas, afirmaciones y aclaraciones nunca aparecen en claro en lo publicado.
+  - En `entrada/` (no publicada) sí aparecen `ia/`, `real/` y `answer: fact|fake` de `facts.txt`.
 - Los ids aleatorios de imagen (10 caracteres) se comprueban además por subcadena.
-- La verdad y el voto se nombran siempre `autentica`/`generada` (o `0`/`1`).
-- Rutas siempre relativas y sin `/` inicial (también `data/titulares/{mes}.json`).
-- **Ninguna petición a dominios externos** [D-29]. El enlace a la fuente de una noticia es una navegación que el jugador inicia con un clic, no una petición del juego: no hay `prefetch`, `preconnect`, favicons ni imágenes del medio [D-104].
-- Los textos visibles salen de `js/textos.js`. Temas, fichas, titulares y entradillas son datos; solo se insertan con `textContent` (y la URL de la fuente, solo como `href` validado).
+- La verdad y el voto se nombran siempre `autentica`/`generada` (o `0`/`1`) en código, datos y marcado, también en Fact or Fake [D-02, D-122].
+- Rutas siempre relativas y sin `/` inicial (también `data/facts/{mes}.json`).
+- **Ninguna petición a dominios externos** [D-29]. Fact or Fake no tiene enlaces externos [D-126].
+- Los textos visibles salen de `js/textos.js`. Temas, fichas, afirmaciones, aclaraciones y detalles son datos; solo se insertan con `textContent`.
 
 ### 0.2 Estructura de carpetas
 
 | Ruta | Se publica | Contenido |
 |---|---|---|
 | `index.html` | sí | Todas las pantallas y el diálogo de ficha. |
-| `creditos.html` | sí | Créditos estáticos, sin JS, generados por `herramientas/creditos.mjs` [D-39, D-111]. |
+| `creditos.html` | sí | Créditos estáticos, sin JS, generados por `herramientas/creditos.mjs` [D-39, D-129]. |
 | `.nojekyll` | sí | Vacío. |
 | `css/variables.css`, `css/base.css`, `css/componentes.css` | sí | |
 | `fonts/` | sí | Sin cambios [D-29, D-40]. |
 | `js/` | sí | `main.js`, `juego.js`, `temporizador.js`, `diario.js`, `almacen.js`, `compartir.js`, `textos.js`. Sin archivos nuevos. |
-| `img/ui/` | sí | Los de la 1.3. Ningún SVG nuevo obligatorio (el sello de Headlines es texto con estilo). |
+| `img/ui/` | sí | Los de la 1.3. Ningún SVG nuevo obligatorio (los sellos FACT y FAKE son texto con estilo). |
 | `casos/` | sí | `{id}.webp`, solo Images. |
 | `data/calendario.json` | sí | Images y fecha de lanzamiento: **versión 4** [D-96]. |
-| `data/titulares/AAAA-MM.json` | sí | Headlines, todo ofuscado: **versión 1**, **un archivo por mes de datos** con los días de ese mes [D-103, D-116]. Sin noticias, la carpeta no tiene archivos (o no existe). No hay `data/titulares.json`. |
-| `herramientas/*.mjs` | sí (repositorio) | `temas.mjs`, `importar.mjs`, `creditos.mjs`, `validar.mjs` y, nuevos, `lanzamiento.mjs`, `titulares.mjs` (puras, más dos funciones de lectura y escritura de los archivos mensuales) e `importar-titulares.mjs` [D-95, D-106, D-116]. |
-| `herramientas/banco.json` | **no** | Banco de imágenes, **versión 3** (sin `fecha`) [D-96]. No hay banco de noticias [D-108]. |
+| `data/facts/AAAA-MM.json` | sí | Fact or Fake, todo ofuscado: **versión 1**, un archivo por mes de datos [D-124]. Sin afirmaciones, la carpeta no tiene archivos (o no existe). No hay índice de meses [D-117]. **No existe** `data/titulares/` [D-120]. |
+| `herramientas/*.mjs` | sí (repositorio) | `temas.mjs`, `importar.mjs`, `creditos.mjs`, `validar.mjs`, `lanzamiento.mjs` y, renombrados o nuevos en la 2.1, `afirmaciones.mjs` (antes `titulares.mjs`) e `importar-afirmaciones.mjs` [D-123]. |
+| `herramientas/banco.json` | **no** | Banco de imágenes, **versión 3** (sin `fecha`) [D-96]. |
 | `herramientas/banco.anterior.json`, `herramientas/lote.json` | **no** | Sin cambios. |
 | `entrada/temas/NN-tema/{ia,real}/` | **no** | Imágenes y prompts (sin cambios, D-85, D-93). |
-| `entrada/titulares/NN-tema/noticias.txt` | **no** (`entrada/` en `.gitignore`) | Las 5 noticias de un día [D-106]. |
-| `tests/` | sí (repositorio) | `*.test.mjs`. Nuevo: `tests/titulares.test.mjs`, `tests/lanzamiento.test.mjs`. |
-| `package.json` | sí | Scripts `test`, `validar`, `importar`, `creditos` y, nuevos, `titulares` y `lanzamiento`. |
-| `docs/` | sí | `ESPECIFICACION.md`, `especificacion/*.md` (con el nuevo `4b-titulares.md`) y `DECISIONES.md`. |
+| `entrada/temas/NN-tema/facts.txt` o `facts.en.txt` | **no** (`entrada/` en `.gitignore`) | Las 5 afirmaciones del día, con el mismo tema que las imágenes [D-123]. Ya no existe `entrada/titulares/`. |
+| `entrada/temas/NN-tema/datos.txt` y `datos.original.txt` | **no** | Notas de trabajo del usuario en texto libre (`datos.original.txt`, opcional, es su copia sin tocar); el archivero convierte a mano `datos.txt` en `facts.en.txt`; ninguna herramienta los lee, modifica ni publica, y los dos importadores y `validar` los ignoran [D-139]. |
+| `tests/` | sí (repositorio) | `*.test.mjs`. `tests/titulares.test.mjs` pasa a `tests/afirmaciones.test.mjs`; sigue `tests/lanzamiento.test.mjs`. |
+| `package.json` | sí | Scripts `test`, `validar`, `importar`, `creditos`, `lanzamiento` y, nuevo, `afirmaciones` (no hay script `titulares`). |
+| `docs/` | sí | `ESPECIFICACION.md`, `especificacion/*.md` (con `4b-facts.md`) y `DECISIONES.md`. |
+
+No existe `herramientas/banco-afirmaciones.json` [D-131].
 
 ---
 
@@ -91,18 +103,18 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 
 | Pantalla (`data-pantalla`) | Contenido |
 |---|---|
-| `iniciando` | Transitorio mientras se cargan el almacén, `data/calendario.json` y el archivo de titulares del mes de la fecha efectiva (`data/titulares/{mes}.json`) [D-116]. Sin sección. |
-| `portada` | Título, lema, Case #n, selector de día (modo prueba), **selector de reto** con el estado de cada uno, tema del reto elegido, selector de modo (**solo Images**) o regla de Headlines, racha del reto elegido, botón Start / View report, Cómo jugar (pasos del reto elegido) y pie con Credits [D-98]. |
+| `iniciando` | Transitorio mientras se cargan el almacén, `data/calendario.json` y el archivo de afirmaciones del mes de la fecha efectiva (`data/facts/{mes}.json`) o, en modo prueba, todos los meses, en serie (4.7.2). Sin sección. |
+| `portada` | "Dos expedientes" [D-141]: cabecera con título, lema (común a los dos retos), Case #n · tema del día y botón de ayuda (abre Cómo jugar, un diálogo modal con los pasos del reto elegido); selector de día (modo prueba); dos tarjetas de reto con su estado, descripción, modos (**solo Images**) o regla (Fact or Fake) y su propio botón Start / View report; pie con la racha del reto elegido y Credits [D-98, D-133]. |
 | `cargando` | Solo Images: precarga de las 5 imágenes. |
 | `cuenta-atras` | Solo Images: 3, 2, 1. |
-| `caso` | Images: como en la 1.3. Headlines: tema, Story i/5, marcador, aviso de ausencia (solo en la pregunta de la prueba 1) [D-115], recorte (titular + entradilla + marca) y botones REAL / AI, sin temporizador. Fases `pregunta` y `veredicto`. |
-| `resultado` | Reto y caso, aciertos x/5, mensaje, 5 miniaturas (imágenes) o 5 botones numerados (Headlines) que abren la ficha, rachas del reto, Share y Back [D-89, D-105]. |
+| `caso` | Cabecera común (reto, tema, 5 casillas de progreso, modo en Images y marcador) [D-141]. Images: vitrina con la foto y la ficha de revelación. Fact or Fake: aviso de ausencia (solo en la pregunta de la prueba 1) [D-115], tarjeta (afirmación + marca) y botones FACT / FAKE, sin temporizador. Fases `pregunta` y `veredicto`. |
+| `resultado` | Tablón de pruebas [D-145, D-146]: aciertos x/5, etiqueta del reto y caso, mensaje **del conjunto del reto** [D-134], sello "CASE CLOSED", 5 tarjetas (fotos en Images, afirmaciones en Fact or Fake) con la verdad y lo que dijo el jugador, que abren la ficha; racha, mejor racha, cuenta atrás hasta el caso siguiente, Back y Share [D-89, D-126]. |
 | `ya-jugado` | Del reto elegido: reto y caso, aciertos, cuadros, modo (solo Images), racha, cuenta atrás a medianoche, Share y Back. |
 | `sin-casos` | Ningún reto tiene caso hoy, o no hay fecha de lanzamiento (texto propio) [D-24, D-95]. |
-| `error` | No se pudo cargar `data/calendario.json`, el archivo de titulares del mes (salvo que no exista: un 404 deja Headlines sin caso, no es error [D-116]) o alguna imagen. Reintentar. |
+| `error` | No se pudo cargar `data/calendario.json`, un archivo de `data/facts/` (salvo que no exista: un 404 deja Fact or Fake sin caso o, en modo prueba, cierra la lista de meses; no es error) o alguna imagen. Reintentar. |
 
-- El veredicto es una fase de `caso` [D-05]. `dialog#ficha` es una ventana modal sobre `caso/veredicto` o `resultado`, sin cambio de estado [D-88].
-- Headlines **reutiliza** las pantallas `caso`, `resultado` y `ya-jugado`; no hay pantallas nuevas. `#app[data-reto]` distingue el reto.
+- El veredicto es una fase de `caso` [D-05]. `dialog#ficha` es una ventana modal sobre `resultado` y `dialog#como-jugar`, sobre `portada`; ninguno cambia el estado [D-88]. Desde D-141 la ficha ya no se abre desde el veredicto (el prompt entero cabe en la revelación).
+- Fact or Fake **reutiliza** las pantallas `caso`, `resultado` y `ya-jugado`; no hay pantallas nuevas. `#app[data-reto]` distingue el reto.
 
 ### 1.2 Estado del juego
 
@@ -112,103 +124,104 @@ Un único objeto de estado, gestionado por la función pura `transicion(estado, 
 {
   pantalla: 'portada',
   fase: null,                   // 'pregunta' | 'veredicto' | null (solo en 'caso')
-  reto: 'imagenes',             // 'imagenes' | 'titulares': elegido en portada / en juego [D-98]
-  modo: 'normal',               // modo de Images; en titulares no se usa
+  reto: 'imagenes',             // 'imagenes' | 'afirmaciones' [D-98, D-121]
+  modo: 'normal',               // modo de Images; en afirmaciones no se usa
   retos: {                      // resumen del día por reto [D-98]
-    imagenes:  { caso: {n, fecha, tema, pruebas, clave, fichas} | null, jugado: false },
-    titulares: { caso: {n, fecha, tema, clave, textos, fichas} | null, jugado: false }
+    imagenes:     { caso: {n, fecha, tema, pruebas, clave, fichas} | null, jugado: false },
+    afirmaciones: { caso: {n, fecha, tema, clave, textos, fichas} | null, jugado: false }
   },
   // Copia del caso del reto elegido (CARGADO, ELEGIR_RETO, VOLVER_PORTADA):
   n: 3, tema: 'Fireworks',
-  pruebas: ['k3x9q2m7ab', ...], // Images; null en titulares
-  textos: null,                 // Headlines: 5 bloques ofuscados (684 car.); null en imagenes
+  pruebas: ['k3x9q2m7ab', ...], // Images; null en afirmaciones
+  textos: null,                 // Fact or Fake: 5 bloques ofuscados de afirmación (684 car.); null en imagenes
   clave: 'Mpb9Ycc=',
-  fichas: ['…', ...],           // Images: 5 × 684 car.; Headlines: 5 × 1368 car.
-  fecha: null,                  // fecha de la partida: FIN_CUENTA (Images) o EMPEZAR (Headlines)
+  fichas: ['…', ...],           // 5 × 684 car. en los dos retos
+  fecha: null,                  // fecha de la partida: FIN_CUENTA (Images) o EMPEZAR (Fact or Fake)
   indice: 0,
   resultados: '-----',
   activo: false,                // se aceptan votos (de PINTADA al voto)
   tapada: false,                // solo Images [D-77]
-  texto: null,                  // Headlines: {titular, entradilla} de la prueba actual, solo en 'caso'
+  texto: null,                  // Fact or Fake: afirmación descifrada de la prueba actual (string | null), solo en 'caso'
   revelada: null,               // verdad de la prueba actual, solo en 'veredicto'
-  ficha: null,                  // solo en 'veredicto'. Images: string | null; Headlines: {tipo, texto} | null
-  motivo: null,                 // Headlines: 'oculta' si el fallo vino de una ausencia de más de OCULTA_MAX_MS; si no, null [D-101, D-115]
+  ficha: null,                  // solo en 'veredicto'. Images: string | null; Fact or Fake: {aclaracion, detalles} | null
+  motivo: null,                 // Fact or Fake: 'oculta' si el fallo vino de una ausencia de más de OCULTA_MAX_MS; si no, null
   error: null                   // 'calendario' | 'imagenes' | null
 }
 ```
 
-- `jugado` significa "el intento de hoy de ese reto está gastado": partida `terminada` o `en_curso` en otra pestaña. El detalle (aciertos, en curso) lo lee main.js del almacén para la portada.
-- `texto` solo contiene la noticia actual: el estado nunca guarda más de una noticia descifrada [D-103].
-- **El estado no guarda instantes ni duraciones de ausencia**: el inicio de una ausencia lo apunta main.js en una variable propia y la duración llega ya medida en el evento `VOLVIO` [D-115]. Así `transicion` sigue siendo pura y no depende de ningún reloj.
-- La previsualización y el modo prueba no añaden campos.
+- `jugado` significa "el intento de hoy de ese reto está gastado": partida `terminada` o `en_curso` en otra pestaña.
+- `texto` solo contiene la afirmación actual: el estado nunca guarda más de una afirmación descifrada.
+- **El estado no guarda instantes ni duraciones de ausencia** [D-115], ni el mensaje final (se calcula al pintar el resultado).
+- La previsualización y el modo prueba no añaden campos [D-117].
 
 ### 1.3 Eventos y transiciones
 
 | Estado actual | Evento | Condición | Estado siguiente / efecto |
 |---|---|---|---|
-| `iniciando` | `CARGADO` `{retos, reto}` | `retos.imagenes.caso` y `retos.titulares.caso` son `null` | `sin-casos` |
-| `iniciando` | `CARGADO` | en otro caso | `portada`. `reto` = el pedido si es válido y tiene caso; si no, el otro. Copia el caso de ese reto [D-98]. Antes, main.js cierra como abandonada (pendientes → `F`) cualquier partida `en_curso` de hoy de cada reto, así que `jugado` = hay partida `terminada` [D-79]. |
-| `iniciando` | `ERROR_CALENDARIO` | falla `calendario.json` o el archivo de titulares del mes (red, respuesta distinta de 2xx y de 404, JSON o estructura no válidos, `mes` que no cuadra) | `error` (`'calendario'`). Un 404 del archivo del mes **no** es error: `cargarTitulares` devuelve el mes sin días y Headlines queda sin caso [D-116]. |
+| `iniciando` | `CARGADO` `{retos, reto}` | `retos.imagenes.caso` y `retos.afirmaciones.caso` son `null` | `sin-casos` |
+| `iniciando` | `CARGADO` | en otro caso | `portada`. `reto` = el pedido si es válido y tiene caso; si no, el otro. Copia el caso de ese reto [D-98]. Antes, main.js cierra como abandonada (pendientes → `F`) cualquier partida `en_curso` de hoy de cada reto [D-79]. |
+| `iniciando` | `ERROR_CALENDARIO` | falla `calendario.json` o un archivo de `data/facts/` (red, respuesta distinta de 2xx y de 404, JSON o estructura no válidos, `mes` que no cuadra) | `error` (`'calendario'`). Un 404 **no** es error (4.7.2). |
 | `portada` | `ELEGIR_RETO` `{reto}` | `retoValido(reto)` y distinto del actual | `portada` con ese reto y su caso copiado (`n`, `tema`, `pruebas`, `textos`, `clave`, `fichas`; `null` si no tiene). main.js guarda `ajustes.reto`. Si no, el mismo objeto. |
-| `portada` | `ELEGIR_MODO` `{modo}` | `modoValido(modo)` | como en la 1.3 (se acepta en cualquier reto; solo se ve en Images). |
+| `portada` | `ELEGIR_MODO` `{modo}` | `modoValido(modo)` | como en la 1.3 (solo se ve en Images). |
 | `portada` | `EMPEZAR` `{fecha}` | `retos[reto].caso === null` | el mismo objeto (el botón está `disabled`). |
 | `portada` | `EMPEZAR` | `retos[reto].jugado` | `ya-jugado` (de ese reto) [D-99]. |
 | `portada` | `EMPEZAR` | reto `imagenes` | `cargando` (main.js cierra Cómo jugar) [D-83]. |
-| `portada` | `EMPEZAR` `{fecha}` | reto `titulares` | `caso`, `fase: 'pregunta'`, `indice: 0`, `resultados: '-----'`, `activo: false`, `fecha` = la del evento, `texto = desofuscarTexto(textos[0], clave, n, 0)`, `motivo: null`. **Se consume el intento**: main.js guarda la partida `en_curso` antes de pintar la primera noticia [D-100]. En la prueba 1 se ve el aviso de ausencia (2.3) [D-115]. |
+| `portada` | `EMPEZAR` `{fecha}` | reto `afirmaciones` | `caso`, `fase: 'pregunta'`, `indice: 0`, `resultados: '-----'`, `activo: false`, `fecha` = la del evento, `texto = desofuscarAfirmacion(textos[0], clave, n, 0)`, `motivo: null`. **Se consume el intento**: main.js guarda la partida `en_curso` antes de pintar la primera afirmación [D-100]. En la prueba 1 se ve el aviso de ausencia (2.3). |
 | `cargando`, `error`, `cuenta-atras` | `PRECARGA_OK`, `PRECARGA_ERROR`, `REINTENTAR`, `FIN_CUENTA` | | Como en la 1.3 (solo se llega en Images). |
-| `caso/pregunta` | `PINTADA` | `activo === false` | `activo: true`. En Images, main.js arranca el temporizador salvo en `investigador`; en Headlines no hay temporizador. |
-| `caso/pregunta` | `VOTO` `{voto}` | `activo === true` | `veredicto`, código `A`/`F`, `revelada`, `activo: false`, `tapada: false`, `motivo: null`. `ficha`: Images, `desofuscarFicha(...)`; Headlines, `desofuscarNoticia(fichas[i], clave, n, i)`. |
+| `caso/pregunta` | `PINTADA` | `activo === false` | `activo: true`. En Images, main.js arranca el temporizador salvo en `investigador`; en Fact or Fake no hay temporizador. |
+| `caso/pregunta` | `VOTO` `{voto}` | `activo === true` | `veredicto`, código `A`/`F`, `revelada`, `activo: false`, `tapada: false`, `motivo: null`. `ficha`: Images, `desofuscarFicha(...)`; Fact or Fake, `desofuscarAclaracion(fichas[i], clave, n, i)`. |
 | `caso/pregunta` | `VOTO` | `activo === false` | el mismo objeto |
 | `caso/pregunta` | `AGOTADO` | Images, `activo`, no tapada, modo con límite | `tapada: true` [D-77] |
-| `caso/pregunta` | `AGOTADO` | cualquier otra situación (también Headlines) | el mismo objeto |
-| `caso/pregunta` | `VOLVIO` `{ocultoMs, indice}` | reto `titulares`, `activo === true`, `indice === estado.indice` y `ocultacionEsFallo(ocultoMs)` (más de 3000 ms) | `veredicto` con código **`F`**, `revelada`, `ficha` (como en `VOTO`), `activo: false`, `motivo: 'oculta'` [D-101, D-115] |
-| `caso/pregunta` | `VOLVIO` | cualquier otra situación (Images; Headlines sin pintar; ausencia de 3000 ms o menos; `indice` distinto; `ocultoMs` no numérico) | el mismo objeto: la prueba sigue en pregunta con los votos activos |
-| `caso/veredicto` | `SIGUIENTE` | `indice < 4` | `caso/pregunta`, `indice + 1`, `revelada`, `ficha` y `motivo` a `null`, `activo: false`, `tapada: false`; en Headlines, `texto` = el de la prueba siguiente. |
+| `caso/pregunta` | `AGOTADO` | cualquier otra situación (también Fact or Fake) | el mismo objeto |
+| `caso/pregunta` | `VOLVIO` `{ocultoMs, indice}` | reto `afirmaciones`, `activo === true`, `indice === estado.indice` y `ocultacionEsFallo(ocultoMs)` | `veredicto` con código **`F`**, `revelada`, `ficha` (como en `VOTO`), `activo: false`, `motivo: 'oculta'` [D-101, D-115] |
+| `caso/pregunta` | `VOLVIO` | cualquier otra situación | el mismo objeto |
+| `caso/veredicto` | `SIGUIENTE` | `indice < 4` | `caso/pregunta`, `indice + 1`, `revelada`, `ficha` y `motivo` a `null`, `activo: false`, `tapada: false`; en Fact or Fake, `texto` = la afirmación siguiente. |
 | `caso/veredicto` | `SIGUIENTE` | `indice === 4` | `resultado`, `fase: null`, `texto`, `revelada` y `ficha` a `null`, `retos[reto].jugado = true`. main.js guarda la partida `terminada` y las rachas del reto. |
-| `resultado`, `ya-jugado` | `VOLVER_PORTADA` | | `portada` con el mismo `reto` y su caso copiado; `fase`, `fecha`, `texto`, `revelada`, `ficha`, `motivo` a `null`, `indice: 0`, `resultados: '-----'` [D-98]. |
-| cualquiera salvo `iniciando`, `error`, `sin-casos` | `OTRA_PESTANA` `{reto}` | otra pestaña ha empezado o terminado ese reto hoy [D-51] | `retos[reto].jugado = true`. Además, si `reto === estado.reto` y la pantalla es `portada`, `cuenta-atras` o `caso` → `ya-jugado` (si sigue en curso en la otra, solo `avisos.otra_pestana`). Si el `reto` no es válido, el mismo objeto. |
+| `resultado`, `ya-jugado` | `VOLVER_PORTADA` | | `portada` con el mismo `reto` y su caso copiado; `fase`, `fecha`, `texto`, `revelada`, `ficha`, `motivo` a `null`, `indice: 0`, `resultados: '-----'`. |
+| cualquiera salvo `iniciando`, `error`, `sin-casos` | `OTRA_PESTANA` `{reto}` | otra pestaña ha empezado o terminado ese reto hoy [D-51] | `retos[reto].jugado = true`; si `reto === estado.reto` y la pantalla es `portada`, `cuenta-atras` o `caso` → `ya-jugado`. Reto inválido → el mismo objeto. |
 | `resultado`, `ya-jugado` | `COMPARTIR` | | sin cambio de estado (efecto en main.js) |
-| `ya-jugado`, `sin-casos`, `portada` | `MEDIANOCHE` | la fecha efectiva ha cambiado | `iniciando`: main.js vuelve a cargar `data/calendario.json` y el archivo de titulares del mes de la nueva fecha (el 1 de cada mes, el del mes nuevo) [D-116]. |
-| cualquiera | evento no listado (incluidos `VER_COMO_JUGAR`, `ENTENDIDO` y el antiguo `OCULTA`) | | el mismo objeto |
+| `ya-jugado`, `sin-casos`, `portada` | `MEDIANOCHE` | la fecha efectiva ha cambiado | `iniciando`: main.js vuelve a cargar `data/calendario.json` y el archivo de `data/facts/` del mes de la nueva fecha. |
+| cualquiera | evento no listado (incluidos `VER_COMO_JUGAR`, `ENTENDIDO` y `OCULTA`) | | el mismo objeto |
 
 Reglas adicionales:
-- **Un intento al día por reto** [D-99]: se pueden jugar los dos el mismo día, en cualquier orden. Images sigue con un único intento para sus tres modos [D-32].
-- **Portada como centro** [D-98, DP-42]: recargar con un reto jugado lleva a la portada, donde su ficha dice "Filed · 4/5" y el botón pasa a View report (`EMPEZAR` → `ya-jugado`). `resultado` solo se ve una vez.
-- **Reto ya jugado y el otro no**: la portada muestra los dos estados; elegir el pendiente permite jugarlo con normalidad. Un reto sin caso hoy muestra "No case today" y deja Start `disabled`.
-- **Pestaña oculta en Images** [D-78]: sin efecto, como en la 1.3. `VOLVIO` se ignora.
-- **Pestaña oculta en Headlines** [D-101, D-115]:
-  - **Cuándo empieza una ausencia**: en el `visibilitychange` con `document.visibilityState === 'hidden'`, si en ese instante `estado.reto === 'titulares'`, la pantalla es `caso`, la fase `pregunta` y `activo === true` (noticia pintada y sin responder). main.js apunta `{perf: performance.now(), fecha: Date.now()}` y el `indice`. En cualquier otra situación (portada, veredicto, resultado, `ya-jugado`, antes de `PINTADA`) no empieza ninguna ausencia.
-  - **Cuándo termina**: en el siguiente `visibilitychange` a `visible` (también al restaurar la página desde la caché de avance y retroceso, que dispara ese evento). main.js calcula `ocultoMs = medirOculta(inicio, ahora)`, borra el inicio apuntado y despacha `VOLVIO {ocultoMs, indice}`.
-  - **Umbral**: `OCULTA_MAX_MS = 3000`. Con 3000 ms o menos no pasa nada: la noticia sigue en pregunta, los votos siguen activos, no se guarda nada y el jugador no ve ningún aviso. Con más de 3000 ms, la prueba es `F` (`motivo: 'oculta'`), se guarda en el acto y el jugador ve, al volver, el veredicto de esa prueba (sello, respuesta, fuente o confesión) con el texto `titulares.oculta` y el foco en Next.
-  - **Ausencias seguidas, no acumuladas**: cada ausencia se mide por separado; varias ausencias cortas (cada una de 3 s o menos) no suman (riesgo R12 de 9.5).
-  - **Por qué se mide al volver y no con un temporizador mientras está oculta**: los navegadores estrangulan o congelan los temporizadores de las pestañas ocultas (`setTimeout` a 1 por segundo o por minuto; Safari en iOS y Chrome en Android suspenden la página entera al bloquear la pantalla o cambiar de app), así que un `setTimeout(3000)` puede disparar tarde o no disparar nunca; además, mientras la pestaña está oculta el jugador no ve nada, así que decidir antes no le aporta nada. Al volver, el resultado es siempre el mismo y la regla es determinista. No se usa ningún temporizador ni evento `OCULTA`.
-  - **Reloj**: `medirOculta` toma el mayor de los dos intervalos, `performance.now()` (monótono, inmune a cambios de hora) y `Date.now()` (que sigue contando aunque el sistema se suspenda y `performance.now()` se detenga en algunas plataformas). Adelantar la hora del dispositivo solo puede perjudicar al jugador; atrasarla no acorta la medida de `performance.now()`.
-  - **Si la página no vuelve** (el sistema la descarta mientras está oculta, o el jugador cierra la pestaña): al reabrir, la partida `en_curso` se cierra como abandonada y sus pendientes, incluida esa prueba, son `F` [D-79]. No hace falta guardar nada al ocultarse.
-  - **Orden al volver**: primero `VOLVIO` (y su guardado), después lo de la 1.3 (relecturas de D-51, `OTRA_PESTANA`, `MEDIANOCHE`).
-  - Bloquear la pantalla, una llamada o una notificación a pantalla completa de 3 s o menos ya no penalizan. Perder el foco sin ocultar la pestaña (otra ventana al lado, pantalla dividida) no se detecta.
-- **Partida abandonada** (recarga o cierre a medias): pendientes → `F`, en los dos retos [D-79].
-- **Medianoche durante la partida**: la partida pertenece a su `fecha` y usa los datos ya cargados (también si cruza de mes). `MEDIANOCHE` solo se procesa en `portada`, `ya-jugado` y `sin-casos`, y siempre recarga los dos archivos de datos [D-116].
+- **Un intento al día por reto** [D-99]; Images, uno para sus tres modos [D-32].
+- **Portada como centro** [D-98]: recargar con un reto jugado lleva a la portada ("Filed · 4/5", botón View report → `ya-jugado`). `resultado` solo se ve una vez.
+- **Reto jugado y el otro no**: la portada muestra los dos estados. Un reto sin caso hoy muestra "No case today" y deja su botón Start `disabled`.
+- **Teclado** [D-122]: en `caso/pregunta`, `votoDeTecla(estado.reto, tecla)` decide el voto: R e I solo en Images; F y K solo en Fact or Fake (D-132, antes DP-58). Con Ctrl, Alt o Meta pulsadas no se trata ninguna tecla del juego (Ctrl+F y Ctrl+K son atajos del navegador). Enter sigue con Next en los dos.
+- **Pestaña oculta en Images** [D-78]: sin efecto. `VOLVIO` se ignora.
+- **Pestaña oculta en Fact or Fake** [D-101, D-115], igual que en la 2.0 con `afirmaciones` en lugar de `titulares`:
+  - **Empieza** en el `visibilitychange` a `hidden` si `estado.reto === 'afirmaciones'`, pantalla `caso`, fase `pregunta` y `activo === true`. main.js apunta `{perf: performance.now(), fecha: Date.now()}` y el `indice`. En cualquier otra situación no empieza ninguna ausencia.
+  - **Termina** en el siguiente `visibilitychange` a `visible`: `ocultoMs = medirOculta(inicio, ahora)`, se borra el inicio y se despacha `VOLVIO {ocultoMs, indice}`.
+  - **Umbral** `OCULTA_MAX_MS = 3000`: con 3000 ms o menos no pasa nada (sigue en pregunta, sin aviso y sin guardar nada); con más, la prueba es `F` (`motivo: 'oculta'`), se guarda en el acto y al volver se ve su veredicto (sello, aclaración y detalles) con el texto `afirmaciones.oculta` y el foco en Next.
+  - **Ausencias seguidas, no acumuladas** (riesgo R12).
+  - **Se mide al volver** (los navegadores estrangulan o congelan los temporizadores de las pestañas ocultas); no hay temporizador ni evento `OCULTA`.
+  - **Reloj**: el mayor de los intervalos de `performance.now()` y `Date.now()`.
+  - **Si la página no vuelve**: al reabrir, la partida `en_curso` se cierra como abandonada [D-79].
+  - **Orden al volver**: primero `VOLVIO` (y su guardado), después lo de la 1.3.
+  - Perder el foco sin ocultar la pestaña no se detecta.
+- **Partida abandonada**: pendientes → `F`, en los dos retos [D-79].
+- **Medianoche durante la partida**: la partida usa los datos ya cargados (también si cruza de mes). `MEDIANOCHE` solo se procesa en `portada`, `ya-jugado` y `sin-casos`. En `resultado`, la cuenta atrás ofrece el caso nuevo y la vuelta a la portada recarga el día (2.3) [D-145].
 - **Veredicto**: avance manual con Next o Enter [D-27].
-- **Ficha y texto**: `texto` solo existe en `caso`; `ficha`, solo en `veredicto`. En `resultado`, main.js descifra lo de cada botón solo al abrirlo. Nada de eso se guarda [D-88, D-103].
-- **Tema**: no se guarda ni se comparte [D-54].
-- **Previsualización y modo prueba**: la tabla no cambia. En modo prueba, el día se elige por `n`, la URL lleva `&reto=` [D-110] y se carga el archivo de titulares del mes del día elegido (4.7.2) [D-116].
+- **Ficha y texto**: `texto` solo existe en `caso`; `ficha`, solo en `veredicto`. En `resultado`, main.js descifra al pintar el tablón la verdad y (en Fact or Fake) las 5 afirmaciones, ya contestadas [D-145]; la ficha (prompt o aclaración) de cada tarjeta, solo al abrirla. Nada de eso se guarda [D-88].
+- **Tema**: no se guarda ni se comparte [D-54]. Es el mismo para los dos retos del día.
+- **Previsualización y modo prueba**: la tabla no cambia. En modo prueba la URL lleva `&reto=` (`imagenes` o `afirmaciones`) [D-110].
 
 ### 1.4 Diagrama
 
 ```
-iniciando ──► portada (reto: imagenes | titulares) ──► sin-casos / error
+iniciando ──► portada (reto: imagenes | afirmaciones) ──► sin-casos / error
                │ ELEGIR_RETO / ELEGIR_MODO (portada)
                │ EMPEZAR, reto jugado ─────────────────────────────► ya-jugado
                │ EMPEZAR, imagenes ──► cargando ──► cuenta-atras ──FIN_CUENTA──┐
-               │ EMPEZAR, titulares ────────────────────────────────────────────┤
+               │ EMPEZAR, afirmaciones ─────────────────────────────────────────┤
                ▼                                                                ▼
-                     caso[i]/pregunta ──VOTO / VOLVIO >3000 ms (solo titulares)──► caso[i]/veredicto
-                     (imagenes: AGOTADO → tapada; VOLVIO ≤3000 ms: sin cambio)     │ SIGUIENTE i<4 → caso[i+1]
-                                                                                   ▼ i = 4
-                                                                               resultado
+                     caso[i]/pregunta ──VOTO / VOLVIO >3000 ms (solo afirmaciones)──► caso[i]/veredicto
+                     (imagenes: AGOTADO → tapada; VOLVIO ≤3000 ms: sin cambio)        │ SIGUIENTE i<4 → caso[i+1]
+                                                                                      ▼ i = 4
+                                                                                  resultado
 resultado / ya-jugado ──VOLVER_PORTADA──► portada
-portada / ya-jugado / sin-casos ──MEDIANOCHE──► iniciando (recarga calendario y mes de titulares)
-portada (modo prueba) ──Open this day──► ?prueba=1&dia=n&reto=r (recarga) ──► iniciando
+portada / ya-jugado / sin-casos ──MEDIANOCHE──► iniciando (recarga calendario y mes de data/facts/)
+portada (modo prueba) ──Open this day──► ?prueba=1&dia=n&reto=r (recarga) ──► iniciando (calendario y todos los meses)
 ```
 
 ---
@@ -219,190 +232,295 @@ El Perito Visual crea marcado y estilos; el Agente de Campo solo usa los ganchos
 
 ### 2.1 Mecanismo de pantallas
 
-- `<main id="app" data-pantalla="portada" data-reto="imagenes" data-modo="normal">`: main.js mantiene al día `data-pantalla`, `data-reto` (`imagenes|titulares`) [D-98] y `data-modo`. CSS usa `data-reto` para la composición de cada reto (temporizador y sobre solo en Images, recorte solo en Headlines).
+- `<main id="app" data-pantalla="portada" data-reto="imagenes" data-modo="normal">`: main.js mantiene al día `data-pantalla`, `data-reto` (`imagenes|afirmaciones`) y `data-modo`. CSS usa `data-reto` para la composición de cada reto (vitrina, temporizador y sobre solo en Images, tarjeta solo en Fact or Fake, nombres `[data-reto-nombre]`).
 - Cada pantalla es `<section class="pantalla" id="pantalla-{nombre}" hidden>`; solo una sin `hidden`. Además de las secciones, main.js solo cambia `hidden` en los elementos que este contrato indica.
-- Foco al cambiar de pantalla: `data-foco` o el primer `h1`/`h2` [D-41].
+- Foco al cambiar de pantalla: `data-foco` o el primer `h1`/`h2` [D-41]. En `caso`, el foco va a `#caso-etiqueta` al empezar cada pregunta y a Next al entrar en el veredicto.
 
 ### 2.2 Atributos genéricos
 
 | Atributo | Dónde | Uso |
 |---|---|---|
-| `data-texto="grupo.clave"` | elementos con texto fijo | Como en la 1.3. |
-| `data-accion` | `<button>` | `empezar`, `siguiente`, `compartir`, `reintentar`, `leer-confesion`, `ver-ficha`, `cerrar-ficha`, **`volver-portada`** [D-98] y, en modo prueba, `abrir-prueba`. |
-| `data-voto="autentica"` / `"generada"` | botones de respuesta | Fijos, comunes a los dos retos. |
+| `data-texto="grupo.clave"` | elementos con texto fijo | Como en la 1.3: main.js los rellena al arrancar. |
+| `data-accion` | `<button>` | `empezar`, `siguiente`, `compartir`, `reintentar`, `ver-ficha`, `cerrar-ficha`, `volver-portada`, `abrir-ayuda`, `cerrar-ayuda` y, en modo prueba, `abrir-prueba` [D-141]. Ya no existe `leer-confesion`. |
+| `data-reto-boton="imagenes\|afirmaciones"` | los dos botones `empezar` de la portada | Reto de la tarjeta del botón [D-141]. |
+| `data-reto-nombre="imagenes\|afirmaciones"` | `span` de `#caso-reto`, `#veredicto-titulo` y `#resultado-nota` | Texto fijo de cada reto; CSS solo muestra el que coincide con `#app[data-reto]`. |
+| `data-voto="autentica"` / `"generada"` | botones de respuesta | Fijos, comunes a los dos retos [D-122]. |
 | `data-foco` | uno por pantalla | |
 | `data-estado="acierto\|fallo"` | `#veredicto` y cada `button.miniatura` | Resultado del jugador. Ausente antes de responder. |
-| `data-verdad="autentica\|generada"` | `#veredicto` | [D-104] Solo en fase `veredicto` (para el estilo del sello, sobre todo el de IA en Headlines). Ausente en fase `pregunta`. |
-| `data-fase`, `data-tapada` | `#pantalla-caso` | Como en la 1.3; en Headlines, `data-tapada` siempre `no`. |
+| `data-estado="pendiente\|actual\|acierto\|fallo"` | cada `li` de `#caso-progreso` | Progreso de la partida [D-141]. |
+| `data-verdad="autentica\|generada"` | `#veredicto` y cada `button.miniatura` | En `#veredicto`, solo en fase `veredicto` (ausente en `pregunta`). En las tarjetas del resultado, desde que se crean (las 5 pruebas ya están contestadas) [D-145]. Estilo del sello: FACT o FAKE, REAL o AI. |
+| `data-fase`, `data-tapada` | `#pantalla-caso` | `pregunta\|veredicto` y `si\|no`; en Fact or Fake, `data-tapada` siempre `no`. |
 | `data-nivel`, `--restante` | `#temporizador` | Solo Images. |
 | `data-prueba="1".."5"` | `button.miniatura` | Posición. |
-| `data-visible` | `#compartir-aviso` | |
+| `data-visible` | `#compartir-aviso` | `si\|no`. |
 | `data-pagina` | `<body>` | `juego` o `creditos`. |
 
-Clases: `.solo-lectores`; estructurales `.pantalla`, `.prueba-img`, `.boton-texto`, `.miniatura` y, nueva, `.miniatura-numero` [D-105]. Los estados van en `data-*` [D-03].
+Clases: `.solo-lectores`; estructurales `.pantalla`, `.prueba-img`, `.boton-texto`, `.reto`, `.reto-radio`, `.reto-estado`, `.miniatura` y las piezas de las tarjetas del resultado (`.mini-foto`, `.mini-img`, `.mini-cabecera`, `.mini-numero`, `.mini-sello`, `.mini-texto`, `.mini-pie`, `.mini-voto`). Los estados van en `data-*` [D-03]. Las demás clases del HTML (`.cinta-peligro`, `.portada-cabecera`, `.boton-ayuda`, `.dato`…) son solo de estilo.
 
-Temas, titulares, entradillas y fichas solo como `textContent` en los elementos que se citan aquí; la URL de la fuente solo como `href` de `#veredicto-fuente-enlace` y `#ficha-fuente-enlace` tras `urlFuenteValida`, y su dominio (`medioDeUrl`) como `textContent`. Nada de eso va en ids, clases, otros atributos, `alt` ni rutas.
+Temas, afirmaciones, aclaraciones, detalles y fichas solo como `textContent` en los elementos que se citan aquí. Nada de eso va en ids, clases, otros atributos, `alt` ni rutas.
 
 ### 2.3 Elementos por pantalla
 
-**Portada** (`#pantalla-portada`), en este orden del DOM:
-- `h1 data-texto="portada.titulo"`, `p.portada-lema data-texto="portada.lema"` y `#portada-caso` ("Case #n"; `hidden` si `estado.n` es `null`).
-- `#selector-prueba` (solo en modo prueba; lo crea main.js **justo después de `#portada-caso`**) con el marcado de D-70. Las `option` llevan `value = String(n)` y texto `rellenar(prueba.opcion, {n, tema})`, con `tema` = los temas de los dos retos de ese día unidos por " / " (o el único que se conozca: de Headlines solo se conocen los días del mes cargado, 4.7.2) [D-110, D-116].
-- Selector de reto [D-98]:
+Marcado actual de `index.html` y comportamiento de `js/main.js` tras la tarea 78 [D-141 a D-146]. `{r}` es `imagenes` o `afirmaciones`. En las plantillas de texto, la posición de una prueba (`{i}`, o `{n}` en `final.alt_prueba`) va de 1 a 5.
+
+**Portada** (`#pantalla-portada`), "dos expedientes" [D-141], en este orden del DOM:
+- `div.cinta-peligro` (decorativa, `aria-hidden`).
+- `header.portada-cabecera`:
+  - `div.portada-marca` con `h1[tabindex="-1"][data-foco] data-texto="portada.titulo"` (recibe el foco de la pantalla) y `p.portada-lema data-texto="portada.lema"` (texto exacto, común a los dos retos: "Two cases a day. Spot the fake." [D-133]; no cambia al elegir reto).
+  - `p#portada-caso`: `rellenar(portada.etiqueta_caso, {n})` ("Case #n"); vacío y `hidden` si `estado.n` es `null`.
+  - `#selector-prueba` (solo en modo prueba; lo crea main.js **justo después de `#portada-caso`**, dentro de la cabecera): `div#selector-prueba` con `label[for="selector-prueba-dia"]` (`prueba.etiqueta`), `select#selector-prueba-dia` y `button.boton[data-accion="abrir-prueba"]` (`prueba.boton`), que recarga con `?prueba=1&dia={n}&reto={reto}` [D-70]. Las `option` llevan `value = String(n)` y texto `rellenar(prueba.opcion, {n, tema})`, con `tema` = el tema del día (si los dos retos lo tienen y, por error, difiere, los dos unidos por " / ").
+  - `p#portada-tema`: `rellenar(portada.tema, {tema})` con el tema del reto elegido (vacío si no tiene caso) [D-54]. CSS le antepone "· " cuando no está vacío.
+  - `button.boton-ayuda[data-accion="abrir-ayuda"][aria-haspopup="dialog"]` con `span.icono-ayuda` (`aria-hidden`) y `span.boton-ayuda-texto data-texto="como_jugar.titulo"` (en móvil solo se ve el icono; el texto sigue ahí para lectores). Abre `dialog#como-jugar` con `showModal()`.
+- `fieldset#portada-retos` con `legend data-texto="portada.elige_reto"` y `div.retos` con dos tarjetas iguales, primero Images y después Fact or Fake [D-98, D-121, D-141]:
   ```html
-  <fieldset id="portada-retos">
-    <legend data-texto="portada.elige_reto">[[portada.elige_reto]]</legend>
-    <div class="retos">
-      <div class="reto">
-        <input type="radio" name="reto" id="reto-imagenes" value="imagenes">
-        <label for="reto-imagenes">
-          <span class="reto-nombre" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
-          <span class="reto-estado" id="reto-imagenes-estado"></span>
-        </label>
-      </div>
-      <div class="reto">
-        <input type="radio" name="reto" id="reto-titulares" value="titulares">
-        <label for="reto-titulares">
-          <span class="reto-nombre" data-texto="portada.reto_titulares">[[portada.reto_titulares]]</span>
-          <span class="reto-estado" id="reto-titulares-estado"></span>
-        </label>
-      </div>
+  <div class="reto">
+    <input type="radio" name="reto" id="reto-{r}" class="reto-radio" value="{r}" aria-describedby="reto-{r}-desc reto-{r}-estado">
+    <div class="reto-cabecera">
+      <p class="reto-expediente" data-texto="portada.expediente_{r}">[[portada.expediente_{r}]]</p>
+      <p class="reto-estado" id="reto-{r}-estado"></p>
     </div>
-  </fieldset>
+    <label class="reto-nombre" for="reto-{r}" data-texto="portada.reto_{r}">[[portada.reto_{r}]]</label>
+    <p class="reto-desc" id="reto-{r}-desc" data-texto="portada.desc_reto_{r}">[[portada.desc_reto_{r}]]</p>
+    <div class="reto-accion">
+      <!-- Images: fieldset#portada-modos · Fact or Fake: p#portada-regla -->
+      <button type="button" class="boton boton-primario" data-accion="empezar" data-reto-boton="{r}"><span class="boton-texto" id="portada-empezar-{r}-texto" data-texto="portada.empezar_{r}">[[portada.empezar_{r}]]</span></button>
+    </div>
+  </div>
   ```
-  - Dos fichas en **una fila** en todos los tamaños garantizados, mismo estilo que las de modo (radios nativos, foco visible, flechas del teclado entre ellas).
-  - `.reto-estado` (main.js, `textContent`): `portada.estado_sin_caso` si el reto no tiene caso; `portada.estado_jugado` (`{aciertos}`) si su partida de hoy está terminada; `portada.estado_en_curso` si está en curso en otra pestaña; si no, `portada.estado_pendiente`.
-- `<p id="portada-tema">`: `portada.tema` con el tema del reto elegido (vacío si no tiene caso) [D-54].
-- `<fieldset id="portada-modos">` como en la 1.3. main.js le pone `hidden` cuando el reto es `titulares` (no solo oculto por CSS: no debe ser alcanzable con Tab) [D-98].
-- `<p id="portada-regla" data-texto="portada.regla_titulares" hidden>`: regla breve de Headlines (sin temporizador; salir de la página **más de unos segundos** antes de responder es fallo). main.js le quita `hidden` solo con `titulares` [D-101, D-115].
-- `#portada-racha`: racha del reto elegido (`hidden` si es 0).
-- `button[data-accion="empezar"][data-foco]` con `<span class="boton-texto" id="portada-empezar-texto">` (sin `data-texto`): main.js pone `portada.boton_empezar`, o `portada.boton_ver_informe` si el reto está jugado. Con el reto sin caso, el botón lleva `disabled`.
-- `details#como-jugar` como en la 1.3. main.js rellena `#como-jugar-pasos` con `como_jugar.pasos` (Images) o `como_jugar.pasos_titulares` según el reto elegido, al arrancar y en cada `ELEGIR_RETO` [D-113].
-- `footer#portada-pie` con `a#portada-creditos`, sin cambios.
+  - `.reto-radio` cubre toda la tarjeta (posición absoluta, opacidad 0): pulsar la tarjeta o usar las flechas elige el reto (`change` → `ELEGIR_RETO`). La tarjeta elegida (`.reto:has(.reto-radio:checked)`) lleva fondo de papel, borde ámbar y una marca que no depende del color; el foco se ve en la tarjeta (`.reto:has(.reto-radio:focus-visible)`).
+  - `.reto-expediente`: "CASE FILE · 01/02" y "CASE FILE · 02/02"; `.reto-desc`: `portada.desc_reto_{r}`.
+  - `.reto-estado` (main.js, `textContent`): `portada.estado_sin_caso`, `portada.estado_jugado` (`{aciertos}`), `portada.estado_en_curso` o `portada.estado_pendiente`.
+  - **Images**: `.reto-accion` contiene `fieldset#portada-modos` (`legend.solo-lectores` con `portada.elige_modo`; tres `div.modo` con `input[type=radio][name=modo]#modo-investigador|modo-normal|modo-perro` y su `label` con `span.modo-nombre` = `portada.modo_*` y `span.modo-desc` = `portada.tiempo_*`). Siempre visible: main.js ya no le pone `hidden`. Elegir un modo con Fact or Fake elegido despacha antes `ELEGIR_RETO {reto: 'imagenes'}` y después `ELEGIR_MODO`.
+  - **Fact or Fake**: `.reto-accion` contiene `p#portada-regla data-texto="portada.regla_afirmaciones"` (regla breve: sin temporizador; salir de la página **más de unos segundos** antes de responder es fallo), siempre visible, sin `hidden`.
+  - **Botón de empezar** de cada tarjeta: `#portada-empezar-{r}-texto` = `portada.empezar_{r}` ("Start · Images", "Start · Fact or Fake"), o `portada.informe_{r}` ("View report · …") si ese reto está jugado; `disabled` si ese reto no tiene caso. Al pulsarlo, si `data-reto-boton` no es el reto elegido, main.js despacha `ELEGIR_RETO` y después Start (`EMPEZAR`; si el reto está jugado, lleva a `ya-jugado`).
+- `footer#portada-pie`: `p#portada-racha` (`rellenar(portada.racha, {racha})` del reto elegido; vacío y `hidden` si es 0) y `a#portada-creditos` (sin cambios).
+- **Cómo jugar** es un diálogo modal, entre los elementos comunes de `#app`:
+  ```html
+  <dialog id="como-jugar" aria-labelledby="como-jugar-titulo">
+    <h2 id="como-jugar-titulo" data-texto="como_jugar.titulo">[[como_jugar.titulo]]</h2>
+    <ol id="como-jugar-pasos"></ol>
+    <button type="button" id="como-jugar-cerrar" class="boton" data-accion="cerrar-ayuda" autofocus>
+      <span class="boton-texto" data-texto="ficha.cerrar">[[ficha.cerrar]]</span>
+    </button>
+  </dialog>
+  ```
+  main.js rellena `#como-jugar-pasos` con un `li` por paso de `como_jugar.pasos` (Images) o `como_jugar.pasos_afirmaciones` según el reto elegido [D-113]. Al cerrarlo (botón o Escape) el foco vuelve al botón de ayuda; se cierra solo, sin devolver el foco, si cambia la pantalla.
+- Ids retirados por D-141: `como-jugar-resumen`, `como-jugar-panel` (con el antiguo `details#como-jugar`) y `portada-empezar-texto`.
 
 **Cargando** y **Cuenta atrás**: sin cambios (solo Images).
 
-**Caso** (`#pantalla-caso`):
-- `header#caso-cabecera`: `#caso-tema`, `#caso-etiqueta` (`partida.etiqueta_prueba` en Images, `titulares.etiqueta_prueba` en Headlines), `#caso-marcador` y, nuevo y último, el aviso de ausencia [D-115]:
-  ```html
-  <p id="caso-aviso" data-texto="titulares.aviso_oculta" hidden>[[titulares.aviso_oculta]]</p>
-  ```
-  - Texto exacto: "Leaving the page for more than a few seconds counts as a miss.".
-  - main.js le quita `hidden` **solo** con `estado.reto === 'titulares'`, `pantalla === 'caso'`, `fase === 'pregunta'` e `indice === 0` (pregunta de la prueba 1), y se lo devuelve en el veredicto de la prueba 1 y en cualquier otro estado. Nunca se ve en Images.
-  - Se elige la prueba 1 y no una pantalla intermedia porque Start lleva directamente a la primera noticia (DP-45, sin estados nuevos) y el aviso queda a la vista justo cuando la regla empieza a contar; en la portada ya lo anticipa `#portada-regla` (DP-52).
-  - Lectores de pantalla: además de estar en el DOM antes del recorte, main.js escribe una vez `titulares.aviso_oculta` en `#temporizador-anuncio` (`aria-live="polite"`) tras `PINTADA` de la prueba 1 y lo vacía en `SIGUIENTE`. Es el único uso de `#temporizador-anuncio` en Headlines.
-- `<div id="caso-escena">` con, en orden, `#prueba-marco`, `#prueba-sobre`, **`#recorte`** y `#veredicto`.
-- `#prueba-marco` y `#prueba-sobre`: como en la 1.3. En Headlines, main.js pone `hidden` a `#prueba-marco` (y `#prueba-sobre` sigue con `hidden`).
-- Recorte de prensa [D-102, D-105], vacío en el HTML:
-  ```html
-  <article id="recorte" hidden aria-labelledby="recorte-titular">
-    <h2 id="recorte-titular"></h2>
-    <p id="recorte-entradilla"></p>
-    <p id="recorte-marca" aria-hidden="true" data-texto="titulares.marca">[[titulares.marca]]</p>
-  </article>
-  ```
-  - main.js le quita `hidden` solo en Headlines (en las dos fases) y rellena titular y entradilla con `textContent` al empezar cada prueba; si `estado.texto` es `null`, el titular recibe `titulares.no_disponible` y la entradilla queda vacía.
-  - `#recorte-marca` ("identifAI-it · Real or AI?" o similar) va siempre, igual en todas las pruebas, para que una captura de pantalla de una noticia generada nunca circule sin contexto (DP-44). Es decorativa para lectores de pantalla.
-  - **Bloqueo de copia** (freno casual, no seguridad): CSS `user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;` en `#recorte`, y main.js registra una vez, en `#recorte`, oyentes de `copy`, `cut`, `contextmenu`, `dragstart` y `selectstart` que llaman a `preventDefault()`. Nada fuera de `#recorte` se bloquea (ni atajos globales, ni el menú contextual del resto de la página, ni el diálogo del resultado).
-  - **Accesibilidad**: el texto es texto real del DOM, sin `aria-hidden`, sin imágenes ni canvas, así que los lectores de pantalla lo leen (y pueden, con sus propias órdenes, copiarlo: se acepta). No se impide el zoom ni la ampliación del texto [D-102].
-- `#veredicto` (`role="status"`, `aria-live="polite"`, `hidden` en pregunta), con `data-estado` y `data-verdad` solo en veredicto. Contiene, en orden:
-  - `#veredicto-sello`: Images, `partida.sello_autentica|sello_generada`; Headlines, `titulares.sello_autentica` o **`titulares.sello_generada`** ("AI-GENERATED · NOT A REAL STORY").
-  - `#veredicto-pie` (icono y `#veredicto-texto`): variante de `veredictos.acierto|fallo`, o de `titulares.oculta` si `motivo === 'oculta'`.
-  - Fuente, nueva [D-104]:
+**Caso** (`#pantalla-caso`, con `data-fase` y `data-tapada`) [D-141, D-142, D-144]:
+- `header#caso-cabecera`, en orden:
+  - `div#caso-titulo`: `p#caso-reto` con dos `span[data-reto-nombre]` (`portada.reto_imagenes`, `portada.reto_afirmaciones`) y `p#caso-tema` = `rellenar(partida.caso_del_dia, {tema})` en los dos retos (vacío sin tema).
+  - `p#caso-etiqueta.solo-lectores[tabindex="-1"][data-foco]`: `partida.etiqueta_prueba` ("Evidence i/5") en Images o `afirmaciones.etiqueta_prueba` ("Claim i/5") en Fact or Fake. Recibe el foco al empezar cada pregunta y da nombre a `#afirmacion`.
+  - `ol#caso-progreso[aria-hidden="true"]` con 5 `li`: `data-estado` = `acierto` o `fallo` si la prueba ya tiene código, `actual` en la prueba `indice` sin responder y `pendiente` en las demás.
+  - `div#caso-puntuacion`: `p#caso-modo` = `rellenar(partida.modo_etiqueta, {modo})` ("Normal mode") en Images y vacío en Fact or Fake (CSS lo oculta), y `p#caso-marcador` = `rellenar(partida.marcador, {aciertos})` en los dos.
+  - Último, el aviso de ausencia [D-115]:
     ```html
-    <div id="veredicto-fuente" hidden>
-      <p id="veredicto-fuente-titulo" data-texto="titulares.fuente_titulo">[[titulares.fuente_titulo]]</p>
-      <a id="veredicto-fuente-enlace" target="_blank" rel="noopener noreferrer" hidden><span id="veredicto-fuente-texto"></span><span class="solo-lectores" data-texto="titulares.nueva_pestana">[[titulares.nueva_pestana]]</span></a>
-      <p id="veredicto-fuente-sin" data-texto="titulares.fuente_no_disponible" hidden>[[titulares.fuente_no_disponible]]</p>
+    <p id="caso-aviso" data-texto="afirmaciones.aviso_oculta" hidden>[[afirmaciones.aviso_oculta]]</p>
+    ```
+    - Texto exacto: "Leaving the page for more than a few seconds counts as a miss.".
+    - main.js le quita `hidden` **solo** con `estado.reto === 'afirmaciones'`, `pantalla === 'caso'`, `fase === 'pregunta'` e `indice === 0`, y se lo devuelve en cualquier otro estado. Nunca se ve en Images (CSS lo oculta además con `#app[data-reto="imagenes"]`).
+    - Lectores de pantalla: main.js escribe una vez `afirmaciones.aviso_oculta` en `#temporizador-anuncio` tras `PINTADA` de la prueba 1 y lo vacía al empezar la prueba siguiente.
+- `div#caso-escena` contiene, en este orden, la vitrina, la ficha de papel, el temporizador y los botones:
+  - **Vitrina** (solo Images; CSS la oculta en Fact or Fake, y main.js pone `hidden` a `#prueba-marco`):
+    ```html
+    <div id="prueba-vitrina">
+      <div id="prueba-caja">
+        <figure id="prueba-marco"></figure>
+        <div id="prueba-sobre" hidden aria-hidden="true">
+          <p id="prueba-sobre-texto" data-texto="partida.sobre_texto">[[partida.sobre_texto]]</p>
+        </div>
+        <p id="prueba-etiqueta" aria-hidden="true"></p>
+        <p id="prueba-sello" aria-hidden="true"></p>
+      </div>
     </div>
     ```
-    El `a` no lleva `href` en el HTML. Solo en Headlines, fase veredicto y `revelada === 0`, main.js quita `hidden` a `#veredicto-fuente`; si `ficha?.tipo === 'fuente'` y `urlFuenteValida(ficha.texto)`, pone `href = ficha.texto`, `#veredicto-fuente-texto` = `rellenar(titulares.fuente_enlace, {medio: medioDeUrl(url)})` y quita `hidden` al enlace; si no, muestra `#veredicto-fuente-sin`. Al salir del veredicto, quita `href`, vacía el texto y vuelve a ocultar los tres.
-  - `#veredicto-confesion` (1.3). main.js le pone `hidden` en Headlines cuando `revelada === 0`; en Images y en las noticias generadas, visible, con `recortarFicha(texto)` del prompt (`ficha.texto` en Headlines) o `confesion.no_disponible` si la ficha es `null` o no es de tipo `prompt`.
-- `#temporizador` y `#temporizador-anuncio`: solo Images (CSS oculta `#temporizador` con `#app[data-reto="titulares"]`; el anuncio queda vacío salvo el aviso de ausencia de la prueba 1).
-- `#caso-botones`: sin cambios (votos y Next, comunes).
+    - `#prueba-marco` recibe la `img.prueba-img` precargada (`alt` = `partida.alt_prueba`, 1080 x 1350); `#prueba-sobre` como en la 1.3 (la imagen lleva `hidden` mientras está sellada y vuelve a verse en el veredicto). `#prueba-caja` es 4:5 con `object-fit: contain` y marco de papel: la foto se ve siempre completa [D-144].
+    - `#prueba-etiqueta` y `#prueba-sello` están vacíos en la pregunta. En el veredicto de Images, `rellenar(revelacion.etiqueta_prueba, {i})` ("Exhibit i/5") y el mismo texto que `#veredicto-sello` (REAL o AI), sobre las esquinas de la foto. En Fact or Fake quedan vacíos.
+  - **Ficha de papel** `div#caso-tarjeta`: la afirmación (Fact or Fake) y la revelación de los dos retos. Contiene, en orden:
+    - Franja del veredicto (sustituye a `#veredicto-pie`):
+      ```html
+      <div id="veredicto-banda" role="status">
+        <span id="veredicto-icono" aria-hidden="true"></span>
+        <div id="veredicto-banda-cuerpo">
+          <p id="veredicto-banda-texto"></p>
+          <p id="veredicto-texto"></p>
+        </div>
+      </div>
+      ```
+      CSS la oculta mientras `#veredicto` tiene `hidden`; color e icono según `#veredicto[data-estado]`. `#veredicto-banda-texto` = `rellenar(revelacion.banda_acierto|banda_fallo, {voto})` ("Right call · you said Fake"), con `{voto}` = lo que dijo el jugador (`partida.voto_*` "Real"/"AI" o `afirmaciones.voto_*` "Fact"/"Fake"; en un acierto, la verdad; en un fallo, la contraria), o `revelacion.banda_oculta` ("Missed call · you left the page") si `motivo === 'oculta'`. `#veredicto-texto`: variante de `veredictos.acierto|fallo`, o de `afirmaciones.oculta` si `motivo === 'oculta'`.
+    - Tarjeta de la afirmación [D-102, D-126], vacía en el HTML:
+      ```html
+      <article id="afirmacion" hidden aria-labelledby="caso-etiqueta">
+        <p id="afirmacion-titulo" aria-hidden="true" data-texto="revelacion.titulo_afirmacion">[[revelacion.titulo_afirmacion]]</p>
+        <p id="afirmacion-texto"></p>
+        <p id="afirmacion-marca" aria-hidden="true" data-texto="afirmaciones.marca">[[afirmaciones.marca]]</p>
+      </article>
+      ```
+      - main.js le quita `hidden` solo en Fact or Fake (en las dos fases) y rellena `#afirmacion-texto` con `textContent` al empezar cada prueba; si `estado.texto` es `null`, recibe `afirmaciones.no_disponible`. Fuera de `caso` (y en Images), `#afirmacion-texto` queda vacío.
+      - `#afirmacion-titulo` ("The claim") solo se ve en el veredicto (CSS). En el veredicto el artículo pasa a `display: contents` para ordenar afirmación, aclaración y marca en la columna de la tarjeta; la afirmación sigue en `--fuente-titulos` y, si es FAKE, tachada en rojo.
+      - `#afirmacion-marca` muestra siempre "identifAI-it · Fact or Fake?" (exacto), igual en todas las pruebas, para que una captura de una afirmación falsa nunca circule sin contexto [D-128]. Es decorativa para lectores de pantalla. Va en el flujo, al final de la tarjeta (no es absoluta) [D-142].
+      - **Bloqueo de copia** (freno casual): CSS `user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;` en `#afirmacion`, y main.js registra una vez, en `#afirmacion`, oyentes de `copy`, `cut`, `contextmenu`, `dragstart` y `selectstart` con `preventDefault()`. Fuera de `#afirmacion` solo se bloquea `#resultado-revision` (D-145, ver Resultado) [D-102].
+      - **Accesibilidad**: texto real del DOM, sin `aria-hidden`, legible por lectores de pantalla y ampliable.
+    - `#veredicto` (`role="status"`, `aria-live="polite"`, `hidden` en pregunta), con `data-estado` y `data-verdad` solo en veredicto:
+      ```html
+      <div id="veredicto" role="status" aria-live="polite" hidden>
+        <p id="veredicto-sello"></p>
+        <p id="veredicto-titulo">
+          <span data-reto-nombre="imagenes" data-texto="revelacion.titulo_imagenes">[[revelacion.titulo_imagenes]]</span>
+          <span data-reto-nombre="afirmaciones" data-texto="revelacion.titulo_afirmaciones">[[revelacion.titulo_afirmaciones]]</span>
+        </p>
+        <p id="veredicto-resumen"></p>
+        <div id="veredicto-aclaracion" hidden>
+          <p id="veredicto-aclaracion-texto"></p>
+          <ul id="veredicto-detalles"></ul>
+        </div>
+        <div id="veredicto-confesion">
+          <p id="veredicto-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</p>
+          <blockquote id="veredicto-confesion-texto"></blockquote>
+          <p id="veredicto-confesion-nota" aria-hidden="true" data-texto="confesion.nota">[[confesion.nota]]</p>
+        </div>
+      </div>
+      ```
+      - `#veredicto-sello`: Images, `partida.sello_autentica|sello_generada`; Fact or Fake, `afirmaciones.sello_autentica` ("FACT") o `afirmaciones.sello_generada` ("FAKE").
+      - `#veredicto-titulo`: "The verdict" (Images) o "The truth" (Fact or Fake), por `data-reto-nombre`.
+      - `#veredicto-resumen`: Images, `revelacion.resumen_autentica|resumen_generada` ("This is a real photograph." / "This photo was generated by AI."); vacío y oculto en Fact or Fake.
+      - `#veredicto-aclaracion` [D-126]: solo en Fact or Fake y fase veredicto, main.js quita `hidden` al contenedor, pone `ficha.aclaracion` en `#veredicto-aclaracion-texto` y crea un `<li>` sin atributos por detalle (`textContent`); con 0 detalles, el `ul` queda vacío y con `hidden`. Si `ficha` es `null`, el texto es `afirmaciones.aclaracion_no_disponible` y no hay detalles. En Images y al salir del veredicto, vacía los dos y vuelve a ocultar el contenedor.
+      - `#veredicto-confesion`: solo Images [D-144]. `blockquote#veredicto-confesion-texto` = el prompt **entero** (`estado.ficha`) o `confesion.no_disponible`, con comillas “ ” por CSS; `#veredicto-confesion-nota` ("The prompt used to create this image.") solo se ve en horizontal. CSS oculta la confesión entera con `#veredicto[data-verdad="autentica"]` (en las fotos reales la ficha queda solo con el veredicto). En Fact or Fake, main.js le pone `hidden`. Ya no hay recorte ni botón `leer-confesion` (`recortarFicha` sigue en `juego.js` sin uso en main.js).
+    - `p#veredicto-marca[aria-hidden="true"] data-texto="partida.marca"` ("identifAI-it · Real or AI?"): pie de la ficha, solo en Images y en horizontal (CSS).
+  - `#temporizador` (`data-nivel`, `--restante`, `aria-hidden`, con `#temporizador-cinta`) y `p#temporizador-anuncio.solo-lectores[aria-live="polite"]`: solo Images (CSS oculta `#temporizador` con `#app[data-reto="afirmaciones"]`; el anuncio queda vacío salvo el aviso de ausencia de la prueba 1).
+  - `#caso-botones` [D-122]: los dos votos y Next, comunes. Cada voto lleva texto y tecla por reto:
+    ```html
+    <button type="button" class="boton boton-voto" data-voto="autentica" aria-keyshortcuts="R">
+      <span class="boton-texto" id="voto-autentica-texto"></span>
+      <kbd id="voto-autentica-tecla" aria-hidden="true"></kbd>
+    </button>
+    <button type="button" class="boton boton-voto" data-voto="generada" aria-keyshortcuts="I">
+      <span class="boton-texto" id="voto-generada-texto"></span>
+      <kbd id="voto-generada-tecla" aria-hidden="true"></kbd>
+    </button>
+    <button type="button" class="boton boton-primario" data-accion="siguiente"><span class="boton-texto" data-texto="partida.boton_siguiente">[[partida.boton_siguiente]]</span></button>
+    ```
+    - Los `span` de voto no llevan `data-texto`: main.js pone, en cada render de `caso`, el texto (`partida.boton_autentica|boton_generada` en Images; `afirmaciones.boton_autentica|boton_generada` en Fact or Fake), el contenido de `kbd` y `aria-keyshortcuts` con `teclaDeVoto(reto, voto)` (R/I o F/K).
+    - Texto de Next (main.js, en cada render): `partida.boton_ver_resultado` ("See result") en la prueba 5; si no, `afirmaciones.boton_siguiente` ("Next claim") o `partida.boton_siguiente` ("Next evidence").
+    - CSS oculta Next en la pregunta y los votos en el veredicto. Next tiene siempre su propia fila y nunca queda tapado (`position: relative; z-index: 1`); si el texto desborda, la ficha o la tarjeta se desplazan por dentro, nunca el botón [D-142]. Images en vertical: Next ámbar, fuera de la ficha y a todo el ancho; Images en horizontal: barra oscura al pie de la ficha [D-144]; Fact or Fake: bajo la tarjeta, a la derecha (a todo el ancho en vertical).
+- Al salir del veredicto, main.js pone `hidden` a `#veredicto`, le quita `data-estado` y `data-verdad` y vacía `#veredicto-sello`, `#veredicto-texto`, `#veredicto-banda-texto`, `#veredicto-resumen`, `#veredicto-confesion-texto`, `#prueba-etiqueta`, `#prueba-sello` y la aclaración. Fuera de `caso` vacía además `#afirmacion-texto`.
+- Ids retirados por D-141 y D-144: `veredicto-pie` (lo sustituye `#veredicto-banda`), el botón `leer-confesion` y `veredicto-consejo*` (D-143, sin objeto).
 
-**Resultado** (`#pantalla-resultado`):
-- Nuevo `<p id="resultado-reto">` antes de `#resultado-aciertos`: `rellenar(final.reto, {reto, n})` ("Headlines · Case #12").
-- `#resultado-aciertos` (`data-foco`), `#resultado-mensaje`, `#resultado-rachas` (del reto) y `button[data-accion="compartir"]` como en la 1.3, más `button[data-accion="volver-portada"]` (`final.boton_volver`) en la misma `.acciones`.
-- `#resultado-revision`: Images, las 5 miniaturas de la 1.3. Headlines [D-105]:
+**Resultado** (`#pantalla-resultado`), tablón de pruebas [D-145, D-146]:
+- `div.cinta-peligro` (decorativa).
+- `header#resultado-franja`:
+  - `p#resultado-aciertos[tabindex="-1"][data-foco]`: `rellenar(final.aciertos, {aciertos})`.
+  - `div#resultado-datos` con `p#resultado-reto` = `etiquetaResultado([nombre del reto, rellenar(portada.etiqueta_caso, {n}), tema, modo])` (las partes no vacías unidas por " · "; el modo solo en Images; mayúsculas por CSS: "IMAGES · CASE #3 · FIREWORKS · NORMAL", "FACT OR FAKE · CASE #3 · FIREWORKS") y `p#resultado-mensaje` [D-134]: `textContent` = `mensajeFinal(aciertos, mensajesDelReto(estado.reto, TEXTOS.final))`, es decir, `final.mensajes[aciertos]` en Images y `final.mensajes_afirmaciones[aciertos]` en Fact or Fake. Sin atributos que dependan del reto ni de los aciertos.
+  - `p#resultado-sello[aria-hidden="true"] data-texto="resultado.sello_cerrado"` ("CASE CLOSED"): CSS solo lo muestra desde 640 px de ancho.
+- `div#resultado-tablon` con `ol#resultado-revision` (vacío en el HTML) y `p#resultado-nota` con dos `span[data-reto-nombre]` (`resultado.nota_imagenes` "Tap a photo to see its file", `resultado.nota_afirmaciones` "Tap a claim to read the truth again").
+- **Tarjetas** (main.js, al pintar `resultado`): 5 `li` en `#resultado-revision`, cada uno con un `button.miniatura`. Para cada prueba, main.js descifra la verdad (`desofuscar(clave, n, i)`) y calcula lo que dijo el jugador con `votoDicho(verdad, codigo)` de `juego.js` (acierto = la verdad; fallo, también por ausencia = la contraria):
   ```html
+  <!-- Images -->
   <li>
-    <button type="button" class="miniatura" data-accion="ver-ficha" data-prueba="3" data-estado="acierto" aria-haspopup="dialog">
-      <span class="miniatura-numero" aria-hidden="true">3</span>
-      <span class="solo-lectores">Story 3: correct</span>
+    <button type="button" class="miniatura" data-accion="ver-ficha" data-prueba="3" data-estado="fallo" data-verdad="generada" aria-haspopup="dialog">
+      <span class="solo-lectores">Evidence 3: wrong</span>
+      <span class="mini-foto" aria-hidden="true"><img class="mini-img" src="casos/k3x9q2m7ab.webp" alt="" width="1080" height="1350"><span class="mini-sello">AI</span></span>
+      <span class="mini-pie" aria-hidden="true"><span class="mini-numero">#3</span><span class="mini-voto">You said Real</span></span>
+    </button>
+  </li>
+  <!-- Fact or Fake -->
+  <li>
+    <button type="button" class="miniatura" data-accion="ver-ficha" data-prueba="3" data-estado="acierto" data-verdad="autentica" aria-haspopup="dialog">
+      <span class="solo-lectores">Claim 3: correct</span>
+      <span class="mini-cabecera" aria-hidden="true"><span class="mini-numero">#3</span><span class="mini-sello">FACT</span></span>
+      <span class="mini-texto" aria-hidden="true">(afirmación descifrada)</span>
+      <span class="mini-pie" aria-hidden="true"><span class="mini-voto">You said Fact</span></span>
     </button>
   </li>
   ```
-  El nombre accesible es `rellenar(titulares.estado_prueba, {i, estado: final.estados[estado]})`. El icono, por CSS (`::after`) según `data-estado`. Ni la verdad, ni el titular, ni la fuente están en el marcado.
+  - Nombre accesible: solo el `span.solo-lectores`, `rellenar(final.estado_prueba, …)` ("Evidence i: …") en Images o `rellenar(afirmaciones.estado_prueba, …)` ("Claim i: …") en Fact or Fake, con `{i, estado: final.estados[estado]}` ("correct" o "wrong"). Las demás piezas llevan `aria-hidden="true"`.
+  - `.mini-sello` = el sello de la verdad (`partida.sello_*` o `afirmaciones.sello_*`); `.mini-voto` = `rellenar(resultado.dijiste, {voto})` con `partida.voto_*` o `afirmaciones.voto_*`; `.mini-img` = `rutaPrueba(id)`. `.mini-texto` = `desofuscarAfirmacion(textos[i], clave, n, i)` o `afirmaciones.no_disponible`. Si la verdad no se puede descifrar, no hay `data-verdad`, el sello queda vacío y no hay `.mini-voto`.
+  - **Coexistencia en el DOM** [D-145]: solo en esta pantalla, y ya contestadas las cinco, están en el DOM a la vez las 5 verdades y (en Fact or Fake) las 5 afirmaciones. Las aclaraciones, los detalles y los prompts no: solo en el diálogo, al abrirlo. En cualquier render de otra pantalla, main.js vacía `#resultado-revision`.
+  - **Bloqueo de copia del tablón** [D-145]: CSS `user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;` en `#resultado-revision`, y main.js registra una vez, en `#resultado-revision`, los mismos oyentes que en `#afirmacion` (`copy`, `cut`, `contextmenu`, `dragstart`, `selectstart`, con `preventDefault()`).
+  - Disposición (CSS, D-146): en horizontal o ancho, las 5 en una fila; en vertical, Images en 3 + 2 y Fact or Fake en 2 + 2 + 1. Tarjetas giradas entre -2 y 2 grados, con chincheta; las falladas con contorno rojo; `.mini-texto` recortado con `line-clamp` (`--lineas`, sin puntos suspensivos).
+- `footer#resultado-pie`:
+  ```html
+  <div id="resultado-rachas">
+    <p class="dato"><span class="dato-etiqueta" data-texto="resultado.etiqueta_racha">…</span><span class="dato-valor" id="resultado-racha"></span></p>
+    <p class="dato"><span class="dato-etiqueta" data-texto="resultado.etiqueta_mejor_racha">…</span><span class="dato-valor" id="resultado-mejor-racha"></span></p>
+    <p class="dato" id="resultado-proximo"><span class="dato-etiqueta" data-texto="resultado.siguiente_caso">…</span><span class="dato-valor dato-ambar" id="resultado-cuenta-atras" aria-live="off"></span></p>
+    <div id="resultado-nuevo-caso" hidden>
+      <p data-texto="resultado.nuevo_caso">…</p>
+      <button type="button" class="boton boton-primario" data-accion="volver-portada"><span class="boton-texto" data-texto="resultado.boton_nuevo_caso">…</span></button>
+    </div>
+  </div>
+  <div class="acciones">
+    <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">…</span></button>
+    <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">…</span></button>
+  </div>
+  ```
+  - `#resultado-racha` y `#resultado-mejor-racha`: `racha` y `mejorRacha` del reto en el almacén.
+  - `#resultado-cuenta-atras`: `formatearCuentaAtras(msHastaMedianoche(ahora))` (HH:MM:SS), cada segundo, con el mismo bucle que `ya-jugado`. Al pintar `resultado`, `#resultado-proximo` visible y `#resultado-nuevo-caso` con `hidden`.
+  - **Medianoche en resultado** [D-145]: cuando la fecha local deja de ser la de la carga, el bucle se para, **no** se despacha `MEDIANOCHE` (la tabla no lo procesa aquí), se pone `hidden` a `#resultado-proximo` y se quita a `#resultado-nuevo-caso` ("New case available" y botón "Play"). Cualquier `volver-portada` desde `resultado` (Play o Back) despacha `VOLVER_PORTADA` y, si el día cambió, `MEDIANOCHE` (recarga del día nuevo).
+  - Back (`final.boton_volver`) va antes que Share (`compartir.boton`, "Share result", con `span.icono-compartir`).
 
-**Ya jugado** (`#pantalla-ya-jugado`): como en la 1.3, más `<p id="ya-jugado-reto">` (`final.reto`) tras el `h2` y `button[data-accion="volver-portada"]` tras Compartir. `#ya-jugado-modo` lleva `hidden` en Headlines. Todo se refiere al reto de `estado.reto`.
+**Ya jugado** (`#pantalla-ya-jugado`): como en la 2.0 (`#ya-jugado-reto`, `#ya-jugado-aciertos`, `#ya-jugado-modo`, `#ya-jugado-cuadros`, `#ya-jugado-racha`, `#ya-jugado-cuenta-atras`, Share y Back); `#ya-jugado-modo` lleva `hidden` en Fact or Fake. No muestra mensaje final.
 
-**Sin casos**: `<p id="sin-casos-texto" tabindex="-1" data-foco>` sin `data-texto`: main.js pone `sin_casos.sin_lanzamiento` si `lanzamiento === null`, o `sin_casos.texto` si no [D-95]. **Error**: sin cambios.
+**Sin casos**: `<p id="sin-casos-texto" tabindex="-1" data-foco>`: `sin_casos.sin_lanzamiento` si `lanzamiento === null`, o `sin_casos.texto` [D-95]. **Error**: sin cambios.
 
-**Comunes**: `#compartir-aviso`, `#compartir-manual` con su `label`, `#aviso-almacen` y `#aviso-previsualizacion` (texto `avisos.previsualizacion` con `?fecha=`, o `avisos.prueba` con `{n}` en modo prueba [D-110]).
+**Comunes**: `#compartir-aviso`, `#compartir-manual` con su `label`, `#aviso-almacen`, `#aviso-previsualizacion` (`avisos.previsualizacion` o `avisos.prueba`), `dialog#como-jugar` (ver Portada) y `dialog#ficha`.
 
-**Diálogo `#ficha`** (1.3, ampliado [D-104, D-105]):
+**Diálogo `#ficha`** [D-88, D-126]:
 ```html
 <dialog id="ficha" aria-labelledby="ficha-titulo">
   <h2 id="ficha-titulo"></h2>
   <img id="ficha-img" alt="" width="1080" height="1350" hidden>
-  <div id="ficha-recorte" hidden>
-    <p id="ficha-titular"></p>
-    <p id="ficha-entradilla"></p>
-  </div>
+  <p id="ficha-afirmacion" hidden></p>
   <p id="ficha-era"></p>
   <h3 id="ficha-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</h3>
   <p id="ficha-texto"></p>
-  <p id="ficha-fuente" hidden>
-    <a id="ficha-fuente-enlace" target="_blank" rel="noopener noreferrer"><span id="ficha-fuente-texto"></span><span class="solo-lectores" data-texto="titulares.nueva_pestana">[[titulares.nueva_pestana]]</span></a>
-  </p>
-  <p id="ficha-fuente-sin" data-texto="titulares.fuente_no_disponible" hidden>[[titulares.fuente_no_disponible]]</p>
+  <div id="ficha-aclaracion" hidden>
+    <p id="ficha-aclaracion-texto"></p>
+    <ul id="ficha-detalles"></ul>
+  </div>
   <button type="button" id="ficha-cerrar" class="boton" data-accion="cerrar-ficha">
     <span class="boton-texto" data-texto="ficha.cerrar">[[ficha.cerrar]]</span>
   </button>
 </dialog>
 ```
-- Images: como en la 1.3 (`#ficha-recorte`, `#ficha-fuente` y `#ficha-fuente-sin` con `hidden`).
-- Headlines, desde `ver-ficha` en `resultado`: `#ficha-titulo` = `titulares.estado_prueba`; `#ficha-recorte` visible con titular y entradilla completos (`desofuscarTexto`); `#ficha-era` = `rellenar(final.era, {sello})`; si es generada, título de confesión y `#ficha-texto` con el prompt completo, y la fuente oculta; si es auténtica, título de confesión y `#ficha-texto` con `hidden`, y la fuente como en el veredicto.
-- Headlines, desde `leer-confesion` en el veredicto: solo título, era y prompt (sin recorte).
-- Al cerrarse, main.js además vacía `#ficha-titular`, `#ficha-entradilla` y `#ficha-fuente-texto`, quita `href` al enlace y devuelve `hidden` a `#ficha-recorte`, `#ficha-fuente` y `#ficha-fuente-sin`, y quita `hidden` a `#ficha-confesion-titulo` y `#ficha-texto`.
+- Se abre solo desde una tarjeta `ver-ficha` del resultado, en los dos retos (desde D-141 no hay `leer-confesion`; `abrirFicha` aún admite `caso/veredicto` en Images, pero ningún botón la llama ahí). Lo que muestra se descifra al abrir y no se guarda.
+- Images: `#ficha-titulo` = `rellenar(final.estado_prueba, {i, estado})`; `#ficha-img` visible con `rutaPrueba(id)` y `alt` = `rellenar(final.alt_prueba, {n})` ("Evidence 3"); `#ficha-era` = `rellenar(final.era, {sello})`; `#ficha-texto` = `desofuscarFicha(...)` (prompt o "Real photograph") o `confesion.no_disponible`; `#ficha-afirmacion` y `#ficha-aclaracion` con `hidden`.
+- Fact or Fake: `#ficha-titulo` = `afirmaciones.estado_prueba`; `#ficha-img` con `hidden`; `#ficha-afirmacion` visible con la afirmación (`desofuscarAfirmacion`); `#ficha-era` = `rellenar(final.era, {sello})` con el sello FACT o FAKE; `#ficha-confesion-titulo` y `#ficha-texto` con `hidden`; `#ficha-aclaracion` visible con aclaración y detalles (`desofuscarAclaracion`; si es `null`, `afirmaciones.aclaracion_no_disponible`).
+- Al cerrarse, main.js vacía `#ficha-titulo`, `#ficha-era`, `#ficha-texto`, `#ficha-afirmacion`, `#ficha-aclaracion-texto` y `#ficha-detalles`, devuelve `hidden` a `#ficha-afirmacion`, `#ficha-aclaracion` y `#ficha-img` (sin `src` ni `alt`), quita `hidden` a `#ficha-confesion-titulo` y `#ficha-texto` y devuelve el foco a la tarjeta que lo abrió. Si cambia la pantalla o la fase con la ficha abierta, se cierra sin devolver el foco.
+
+Ids de la 2.0 que **desaparecen** (no se crean): `reto-titulares*`, `recorte*`, `veredicto-fuente*`, `ficha-recorte`, `ficha-titular`, `ficha-entradilla`, `ficha-fuente*`, `creditos-noticias`, `creditos-medios`, `creditos-ficcion`.
 
 ### 2.4 Cabecera de index.html
 
-Sin cambios: misma CSP `default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'` [D-36], `lang="en"`. **Confirmado** [D-104]: la CSP controla los recursos que carga la página (scripts, estilos, imágenes, `fetch`), no la navegación de nivel superior que provoca un clic en un enlace (`navigate-to` nunca llegó a los navegadores; `form-action` solo afecta a formularios). Los enlaces `target="_blank"` a la fuente funcionan sin tocar la CSP, y `rel="noopener noreferrer"` deja `window.opener` a `null` y no envía `Referer`. Los archivos `data/titulares/{mes}.json` son del mismo origen: `default-src 'self'` los permite.
+Sin cambios: CSP `default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'` [D-36], `lang="en"`. Fact or Fake no tiene enlaces externos. Los archivos `data/facts/{mes}.json` son del mismo origen.
 
 ### 2.5 Tipografías
 
-Sin cambios [D-29, D-40]. El titular usa `--fuente-titulos`; la entradilla, `--fuente-cuerpo`; la marca, `--fuente-datos`; el aviso de ausencia, `--fuente-cuerpo`.
+Sin cambios [D-29, D-40]. La afirmación usa `--fuente-titulos` en la pregunta; la aclaración y los detalles, `--fuente-cuerpo`; la marca, `--fuente-datos`; el aviso de ausencia, `--fuente-cuerpo`.
 
 ### 2.6 Composición sin deslizar [D-84]
 
-Siguen R1 a R13 de la 1.3 con los mismos tamaños garantizados (360 x 640, 640 x 360, 1280 x 720, 390 x 844, 768 x 1024). Cambios y reglas nuevas:
+Siguen R1 a R13 de la 1.3 con los mismos tamaños garantizados (360 x 640, 640 x 360, 1280 x 720, 390 x 844, 768 x 1024). Reglas de la 2.0 adaptadas a Fact or Fake [D-126]:
 
-- **R8. Portada** [D-98]:
-  - En vertical: título, lema, Case #n, selector de prueba, **retos (una fila de 2)**, tema, modos (solo Images) o `#portada-regla` (solo Headlines), racha, Start, desplegable y pie.
-  - En horizontal: a la izquierda, identidad (título, lema, Case #n, racha, desplegable y pie); a la derecha, acción (selector de prueba, retos, tema, modos o regla, Start).
-  - Para que quepa también con selector de prueba y aviso a 360 x 640, el perito puede, en este orden: (1) ocultar el lema con `@media (max-height: 700px)` (es decorativo; el `h1` queda); (2) poner Case #n y la racha en la misma línea; (3) reducir la descripción de cada modo a una línea. Nunca por debajo de 16 px de cuerpo ni 44 x 44 px de control.
-  - Cada ficha de reto mide al menos 44 px de alto, con el nombre en una línea y el estado (18 caracteres como máximo) en otra.
-  - El desplegable abierto sigue en el flujo y es el único elemento que encoge (D-83).
-- **R14. Caso de Headlines en vertical** [D-105, D-115]: filas `auto minmax(0, 1fr) auto` (cabecera, escena, botones). `#caso-escena` deja de ser una celda superpuesta: con `#app[data-reto="titulares"]` es una columna con `#recorte` y, en veredicto, `#veredicto`. Titular con `--fuente-titulos` y `clamp()` (20 px como mínimo); entradilla de 16 px como mínimo. Los votos, en una fila abajo, como en Images. **Aviso de ausencia**: `#caso-aviso` va en la cabecera, ocupa el hueco que en Images deja el temporizador, con 14 px como mínimo (como el pie de créditos, D-37), contraste AA y 2 líneas como máximo a 360 px; no se superpone al recorte. Si en la prueba 1 con el aviso y textos máximos no cupiera, el perito reduce primero el titular hacia su mínimo de 20 px y, si aún no cabe, se aplica R13.
-- **R15. Caso de Headlines en horizontal**: como R7, con la escena (recorte y veredicto) a la izquierda y cabecera (con `#caso-aviso`) y botones a la derecha.
-- **R16. Veredicto de Headlines**: la entradilla se oculta por CSS (`#pantalla-caso[data-fase="veredicto"] #recorte-entradilla`) para dejar sitio (DP-47; completa en el diálogo del resultado). El sello se superpone a la tarjeta del recorte (posición absoluta, no ocupa alto propio); el de IA, `#veredicto[data-verdad="generada"]`, es muy visible (banda o sello grande en rojo con contraste AA, también sin color gracias al texto). Debajo, en el flujo: pie, fuente o confesión (recortada a 90 caracteres) y Read full confession. `#caso-aviso` está oculto en el veredicto.
-- **R17. Resultado de Headlines**: como R9, con los 5 `button.miniatura` numerados en una fila (44 x 44 px como mínimo cada uno, número grande e icono), y Share y Back en una fila.
-- **R18. Textos largos**: con titular de 110 caracteres y entradilla de 280 (los máximos del importador), las dos fases caben sin scroll en los tamaños garantizados, **también la pregunta de la prueba 1 con `#caso-aviso`**. Si no cupieran (zoom, texto ampliado, pantallas menores), se aplica R13: la sección se desplaza por dentro; nunca se recorta ni se oculta texto.
-- **R11. Diálogo**: igual; `#ficha-recorte` con el titular en `--fuente-titulos`.
+- **R8. Portada** [D-98]: como en la 2.0 (retos en una fila de 2; modos o `#portada-regla`; orden de compresión: lema, Case #n y racha en una línea, descripción de modos en una línea). Cada ficha de reto mide al menos 44 px de alto, con el nombre en una línea y el estado (18 caracteres como máximo) en otra.
+- **R14. Caso de Fact or Fake en vertical**: filas `auto minmax(0, 1fr) auto` (cabecera, escena, botones). Con `#app[data-reto="afirmaciones"]`, `#caso-escena` es una columna con `#afirmacion` y, en veredicto, `#veredicto`. En la pregunta, la afirmación con `--fuente-titulos` y `clamp()` (20 px como mínimo), centrada en la tarjeta; la marca, abajo, 14 px como mínimo. `#caso-aviso` en la cabecera, 14 px como mínimo, contraste AA, 2 líneas como máximo a 360 px.
+- **R15. Caso de Fact or Fake en horizontal**: como R7, con la escena (tarjeta y veredicto) a la izquierda y cabecera (con `#caso-aviso`) y botones a la derecha.
+- **R16. Veredicto de Fact or Fake** [D-148, cierra DP-63]: la afirmación **sigue visible en la revelación en todos los tamaños**, nunca se oculta. Va en `--fuente-titulos` (peso 600, de 20 a 30 px con `clamp(1.25rem, 5.4vw, 1.875rem)`; 18 px con `max-height: 420px`), alineada a la izquierda, tachada con el color del sello si es FAKE (`#caso-tarjeta:has(#veredicto[data-verdad="generada"]) #afirmacion-texto`). La franja `#veredicto-banda` (acierto o fallo, con el sello FACT o FAKE grande y distinto del otro también sin color gracias al texto, contraste AA) sustituye al pie. Debajo, la verdad (`#veredicto-aclaracion`) y los detalles (lista con viñetas, 16 px). `#caso-aviso` está oculto en la revelación. Si el contenido no cabe, la tarjeta se desplaza por dentro (D-142, R13); el botón siguiente nunca se desplaza.
+- **R17. Resultado de Fact or Fake**: como R9, con los 5 `button.miniatura` del tablón (44 x 44 px como mínimo; disposición en 2.3) y Share y Back en una fila.
+- **R18. Textos largos**: con afirmación de 140 caracteres, aclaración de 160 y 3 detalles de 80 (los máximos del importador), las dos fases caben sin scroll en los tamaños garantizados, **también la pregunta de la prueba 1 con `#caso-aviso`**. Si no cupieran (zoom, texto ampliado, pantallas menores), se aplica R13: la sección se desplaza por dentro; nunca se recorta ni se oculta texto (salvo la regla de R16 para `max-height: 420px`). Desde D-142, lo que se desplaza por dentro es la tarjeta o la ficha, nunca el botón Next.
+- **R11. Diálogo**: igual; `#ficha-afirmacion` en `--fuente-titulos`.
 
-### 2.7 creditos.html [D-39, D-111]
+### 2.7 creditos.html [D-39, D-129]
 
-Como en la 1.3 y, tras `creditos-imagenes`, una sección nueva:
+Como en la 1.3 y, tras `creditos-imagenes`, una sección fija nueva:
 ```html
-<section id="creditos-noticias">
-  <h2>{creditos.noticias}</h2>
-  <p>{creditos.noticias_intro}</p>
-  <ul id="creditos-medios"><li>{medio}</li>…</ul>      <!-- o <p>{creditos.sin_noticias}</p> sin intro -->
-  <p id="creditos-ficcion">{creditos.ficcion}</p>
+<section id="creditos-afirmaciones">
+  <h2>{creditos.afirmaciones}</h2>
+  <p>{creditos.afirmaciones_texto}</p>
 </section>
 ```
-- `{medio}`: dominios (`medioDeUrl`) de las fuentes de todas las noticias auténticas de **todos** los archivos `data/titulares/*.json` [D-116], sin repetir y en orden alfabético, como texto (sin enlaces), sin relación con ningún titular, día ni mes.
-- `creditos.ficcion` aclara que las noticias generadas son ficción creada para el juego.
-- Ids nuevos: `creditos-noticias`, `creditos-medios`, `creditos-ficcion`. Sin script, sin `style`, sin recursos externos.
+- `creditos.afirmaciones_texto` es exacto: "Claims are written for this game from public sources. The fakes are invented and always debunked after you answer." [D-132].
+- Sin lista de medios ni fuentes (Fact or Fake no registra fuentes, D-131). No depende de `data/facts/`.
+- Ids nuevos: `creditos-afirmaciones`. Desaparecen `creditos-noticias`, `creditos-medios` y `creditos-ficcion` (nunca llegaron a generarse).

@@ -15,14 +15,10 @@ export function cuadros(resultados) {
 // Los aciertos se calculan siempre a partir de `resultados`.
 export function textoCompartir({ plantilla, n, nombreModo, resultados, racha, url }) {
   const total = [...resultados].filter((c) => c === 'A').length;
-  return rellenar(plantilla, {
-    caso: n,
-    modo: nombreModo,
-    aciertos: total,
-    cuadros: cuadros(resultados),
-    racha,
-    url
-  });
+  const valores = { caso: n, aciertos: total, cuadros: cuadros(resultados), racha, url };
+  // `nombreModo` es opcional: la plantilla de Headlines no tiene {modo}.
+  if (nombreModo !== undefined && nombreModo !== null) valores.modo = nombreModo;
+  return rellenar(plantilla, valores);
 }
 
 export function urlDelJuego(ubicacion = location) {

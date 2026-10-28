@@ -1,189 +1,172 @@
-# identifAI-it: especificación técnica, versión 2.0 · 3. Módulos JS
+# identifAI-it: especificación técnica, versión 2.1 · 3. Módulos JS
 
-Parte de la especificación 2.0 (índice en `docs/ESPECIFICACION.md`) [D-91, D-114]. Los cambios de la 2.0 van marcados con **[2.0]**; lo no marcado sigue como en la 1.3. Los ajustes D-115 (ausencia de más de 3 s) y D-116 (titulares por mes) ya están incorporados.
+Parte de la especificación 2.1 (índice en `docs/ESPECIFICACION.md`) [D-120]. Los cambios de la 2.1 (Fact or Fake en lugar de Headlines) van marcados con **[2.1]**; lo marcado [2.0] sigue vigente con los nombres nuevos. Lo no marcado sigue como en la 1.3. Qué partes del código ya escrito hay que adaptar está en `9-tareas.md` (9.4.1).
 
 ## 3. Módulos JS
 
-Módulos ES sin dependencias. Las funciones **puras** no tocan el DOM, `window`, `localStorage`, `Date.now()`, `performance.now()` ni `Math.random()` (salvo como valor por defecto de un `aleatorio` inyectable) y se prueban con `node --test`. `TextEncoder`, `TextDecoder`, `btoa`, `atob`, `URL` y `URLSearchParams` son globales en el navegador y en Node 20.
+Módulos ES sin dependencias. Las funciones **puras** no tocan el DOM, `window`, `localStorage`, `Date.now()`, `performance.now()` ni `Math.random()` (salvo como valor por defecto de un `aleatorio` inyectable) y se prueban con `node --test`. `TextEncoder`, `TextDecoder`, `btoa`, `atob` y `URLSearchParams` son globales en el navegador y en Node 20.
 
 Grafo de importaciones, sin ciclos:
 - `main.js` importa todos. `almacen.js` y `juego.js` importan `diario.js`. `compartir.js`, `temporizador.js`, `diario.js` y `textos.js` no importan nada.
 - Herramientas:
   - `temas.mjs` no importa nada.
-  - [2.0] `titulares.mjs` importa `./temas.mjs` (palabras prohibidas, carpetas, `normalizarFicha`, `avisosMezcla`), [D-116] `../js/diario.js` (`validarTitulares`, `mesDeNumero`, `MES_PATRON`) y, solo para `leerTitularesMensuales` y `escribirTitularesMensuales`, `node:fs` y `node:path`; los límites de bytes le llegan por parámetro.
-  - `creditos.mjs` importa `../js/textos.js`, [2.0] `../js/diario.js` (`desofuscar`, `desofuscarNoticia`, `medioDeUrl`, `urlFuenteValida`) y [D-116] `./titulares.mjs` (`leerTitularesMensuales`, `unirMeses`).
-  - `importar.mjs` como en la 1.3 (sin la constante `LANZAMIENTO`) [D-95].
-  - [2.0] `importar-titulares.mjs` importa `../js/diario.js` (`ofuscar`, `ofuscarTexto`, `ofuscarNoticia`, `desofuscar`, `desofuscarTexto`, `TEXTO_MAX_BYTES`, `NOTICIA_MAX_BYTES`, `urlFuenteValida`, `validarTitulares`, `validarCalendario`, `fechaDelDia`, `mesDeNumero`), `./temas.mjs`, `./titulares.mjs` y `./creditos.mjs`.
-  - [2.0] `lanzamiento.mjs` importa `../js/diario.js`, `./temas.mjs` y [D-116] `./titulares.mjs` (lectura, unión, reparto y escritura de los archivos mensuales).
-  - `validar.mjs` importa además `./titulares.mjs` y lee todos los archivos de `data/titulares/`.
+  - [2.1] `afirmaciones.mjs` (antes `titulares.mjs`) importa `./temas.mjs` (`analizarCarpeta`, `contienePalabraProhibida`), `../js/diario.js` (`validarAfirmaciones`, `mesDeNumero`, `MES_PATRON`, `fechaDelDia`, `diasEntre`, `temaValido`, `DETALLES_MAX`, `AFIRMACION_MAX_BYTES`, `ACLARACION_MAX_BYTES`) y, solo para sus dos funciones de archivo, `node:fs` y `node:path`.
+  - [2.1] `creditos.mjs` importa `../js/textos.js` y nada de Fact or Fake (la sección es fija, D-129).
+  - `importar.mjs` como en la 1.3 (sin `LANZAMIENTO`) [D-95]; [2.1] ignora `facts.txt`, `facts.en.txt`, `datos.txt` y `datos.original.txt` (4.4.1) [D-139].
+  - [2.1] `importar-afirmaciones.mjs` importa `../js/diario.js` (`ofuscar`, `desofuscar`, `ofuscarAfirmacion`, `ofuscarAclaracion`, `desofuscarAfirmacion`, `validarAfirmaciones`, `validarCalendario`, `fechaDelDia`, `mesDeNumero`), `./temas.mjs` (`barajar`, `avisosMezcla`) y `./afirmaciones.mjs`. No lee ni escribe ningún banco [D-131].
+  - `lanzamiento.mjs` importa `../js/diario.js`, `./temas.mjs` y [2.1] `./afirmaciones.mjs` (lectura, unión, reparto y escritura de `data/facts/`).
+  - `validar.mjs` importa además `./afirmaciones.mjs` y lee todos los archivos de `data/facts/` (sin banco de Fact or Fake, D-131).
 
 ### 3.1 js/textos.js (cronista)
 
-`export const TEXTOS = {...}`, en inglés americano [D-93]. Claves vigentes de la 1.3 más las de la 2.0 [D-113]:
+`export const TEXTOS = {...}`, en inglés americano [D-93]. [2.1] Se eliminan el grupo `titulares` y las claves `portada.reto_titulares`, `portada.regla_titulares`, `como_jugar.pasos_titulares`, `compartir.plantilla_titulares`, `creditos.noticias`, `creditos.noticias_intro`, `creditos.sin_noticias` y `creditos.ficcion`. Los valores entre comillas marcados como **exactos** no se cambian sin permiso; el resto son propuestas que el cronista puede pulir y el usuario aprueba (tarea 82).
 
 | Grupo | Claves |
 |---|---|
-| `portada` | Las de la 1.3 y [2.0] `elige_reto`; `reto_imagenes` (**"Images"**, exacto) y `reto_titulares` (**"Headlines"**, exacto); `estado_pendiente` (p. ej. "Open case"), `estado_jugado` ("Filed · {aciertos}/5"), `estado_en_curso` ("Open in another tab"), `estado_sin_caso` ("No case today"); `boton_ver_informe` ("View report"); `regla_titulares` (sin temporizador, y salir de la página **más de unos segundos** antes de responder es fallo; p. ej. "No timer. Leave the page for more than a few seconds and it's a miss.") [D-115]. |
-| `como_jugar` | `titulo`, `pasos` (Images, exactamente 4) y [2.0] `pasos_titulares` (exactamente 4: dos retos al día con un intento cada uno; leer titular y entradilla y decidir REAL o AI sin prisa; **salir de la página más de unos segundos antes de responder cuenta como fallo** (un vistazo breve, no) [D-115]; tras responder, la fuente o la confesión). |
+| `portada` | Las de la 1.3 y la 2.0 (`elige_reto`, `reto_imagenes` **"Images"** exacto, `estado_pendiente`, `estado_jugado`, `estado_en_curso` **"In another tab"**, `estado_sin_caso`, `boton_ver_informe`) y [2.1] `reto_afirmaciones` (**"Fact or Fake"**, exacto) y `regla_afirmaciones` (mismo valor aprobado que la antigua `regla_titulares`: **"No timer. Leave for more than a few seconds and it's a miss."**). [2.1] `lema`, común a los dos retos: **"Two cases a day. Spot the fake."** (exacto; sustituye a "Five pieces of evidence. One shot. Real or AI?") [D-133]. |
+| `como_jugar` | `titulo`, `pasos` (Images, exactamente 4) y [2.1] `pasos_afirmaciones` (exactamente 4): dos retos al día con un intento cada uno; leer la afirmación y decidir FACT o FAKE sin prisa; salir de la página **más de unos segundos** antes de responder cuenta como fallo; tras responder, la verdad y los detalles. Propuesta: "Two challenges a day, one try each. This one is Fact or Fake.", "Read the claim, then call it: FACT or FAKE. No timer.", "Leave the page for more than a few seconds and it counts as a miss.", "After you answer, you get the truth and the details." |
 | `cargando`, `cuenta_atras` | Sin cambios. |
-| `partida` | Sin cambios. Headlines reutiliza `caso_del_dia`, `marcador`, `boton_autentica`, `boton_generada`, `boton_siguiente` y `boton_ver_resultado`. |
-| `titulares` | [2.0] `etiqueta_prueba` ("Story {i}/5"), `sello_autentica` (p. ej. "REAL · PUBLISHED STORY"), `sello_generada` (**"AI-GENERATED · NOT A REAL STORY"**, exacto, U+00B7), `marca` (marca fija del recorte, p. ej. "identifAI-it · Real or AI?"), `oculta` (array de 2 o más: fallo por haber salido de la página más de unos segundos) [D-115], **`aviso_oculta`** (**"Leaving the page for more than a few seconds counts as a miss."**, exacto) [D-115], `fuente_titulo` ("The source"), `fuente_enlace` ("Read it at {medio}"), `nueva_pestana` ("(opens in a new tab)"), `fuente_no_disponible`, `no_disponible` (si un recorte no se descifra) y `estado_prueba` ("Story {i}: {estado}"). |
-| `veredictos` | Sin cambios (`acierto`, `fallo`). |
-| `confesion`, `ficha`, `fichas` | Sin cambios (Headlines reutiliza `confesion.*` y `ficha.cerrar`; `fichas.*` solo es de Images). |
-| `final` | Los de la 1.3 y [2.0] `reto` ("{reto} · Case #{n}") y `boton_volver` ("Back"). `mensajes` sirve para los dos retos. |
+| `partida` | Sin cambios. Fact or Fake reutiliza `caso_del_dia`, `marcador`, `boton_siguiente` y `boton_ver_resultado` (los votos tienen sus propias claves). |
+| `afirmaciones` | [2.1] `etiqueta_prueba` ("Claim {i}/5"); `boton_autentica` (**"FACT"**, exacto) y `boton_generada` (**"FAKE"**, exacto); `sello_autentica` (**"FACT"**, exacto) y `sello_generada` (**"FAKE"**, exacto); `marca` (**"identifAI-it · Fact or Fake?"**, exacto, U+00B7) [D-128]; `oculta` (array de 2 o más; pueden quedarse los tres valores aprobados de `titulares.oculta`, que no nombran el reto); `aviso_oculta` (**"Leaving the page for more than a few seconds counts as a miss."**, exacto) [D-115]; `no_disponible` (si una afirmación no se descifra; propuesta: "This file can't be read. Try reloading the page."); `aclaracion_no_disponible` (si la aclaración no se descifra; propuesta: "The record on this claim got lost in the paperwork."); `estado_prueba` ("Claim {i}: {estado}"). |
+| `veredictos` | Sin cambios. |
+| `confesion`, `ficha`, `fichas` | Sin cambios (solo Images, salvo `ficha.cerrar`, común). |
+| `final` | Los de la 1.3 y la 2.0 (`reto`, `boton_volver`). [2.1] **Mensajes por reto** [D-134]: `mensajes` es **solo de Images** (6 cadenas, índice = aciertos de 0 a 5; valores actuales sin cambios) y `mensajes_afirmaciones` es **de Fact or Fake** (6 cadenas, índice = aciertos de 0 a 5, tono policíaco, sin hablar de IA ni de imágenes). `mensajes_afirmaciones` está **aprobado por el usuario y es exacto** [D-138], en este orden: (0) "The paperwork beat you. Not one call survived. The file goes in the drawer, face down.", (1) "One call held up. The other lies were sharper than you. Check the sources.", (2) "Two right calls. A fake in a good suit got past you. Check the source before you sign.", (3) "Three right calls. Solid instincts, but two lies still slipped past your desk.", (4) "Four right calls. One lie got away. Read every claim like a suspect's alibi.", (5) "Every fact confirmed, every fake exposed. No loose ends in this file." Cómo se elige el conjunto: `mensajesDelReto` (3.3). |
 | `ya_jugado` | Sin cambios (`modo` solo en Images). |
-| `sin_casos` | `texto` y [2.0] `sin_lanzamiento` (todavía no hay fecha de apertura, p. ej. "The precinct opens soon. No cases on file yet."). |
+| `sin_casos` | `texto` y `sin_lanzamiento` (2.0). |
 | `errores` | Sin cambios. |
-| `avisos` | Los de la 1.3 y [2.0] `prueba` ("Test mode · Day {n}: nothing gets saved."). |
-| `prueba` | Sin cambios (`opcion` "Day {n}: {tema}", con `{tema}` = los temas conocidos del día unidos por " / "). |
-| `compartir` | `boton`, `copiado`, `manual`, `plantilla` (Images) y [2.0] `plantilla_titulares`, exactamente las de la sección 7 [D-112]. |
-| `creditos` | Los de la 1.3 y [2.0] `noticias`, `noticias_intro`, `sin_noticias` y `ficcion` [D-111]. |
+| `avisos` | Los de la 1.3 y `prueba` (2.0). |
+| `prueba` | Sin cambios. |
+| `compartir` | `boton`, `copiado`, `manual`, `plantilla` (Images) y [2.1] `plantilla_afirmaciones`, exactamente las de la sección 7 [D-128]. |
+| `creditos` | Los de la 1.3 y [2.1] `afirmaciones` ("Fact or Fake") y `afirmaciones_texto`, **exacto**: "Claims are written for this game from public sources. The fakes are invented and always debunked after you answer." (114 caracteres) [D-129, D-132]. |
 
-Reglas [2.0] (además de las de la 1.3):
-- Límites: `portada.reto_*` 12 caracteres; `portada.estado_*` 18 (rellenados con 5); `portada.regla_titulares` 70; `portada.boton_ver_informe` y `final.boton_volver` 16; `titulares.etiqueta_prueba` 16; `titulares.sello_autentica` 32; `titulares.marca` 40; `titulares.fuente_enlace` 24 sin contar `{medio}`; cada `titulares.oculta` 90; `titulares.aviso_oculta` es exacto (63 caracteres); `como_jugar.pasos_titulares` 80 cada uno; `avisos.prueba` 70.
-- Valores exactos que el cronista no puede cambiar por su cuenta: `portada.reto_imagenes`, `portada.reto_titulares`, `titulares.sello_generada`, **`titulares.aviso_oculta`** [D-115], `compartir.plantilla`, `compartir.plantilla_titulares`, además de los de la 1.3.
-- Los textos de Headlines que hablan de salir de la página dicen "more than a few seconds" (o equivalente), nunca que cualquier salida es fallo, y no hace falta que citen la cifra de 3 s [D-115].
-- Ningún texto de Headlines nombra un medio, una persona o una institución.
+Reglas:
+- [D-118] **Cómo se mide**: en puntos de código (`[...s].length`) sobre el texto **ya rellenado** con los valores de relleno de esta tabla. Los tests definen una constante con exactamente estos valores; un marcador que no esté aquí hace fallar el test.
+
+  | Marcador | Valor de relleno |
+  |---|---|
+  | `{aciertos}`, `{i}` | `'5'` |
+  | `{n}`, `{caso}`, `{racha}` | `'999'` |
+  | `{s}` | `'9'` |
+  | `{tiempo}` | `'00:00:00'` |
+  | `{tema}` | 30 caracteres (`'x'.repeat(30)`) |
+  | `{fecha}` | `'Nov 30, 2026'` |
+  | `{modo}` | el más largo de `portada.modo_*` |
+  | `{reto}` | el más largo de `portada.reto_*` |
+  | `{estado}` | el más largo de `final.estados.*` |
+  | `{sello}` | [2.1] el más largo de `partida.sello_*` y `afirmaciones.sello_*` |
+
+  ([2.1] Desaparece `{medio}`.)
+- **Límite general**: toda cadena de `TEXTOS`, rellenada, mide **90** como máximo (también cada `final.mensajes_afirmaciones`, y los 6 aprobados lo cumplen). Excepciones: `fichas.*` (510 bytes UTF-8); `como_jugar.pasos` y `como_jugar.pasos_afirmaciones` (80 cada uno); `compartir.plantilla` y `compartir.plantilla_afirmaciones` (exactas, no se miden); [2.1] `creditos.afirmaciones_texto` (120).
+- Límites de la 1.3 que siguen: `portada.modo_*` 14; `portada.desc_*` 26; `partida.sobre_texto` 16; `confesion.titulo` 30; `confesion.leer_entera` 24; `ficha.cerrar` 16; `prueba.opcion` 50.
+- Límites de la 2.0 que siguen: `portada.reto_*` 12; `portada.estado_*` 18; `portada.boton_ver_informe` y `final.boton_volver` 16; `avisos.prueba` 70. [2.1] `portada.regla_afirmaciones` 70; `afirmaciones.etiqueta_prueba` 16; `afirmaciones.boton_*` y `afirmaciones.sello_*` 12; `afirmaciones.marca` 40; cada `afirmaciones.oculta` 90; `afirmaciones.aviso_oculta` exacto (62).
+- Valores exactos que el cronista no puede cambiar: `portada.reto_imagenes`, `portada.reto_afirmaciones`, [2.1] `portada.lema`, `afirmaciones.boton_*`, `afirmaciones.sello_*`, `afirmaciones.marca`, `afirmaciones.aviso_oculta`, `compartir.plantilla`, `compartir.plantilla_afirmaciones`, [2.1] `creditos.afirmaciones_texto`, [2.1] `final.mensajes_afirmaciones` (los 6, en su orden) [D-138], además de los de la 1.3.
+- Los textos de Fact or Fake que hablan de salir de la página dicen "more than a few seconds" (o equivalente), nunca que cualquier salida es fallo [D-115].
+- Ningún texto de Fact or Fake nombra una persona, una institución ni un medio, ni afirma nada sobre el contenido de un día.
+- [2.1] `final.mensajes_afirmaciones` no habla de IA, imágenes ni fotos (y `final.mensajes` sigue siendo solo de Images) [D-134].
 
 ### 3.2 js/diario.js (agente-de-campo)
 
-Siguen, sin cambios, `fechaLocal`, `sumarDias`, `diasEntre`, `formatearFecha`, `numeroCaso`, `msHastaMedianoche`, `formatearCuentaAtras`, `temaValido`, `rutaPrueba`, `ofuscar`, `desofuscar`, `HOSTS_LOCALES`, `fechaPrevisualizada`, `pruebaActiva`, `FICHA_BLOQUE`, `FICHA_MAX_BYTES`, `flujoFicha`, `ofuscarFicha`, `desofuscarFicha` (misma salida: el vector de D-92 sigue valiendo), `cargarCalendario` y `precargar`.
+Siguen, sin cambios, `fechaLocal`, `sumarDias`, `diasEntre`, `formatearFecha`, `numeroCaso`, `msHastaMedianoche`, `formatearCuentaAtras`, `temaValido`, `rutaPrueba`, `ofuscar`, `desofuscar`, `HOSTS_LOCALES`, `fechaPrevisualizada`, `pruebaActiva`, `FICHA_BLOQUE`, `FICHA_MAX_BYTES`, `flujoFicha`, `ofuscarFicha`, `desofuscarFicha`, `cargarCalendario`, `precargar` y, de la 2.0, `FECHA_BASE_PRUEBA`, `numeroDelDia`, `fechaDelDia`, `validarCalendario` (versión 4), `casoDelDia`, `casoDeNumero`, `flujoBytes`, `ofuscarBloque`, `desofuscarBloque`, `MES_PATRON`, `mesDeFecha`, `mesDeNumero` y `diaDePrueba` (firmas y comportamiento de la 2.0; ver `git show` de la tarea 63).
 
-**Lanzamiento y calendario** [2.0, D-95, D-96]:
+**[2.1] Se retiran** (código de la tarea 62 que hay que borrar con sus tests): `TEXTO_BLOQUE`, `TEXTO_MAX_BYTES`, `NOTICIA_BLOQUE`, `NOTICIA_MAX_BYTES`, `ofuscarTexto`, `desofuscarTexto`, `ofuscarNoticia`, `desofuscarNoticia`, `urlFuenteValida` y `medioDeUrl`.
 
-| Función | Tipo | Parámetros → retorno | Notas |
-|---|---|---|---|
-| `FECHA_BASE_PRUEBA` | constante | | `'2000-01-01'`: base de fechas ficticias del modo prueba sin lanzamiento [D-110] y de los nombres de los archivos mensuales de titulares sin lanzamiento [D-116]. |
-| `numeroDelDia(fechaISO, lanzamiento)` | pura | → `number \| null` | `null` si `lanzamiento` es `null` o la fecha es anterior; si no, `numeroCaso(fechaISO, lanzamiento)`. |
-| `fechaDelDia(lanzamiento, n)` | pura | → `string \| null` | `null` si `lanzamiento` es `null`; si no, `sumarDias(lanzamiento, n - 1)`. |
-| `validarCalendario(obj)` | pura | → `boolean` | **Versión 4**: claves exactas `version`, `lanzamiento`, `dias`; `version === 4`; `lanzamiento` es `null` o una fecha ISO válida (`sumarDias(x, 0) === x`); cada día con claves exactas `n`, `tema`, `pruebas`, `clave`, `fichas` (**sin `fecha`**), `n === k + 1` y el resto como en la 1.3. Rechaza las versiones 1, 2 y 3. |
-| `casoDelDia(calendario, fechaISO)` | pura | → `{n, fecha, tema, pruebas, clave, fichas}` o `null` | `n = numeroDelDia(fechaISO, calendario.lanzamiento)`; `null` si `n` es `null` o no hay día `n`. `fecha` = `fechaISO`. |
-| `casoDeNumero(calendario, n)` | pura | → mismo objeto o `null` | Para el modo prueba: el día `n` aunque no haya lanzamiento, con `fecha = fechaDelDia(calendario.lanzamiento ?? FECHA_BASE_PRUEBA, n)`. |
-| `cargarCalendario(url, pedir)` | async | | Igual, con `validarCalendario` versión 4. |
-
-**Bloques ofuscados genéricos** [2.0, D-103] (algoritmo en 4.8):
+**Afirmaciones y aclaraciones** [2.1, D-124] (algoritmo en 4.8):
 
 | Función | Tipo | Parámetros → retorno | Notas |
 |---|---|---|---|
-| `flujoBytes(semilla, largo)` | pura | `string, number` → `Uint8Array(largo)` | `mulberry32(fnv1a32(semilla))`, `floor(azar() * 256)`. `flujoFicha(clave, n, i)` es `flujoBytes(\`${clave}\|${n}\|${i}\`, 512)`. |
-| `ofuscarBloque(bytes, semilla, largoBloque, aleatorio = Math.random)` | pura | `Uint8Array, string, number` → base64 | 2 bytes de longitud + contenido + relleno, XOR con el flujo. `RangeError` si `bytes.length > largoBloque - 2`. |
-| `desofuscarBloque(cadena, semilla, largoBloque)` | pura, nunca lanza | → `Uint8Array \| null` | `null` si la cadena no tiene exactamente `4 * ceil(largoBloque / 3)` caracteres base64 válidos con el relleno `=` correcto, si `atob` falla o si la longitud descifrada supera `largoBloque - 2`. |
+| `AFIRMACION_BLOQUE`, `AFIRMACION_MAX_BYTES` | constantes | | `512` y `510`. |
+| `ACLARACION_BLOQUE`, `ACLARACION_MAX_BYTES` | constantes | | `512` y `510`. |
+| `DETALLES_MAX` | constante | | `3`. |
+| `ofuscarAfirmacion(texto, clave, n, indice, aleatorio = Math.random)` | pura | → 684 caracteres | Contenido UTF-8 de `texto`; semilla `` `${clave}|${n}|${indice}|afirmacion` ``. `TypeError` si `texto` no es una cadena no vacía o contiene `\n`; `RangeError` si pasa de 510 bytes. |
+| `desofuscarAfirmacion(cadena, clave, n, indice)` | pura, nunca lanza | → `string \| null` | `null` si el bloque no se descifra, no es UTF-8 válido, está vacío o contiene `\n`. |
+| `ofuscarAclaracion({aclaracion, detalles}, clave, n, indice, aleatorio = Math.random)` | pura | → 684 caracteres | Contenido UTF-8 de `[aclaracion, ...detalles].join('\n')`; semilla `` `${clave}|${n}|${indice}|aclaracion` ``. `detalles` es un array de 0 a 3 cadenas (por defecto `[]`). `TypeError` si `aclaracion` o algún detalle no es una cadena no vacía, contiene `\n`, o hay más de 3 detalles; `RangeError` si pasa de 510 bytes. |
+| `desofuscarAclaracion(cadena, clave, n, indice)` | pura, nunca lanza | → `{aclaracion, detalles} \| null` | Parte por `\n`: la primera parte es la aclaración y el resto, los detalles (array, posiblemente vacío). `null` si no se descifra, no es UTF-8 válido, alguna parte está vacía o hay más de 4 partes. |
 
-`ofuscarFicha` y `desofuscarFicha` pasan a implementarse sobre estas dos funciones, sin cambiar su salida (criterio 167).
+**Archivos mensuales de Fact or Fake** [2.1, D-116, D-117, D-124] (formato y reglas en 4.7; carga en 4.7.2). Son las funciones de la 2.0 renombradas; el comportamiento no cambia salvo la carpeta y `validarAfirmaciones`:
 
-**Headlines** [2.0, D-103, D-104]:
+| Función | Antes (2.0) | Notas |
+|---|---|---|
+| `AFIRMACIONES_CARPETA` | `TITULARES_CARPETA` | `'data/facts/'`. |
+| `rutaAfirmaciones(mes)` | `rutaTitulares` | `` `data/facts/${mes}.json` `` si `MES_PATRON` lo acepta; si no, `null`. |
+| `afirmacionesVacias(mes)` | `titularesVacios` | `{version: 1, mes, dias: []}`. |
+| `validarAfirmaciones(obj, mes)` | `validarTitulares` | Claves exactas `version` (=== 1), `mes`, `dias`; `MES_PATRON`; `obj.mes === mes` si se pasa; al menos un día; cada día con claves exactas `n`, `tema`, `clave`, `textos`, `fichas`; `n` entero ≥ 1 y consecutivo dentro del archivo; `temaValido`; clave de 5 bytes; **`textos` y `fichas`: 5 cadenas `/^[A-Za-z0-9+/]{683}=$/` cada uno** (en la 2.0, las fichas eran de 1368). No descifra nada. |
+| `afirmacionesDelDia(datos, lanzamiento, fechaISO)` | `titularesDelDia` | → `{n, fecha, tema, clave, textos, fichas} \| null`. |
+| `afirmacionesDeNumero(datos, lanzamiento, n)` | `titularesDeNumero` | Modo prueba. |
+| `afirmacionesDelMes(meses, mes)` | `titularesDelMes` | |
+| `cargarAfirmaciones(fechaISO, pedir = fetch)` | `cargarTitulares` | Pide solo `rutaAfirmaciones(mesDeFecha(fechaISO))`; 404 → `afirmacionesVacias(mes)`. |
+| `cargarAfirmacionesPrueba(lanzamiento, pedir = fetch)` | `cargarTitularesPrueba` | Sondeo en serie de 4.7.2. |
 
-| Función | Tipo | Parámetros → retorno | Notas |
-|---|---|---|---|
-| `TEXTO_BLOQUE`, `TEXTO_MAX_BYTES` | constantes | | `512` y `510`. |
-| `ofuscarTexto({titular, entradilla}, clave, n, indice, aleatorio)` | pura | → 684 caracteres | Contenido UTF-8 de `titular + '\n' + entradilla`, semilla `` `${clave}|${n}|${indice}|texto` ``. `TypeError` si alguno no es una cadena no vacía o si `titular` contiene `\n`; `RangeError` si pasa de 510 bytes. |
-| `desofuscarTexto(cadena, clave, n, indice)` | pura, nunca lanza | → `{titular, entradilla} \| null` | `null` si el bloque no se descifra, no es UTF-8 válido, no contiene `\n` o alguna parte queda vacía. Se parte por el **primer** `\n`. |
-| `NOTICIA_BLOQUE`, `NOTICIA_MAX_BYTES` | constantes | | `1024` y `1021` (1024 − 2 de longitud − 1 de tipo) [DP-39]. |
-| `ofuscarNoticia({tipo, texto}, clave, n, indice, aleatorio)` | pura | → 1368 caracteres | `tipo` `'fuente'` (byte 0) o `'prompt'` (byte 1); contenido = byte de tipo + UTF-8 de `texto`; semilla `` `${clave}|${n}|${indice}|noticia` ``. `TypeError` con un tipo desconocido o un texto vacío o que no sea cadena; `RangeError` si `texto` pasa de 1021 bytes. |
-| `desofuscarNoticia(cadena, clave, n, indice)` | pura, nunca lanza | → `{tipo, texto} \| null` | `null` si no se descifra, si el contenido está vacío, si el byte de tipo no es 0 ni 1, si el texto es vacío o no es UTF-8 válido. |
-| `urlFuenteValida(url)` | pura | → `boolean` | `true` si es una cadena de 1021 bytes UTF-8 como máximo, `new URL(url)` no lanza, `protocol === 'https:'`, sin usuario ni contraseña, con un `hostname` que contiene un punto y no es una IP, y `new URL(url).href === url` (forma normalizada, la que guarda el importador). |
-| `medioDeUrl(url)` | pura | → `string \| null` | `hostname` sin un `www.` inicial, o `null` si la URL no es válida. |
-
-**Archivos mensuales de Headlines** [D-116] (formato y reglas en 4.7; carga en 4.7.2):
-
-| Función | Tipo | Parámetros → retorno | Notas |
-|---|---|---|---|
-| `MES_PATRON` | constante | | `/^\d{4}-(0[1-9]\|1[0-2])$/`. |
-| `TITULARES_CARPETA` | constante | | `'data/titulares/'` (relativa, sin `/` inicial). |
-| `mesDeFecha(fechaISO)` | pura | → `'AAAA-MM' \| null` | Los 7 primeros caracteres si `fechaISO` es una fecha ISO válida (`sumarDias(x, 0) === x`); si no, `null`. |
-| `mesDeNumero(lanzamiento, n)` | pura | → `'AAAA-MM' \| null` | `mesDeFecha(fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n))`; `null` si `n` no es un entero ≥ 1 o si `lanzamiento` no es `null` ni una fecha ISO válida. Es la **única** regla que asigna un día a un archivo, en el juego y en las herramientas. |
-| `rutaTitulares(mes)` | pura | → `string \| null` | `` `data/titulares/${mes}.json` `` si `MES_PATRON` lo acepta; si no, `null`. |
-| `titularesVacios(mes)` | pura | → `{version: 1, mes, dias: []}` | Lo que devuelve `cargarTitulares` cuando el mes no tiene archivo. Nunca se escribe en disco. |
-| `validarTitulares(obj, mes)` | pura | → `boolean` | Estructura de 4.7: claves exactas `version` (=== 1), `mes` y `dias`; `MES_PATRON.test(obj.mes)`; si se pasa `mes`, `obj.mes === mes`; `dias` con **al menos 1** día; cada día con claves exactas `n`, `tema`, `clave`, `textos`, `fichas`; `n` entero ≥ 1 y consecutivo dentro del archivo (`dias[k].n === dias[0].n + k`); `temaValido`; clave de 5 bytes; `textos`: 5 cadenas `/^[A-Za-z0-9+/]{683}=$/`; `fichas`: 5 cadenas `/^[A-Za-z0-9+/]{1366}==$/`. No descifra nada ni comprueba que cada `n` sea de ese mes (eso lo hacen `titularesDelDia`, `titularesDeNumero` y `validar`). |
-| `titularesDelDia(titulares, lanzamiento, fechaISO)` | pura | → `{n, fecha, tema, clave, textos, fichas} \| null` | `n = numeroDelDia(fechaISO, lanzamiento)`; `null` si `titulares` es `null`, si `n` es `null`, si `titulares.mes !== mesDeFecha(fechaISO)` o si no hay día `n` en `titulares.dias` (se busca por `n`, no por posición). `fecha` = `fechaISO`. |
-| `titularesDeNumero(titulares, lanzamiento, n)` | pura | → mismo objeto o `null` | Para el modo prueba: el día `n` si `titulares.mes === mesDeNumero(lanzamiento, n)` y existe; `fecha = fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`. Un `n` de otro mes → `null` (no lo tiene el archivo cargado). |
-| `cargarTitulares(fechaISO, pedir = fetch)` | async | → objeto de titulares | `mes = mesDeFecha(fechaISO)` (si es `null`, rechaza sin pedir nada); pide **solo** `rutaTitulares(mes)` con `{cache: 'no-cache'}`. Respuesta 404 → `titularesVacios(mes)`. Otra respuesta no 2xx, error de red, JSON inválido o `!validarTitulares(obj, mes)` → rechaza (`ERROR_CALENDARIO`). |
-
-**Modo prueba** [2.0, D-110, D-116]:
+**Modo prueba** [2.0, D-110, D-117]:
 
 | Función | Tipo | Notas |
 |---|---|---|
-| `diaPedido(search)` | pura | → el `n` de `?dia=` si es un entero ≥ 1 escrito en decimal sin signo ni ceros a la izquierda; si no, `null` [D-116]. |
-| `diasDePrueba(calendario, titulares)` | pura | `titulares` es **el mes cargado**. → `[{n, temaImagenes, temaTitulares}]`, ordenado por `n`, con la unión de los `n` del calendario y del mes cargado (`null` en el tema del reto que no tenga ese día o cuyo día esté en otro mes). Nunca copia `pruebas`, `clave`, `textos` ni `fichas`. Con datos ausentes o inválidos, los trata como sin días. |
-| `diaDePrueba(search, dias, nHoy)` | pura | → el día de `?dia=n` si existe; si no, el de `nHoy` si existe; si no, el primero; `null` si no hay días. `nHoy` puede ser `null`. |
+| `diasDePrueba(calendario, meses)` | pura | [2.1] → `[{n, temaImagenes, temaAfirmaciones}]` (antes `temaTitulares`), ordenado por `n`, con la unión de los `n` del calendario y de todos los meses; usa `validarAfirmaciones`. El resto, como en la 2.0. |
+| `diaDePrueba(search, dias, nHoy)` | pura | Sin cambios. |
 
 ### 3.3 js/juego.js (agente-de-campo)
 
-Siguen `MODOS`, `MODO_POR_DEFECTO`, `modoValido`, `VOTOS`, `corregir`, `contarAciertos`, `estadoDeCodigo`, `elegirVariante`, `mensajeFinal` y `recortarFicha`. Cambios [2.0]:
+Siguen `MODOS`, `MODO_POR_DEFECTO`, `modoValido`, `VOTOS`, `corregir`, `contarAciertos`, `estadoDeCodigo`, `elegirVariante`, `mensajeFinal`, `recortarFicha`, `RETO_POR_DEFECTO`, `retoValido`, `retoDePrueba`, `OCULTA_MAX_MS`, `ocultacionEsFallo` y `medirOculta`. Cambios:
 
 | Exportación | Tipo | Descripción |
 |---|---|---|
-| `RETOS` | constante | `Object.freeze(['imagenes', 'titulares'])` [D-98]. |
-| `RETO_POR_DEFECTO` | constante | `'imagenes'`. |
-| `retoValido(reto)` | pura | `true` solo para los valores de `RETOS`. |
-| `retoDePrueba(search)` | pura | El valor de `?reto=` si es válido; si no, `null` [D-110]. |
-| `OCULTA_MAX_MS` | constante | `3000` [D-115]. Umbral de una ausencia en Headlines. |
-| `ocultacionEsFallo(ocultoMs)` | pura | `true` solo si `typeof ocultoMs === 'number'` y `ocultoMs > OCULTA_MAX_MS` (estrictamente mayor: 3000 no es fallo; `Infinity` sí; `NaN`, negativos, cadenas y `undefined`, no) [D-115]. |
-| `medirOculta(inicio, fin)` | pura | `inicio` y `fin` son `{perf, fecha}` (valores de `performance.now()` y `Date.now()` que toma main.js). → `Math.max(0, dPerf, dFecha)`, donde `dPerf = fin.perf - inicio.perf` y `dFecha = fin.fecha - inicio.fecha`; un intervalo con algún valor no finito se ignora (cuenta como 0). Nunca lanza; con argumentos ausentes devuelve 0 [D-115]. |
-| `estadoInicial({modo, reto})` | pura | Estado de 1.2 con `pantalla: 'iniciando'`, `reto` validado (o `RETO_POR_DEFECTO`), `modo` validado, `retos` con los dos casos `null` y `jugado: false`, y `textos`, `texto` y `motivo` a `null`. |
-| `transicion(estado, evento)` | pura | Tabla 1.3. Eventos: `CARGADO {retos, reto}`, `ERROR_CALENDARIO`, `ELEGIR_RETO {reto}`, `ELEGIR_MODO {modo}`, `EMPEZAR {fecha}`, `PRECARGA_OK`, `PRECARGA_ERROR`, `REINTENTAR`, `FIN_CUENTA {fecha}`, `PINTADA`, `VOTO {voto}`, `AGOTADO`, **`VOLVIO {ocultoMs, indice}`** [D-115], `SIGUIENTE`, `VOLVER_PORTADA`, `OTRA_PESTANA {reto}`, `MEDIANOCHE`. **Ya no existe `OCULTA`** (si llega, es un evento no listado: el mismo objeto). Nunca muta: devuelve uno nuevo o el mismo objeto. |
+| `RETOS` | constante | [2.1] `Object.freeze(['imagenes', 'afirmaciones'])` [D-121]. |
+| `TECLAS` | constante | [2.1] `Object.freeze({imagenes: Object.freeze({r: 'autentica', i: 'generada'}), afirmaciones: Object.freeze({f: 'autentica', k: 'generada'})})` [D-122]. |
+| `votoDeTecla(reto, tecla)` | pura | [2.1] El voto de `TECLAS[reto][tecla.toLowerCase()]`, o `null` si el reto no es válido, `tecla` no es una cadena de un carácter o no está en la tabla. main.js no la llama si hay Ctrl, Alt o Meta. |
+| `teclaDeVoto(reto, voto)` | pura | [2.1] La tecla en mayúscula (`'R'`, `'I'`, `'F'`, `'K'`) para el `kbd` y `aria-keyshortcuts`; `null` si no hay. |
+| `mensajesDelReto(reto, final)` | pura | [2.1, D-134] Devuelve el conjunto de mensajes finales del reto: `final.mensajes_afirmaciones` si `reto === 'afirmaciones'`, `final.mensajes` si `reto === 'imagenes'`, y `null` si el reto no es válido (`retoValido`) o `final` no es un objeto. No copia ni valida el array (lo comprueba el test de textos). Uso: `mensajeFinal(aciertos, mensajesDelReto(reto, TEXTOS.final))`. `mensajeFinal(aciertos, mensajes)` no cambia (lanza `RangeError` fuera de 0..5). |
+| `estadoInicial({modo, reto})` | pura | Estado de 1.2 con `retos: {imagenes, afirmaciones}`. |
+| `transicion(estado, evento)` | pura | Tabla 1.3. [2.1] Donde la 2.0 decía `'titulares'`, ahora `'afirmaciones'`. Eventos sin cambios (`VOLVIO {ocultoMs, indice}` incluido; `OCULTA` no existe). |
 
-Detalles:
-- `VOTO` y `VOLVIO` (cuando es fallo) en Headlines: `revelada = desofuscar(clave, n, indice)` y `ficha = desofuscarNoticia(fichas[indice], clave, n, indice)`. En Images, `VOTO` como en la 1.3.
-- `EMPEZAR` (Headlines) y `SIGUIENTE` (Headlines) calculan `texto = desofuscarTexto(textos[indice], clave, n, indice)`.
-- `VOLVIO` devuelve el mismo objeto en Images, fuera de `caso/pregunta`, con `activo === false`, con `evento.indice !== estado.indice` o si `!ocultacionEsFallo(evento.ocultoMs)` (convive con D-78) [D-101, D-115].
-- La decisión del umbral vive en `transicion` (pura y probada); main.js solo mide.
-- `CARGADO` recibe `retos` ya preparado por main.js: `{imagenes: {caso, jugado}, titulares: {caso, jugado}}`.
+Detalles [2.1]:
+- `VOTO` y `VOLVIO` (cuando es fallo) en Fact or Fake: `revelada = desofuscar(clave, n, indice)` y `ficha = desofuscarAclaracion(fichas[indice], clave, n, indice)`.
+- `EMPEZAR` y `SIGUIENTE` en Fact or Fake: `texto = desofuscarAfirmacion(textos[indice], clave, n, indice)` (una cadena o `null`).
+- `VOLVIO` devuelve el mismo objeto en Images, fuera de `caso/pregunta`, con `activo === false`, con `evento.indice !== estado.indice` o si `!ocultacionEsFallo(evento.ocultoMs)`.
+- `CARGADO` recibe `retos` ya preparado por main.js: `{imagenes: {caso, jugado}, afirmaciones: {caso, jugado}}`.
 
 ### 3.4 js/temporizador.js
 
-Sin cambios. Headlines solo usa `esperarPintado` (para `PINTADA`); no crea temporizadores (tampoco para la ausencia: se mide al volver, D-115).
+Sin cambios. Fact or Fake solo usa `esperarPintado` (para `PINTADA`).
 
 ### 3.5 js/almacen.js (agente-de-campo) [2.0, D-109]
 
+Como en la 2.0, con [2.1] `afirmaciones` en lugar de `titulares` [D-121]:
+
 | Función | Tipo | Descripción |
 |---|---|---|
-| `CLAVE`, `VERSION` | constantes | `'identifaiit.v3'` y `3`. |
-| `datosIniciales()` | pura | `{version: 3, ajustes: {modo: 'normal', reto: 'imagenes'}, retos: {imagenes: {partidas: {}, racha: 0, mejorRacha: 0}, titulares: {partidas: {}, racha: 0, mejorRacha: 0}}}`. |
-| `leer(almacen)` | efecto, nunca lanza | Lee **solo** `identifaiit.v3`; JSON inválido, `version !== 3` o estructura incompleta → datos iniciales (rellenando lo que falte). No lee, no migra y no borra `identifaiit.v2` ni `identifaiit.v1`. |
-| `guardar`, `leerConRespaldo`, `guardarConRespaldo`, `actualizar`, `crearAlmacenMemoria` | | Sin cambios de firma (usan `CLAVE`). |
-| `conAjustes(datos, cambios)` | pura | Mezcla `{modo?, reto?}` en `ajustes`. |
-| `partidaDe(datos, reto, fecha)` | pura | → partida o `null`. |
-| `registrarInicio(datos, reto, {fecha, n, modo, sesion})` | pura | Como en la 1.3, dentro de `retos[reto].partidas`. En Headlines, `modo: null`. |
-| `registrarPrueba(datos, reto, fecha, indice, codigo, sesion)` | pura | |
-| `registrarFin(datos, reto, fecha, hoyISO, sesion)` | pura | Recalcula `racha` y `mejorRacha` **de ese reto**. |
-| `cerrarAbandonada(datos, reto, fecha, hoyISO)` | pura | Pendientes → `F` y `registrarFin`. |
-| `calcularRacha(partidas, hoyISO)` | pura | Sin cambios; se llama con las partidas de un reto [D-25, D-99]. |
+| `CLAVE`, `VERSION` | constantes | `'identifaiit.v3'` y `3` (sin cambio de versión: la v3 nunca se publicó). |
+| `datosIniciales()` | pura | `{version: 3, ajustes: {modo: 'normal', reto: 'imagenes'}, retos: {imagenes: {partidas: {}, racha: 0, mejorRacha: 0}, afirmaciones: {partidas: {}, racha: 0, mejorRacha: 0}}}`. |
+| `leer(almacen)` | efecto, nunca lanza | Lee solo `identifaiit.v3`; JSON inválido, `version !== 3` o estructura incompleta → datos iniciales (rellenando lo que falte; un `retos.titulares` que hubiera quedado de una prueba local se ignora y desaparece al guardar). |
+| `guardar`, `leerConRespaldo`, `guardarConRespaldo`, `actualizar`, `crearAlmacenMemoria`, `conAjustes`, `partidaDe`, `registrarInicio`, `registrarPrueba`, `registrarFin`, `cerrarAbandonada`, `calcularRacha` | | Sin cambios de firma; `reto` es `imagenes` o `afirmaciones` (en Fact or Fake, `modo: null`). |
 
-- Con un `reto` que no es `imagenes` ni `titulares`, las funciones devuelven `datos` sin cambios y `partidaDe` devuelve `null`; nunca lanzan.
-- Nunca se guardan la verdad, el voto, la ficha, el texto, `tapada`, `motivo`, el tema ni los instantes o duraciones de una ausencia [D-115]. main.js valida `ajustes.modo` con `modoValido` y `ajustes.reto` con `retoValido`.
+- Con un `reto` que no es `imagenes` ni `afirmaciones` (también `titulares`), las funciones devuelven `datos` sin cambios y `partidaDe` devuelve `null`; nunca lanzan.
+- Nunca se guardan la verdad, el voto, la ficha, la afirmación, `tapada`, `motivo`, el tema, el mensaje final ni los instantes o duraciones de una ausencia.
 
 ### 3.6 js/compartir.js
 
-Sin cambios de funciones. `textoCompartir({plantilla, n, nombreModo, resultados, racha, url})`: `nombreModo` es opcional (la plantilla de Headlines no tiene `{modo}`).
+Sin cambios de funciones. `textoCompartir({plantilla, n, nombreModo, resultados, racha, url})`: `nombreModo` es opcional (la plantilla de Fact or Fake no tiene `{modo}`). El mensaje final no entra en el texto compartido.
 
 ### 3.7 js/main.js (agente-de-campo)
 
-Lo de la 1.3, con estos cambios [2.0]:
+Lo de la 1.3 y la 2.0, con [2.1] estos cambios (el `main.js` actual es aún el de la 1.3: la tarea 77 está pendiente):
 
-1. **Arranque**: decidir previsualización y modo prueba; `leer()`; `estadoInicial({modo, reto})` con `ajustes` validados (en modo prueba, `reto = retoDePrueba(location.search) ?? RETO_POR_DEFECTO`); rellenar textos; marcar los radios de modo y de reto; registrar los oyentes de bloqueo de copia en `#recorte`; cargar los datos [D-116]:
-   - **Juego normal y previsualización**: en paralelo, `cargarCalendario()` y `cargarTitulares(hoy)` (con `hoy` = la fecha efectiva). Solo se pide el archivo del mes de `hoy`.
-   - **Modo prueba**: primero `cargarCalendario()` (hace falta `lanzamiento`); después `nPedido = diaPedido(location.search) ?? nHoy ?? 1`, con `nHoy = numeroDelDia(fechaLocal(new Date()), lanzamiento)`, y `cargarTitulares(fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, nPedido))`. Tras `diaDePrueba`, si `mesDeNumero(lanzamiento, dia.n)` no es el mes cargado (el `?dia=` no existía y se cayó a otro día), una segunda y última llamada a `cargarTitulares` con la fecha de `dia.n`.
-   - Si falla cualquier carga, `ERROR_CALENDARIO` (un 404 del mes no es fallo, 4.7.2).
-2. **Caso de cada reto**: en el juego normal, `casoDelDia(calendario, hoy)` y `titularesDelDia(titulares, calendario.lanzamiento, hoy)`; en modo prueba, `casoDeNumero` y `titularesDeNumero` con el `n` elegido. Para cada reto con partida de hoy `en_curso`, `cerrarAbandonada`. `jugado` = hay partida `terminada`. Despachar `CARGADO {retos, reto}`.
-3. **`render`**: `data-reto` en `#app`; portada (estados de los retos, tema, modos o regla, racha del reto, texto y `disabled` de Start, pasos de Cómo jugar del reto); en `caso`, según reto: imagen y sobre, o `#recorte` (texto de `estado.texto`) y `#caso-aviso` (visible solo en la pregunta de la prueba 1 de Headlines, 2.3) [D-115]; veredicto de 2.3 (sello, `data-verdad`, texto de `titulares.oculta` si `motivo === 'oculta'`, fuente o confesión); resultado (miniaturas o botones numerados, `#resultado-reto`); ya jugado (`#ya-jugado-reto`, modo oculto en Headlines); `#sin-casos-texto`.
+1. **Arranque**: decidir previsualización y modo prueba; `leer()`; `estadoInicial({modo, reto})` con `ajustes` validados (en modo prueba, `reto = retoDePrueba(location.search) ?? RETO_POR_DEFECTO`); rellenar textos; marcar los radios; registrar los oyentes de bloqueo de copia en `#afirmacion`; cargar los datos:
+   - **Juego normal y previsualización**: en paralelo, `cargarCalendario()` y `cargarAfirmaciones(hoy)` (fecha efectiva).
+   - **Modo prueba**: primero `cargarCalendario()`; después `meses = await cargarAfirmacionesPrueba(lanzamiento)`; `dias = diasDePrueba(calendario, meses)`; `dia = diaDePrueba(location.search, dias, nHoy)`; archivo del día `afirmacionesDelMes(meses, mesDeNumero(lanzamiento, dia.n))`.
+   - Si falla cualquier carga, `ERROR_CALENDARIO` (un 404 no es fallo).
+2. **Caso de cada reto**: juego normal, `casoDelDia(calendario, hoy)` y `afirmacionesDelDia(datos, calendario.lanzamiento, hoy)`; modo prueba, `casoDeNumero` y `afirmacionesDeNumero(...)`. `cerrarAbandonada` de cada reto con partida `en_curso`; `jugado` = hay partida `terminada`. `CARGADO {retos, reto}`.
+3. **`render`**: `data-reto` en `#app`; portada (lema común, estados, tema, modos o regla, racha, Start, pasos); en `caso`: textos y teclas de los votos según el reto (`teclaDeVoto`, 2.3); imagen y sobre, o `#afirmacion` (`estado.texto`) y `#caso-aviso` (solo en la pregunta de la prueba 1 de Fact or Fake); veredicto (sello, `data-verdad`, `afirmaciones.oculta` si `motivo === 'oculta'`, aclaración y detalles en Fact or Fake, confesión en Images); resultado (miniaturas o botones numerados, `#resultado-reto`, y `#resultado-mensaje` = `mensajeFinal(aciertos, mensajesDelReto(estado.reto, TEXTOS.final))` [D-134]); ya jugado (`#ya-jugado-reto`, modo oculto en Fact or Fake); `#sin-casos-texto`.
 4. **Efectos**:
    - `ELEGIR_RETO` → `conAjustes({reto})` y guardar.
-   - `EMPEZAR` en Headlines (al pasar a `caso`) → `sesion`, `registrarInicio(datos, 'titulares', {fecha, n, modo: null, sesion})` y guardar **antes** de pintar la primera noticia; comprobar la `sesion` como en D-51.
-   - Cada prueba de Headlines: rellenar `#recorte`, `await esperarPintado()` y, si sigue en la misma prueba y en `pregunta`, `PINTADA`. Sin temporizador. Tras `PINTADA` de la prueba 1, el anuncio de `titulares.aviso_oculta` en `#temporizador-anuncio` (2.3); se vacía en `SIGUIENTE`.
+   - `EMPEZAR` en Fact or Fake → `sesion`, `registrarInicio(datos, 'afirmaciones', {fecha, n, modo: null, sesion})` y guardar **antes** de pintar la primera afirmación; comprobar la `sesion` (D-51).
+   - Cada prueba de Fact or Fake: rellenar `#afirmacion-texto`, `await esperarPintado()` y, si sigue en la misma prueba y en `pregunta`, `PINTADA`. Tras `PINTADA` de la prueba 1, el anuncio de `afirmaciones.aviso_oculta`; se vacía en `SIGUIENTE`.
    - Tras cada veredicto (por `VOTO` o por `VOLVIO`) y al terminar, `registrarPrueba` y `registrarFin` con `estado.reto`.
    - `VOLVER_PORTADA` → recalcular los estados de la portada desde el almacén.
-   - `MEDIANOCHE` → `iniciando` y repetir el punto 1 completo (calendario y archivo de titulares del mes de la nueva fecha) [D-116].
-5. **Entrada**: delegación como en la 1.3, más `change` en `input[name=reto]` → `ELEGIR_RETO` y `volver-portada` → `VOLVER_PORTADA`. R, I y Enter igual en los dos retos.
-6. **`visibilitychange`** [D-115]:
-   - Variable de módulo `ausencia = null` (`{perf, fecha, indice}`), nunca guardada.
-   - **Al ocultarse** (`document.visibilityState === 'hidden'`): si `estado.reto === 'titulares'`, `pantalla === 'caso'`, `fase === 'pregunta'` y `activo`, `ausencia = {perf: performance.now(), fecha: Date.now(), indice: estado.indice}`. No se despacha nada ni se guarda nada. En Images, nada (D-78).
-   - **Al volver** (`'visible'`): si hay `ausencia`, `ocultoMs = medirOculta(ausencia, {perf: performance.now(), fecha: Date.now()})`, `ausencia = null` y despachar `VOLVIO {ocultoMs, indice}`; si la transición da veredicto, sus efectos guardan la `F` y el foco va a Next. Después, como en la 1.3 (temporizador de Images, cuenta atrás, `MEDIANOCHE`, relecturas de D-51).
-   - `ausencia` se borra también en cualquier render que salga de `caso/pregunta` (voto, `OTRA_PESTANA`), para que una medida antigua nunca se aplique a otra prueba (además, `VOLVIO` compara `indice`).
-   - No se usa `setTimeout`, `blur`, `pagehide` ni `freeze` para la ausencia.
-7. **Otras pestañas** [D-51]: en el evento `storage` y al volver, comparar las partidas de hoy de **cada reto** con las conocidas y despachar `OTRA_PESTANA {reto}` por cada reto que otra pestaña haya empezado o terminado.
-8. **Compartir**: plantilla según `estado.reto` (`compartir.plantilla` con `nombreModo`, o `compartir.plantilla_titulares`), con la partida y la racha del reto mostrado.
-9. **Previsualización** [D-68]: sin cambios. Con `lanzamiento: null` lleva a `sin-casos`. Carga el mes de la fecha de `?fecha=`.
-10. **Modo prueba** [D-70, D-110, D-116]: `PRUEBAS_ABIERTAS` sin cambios (una línea, sin fecha en el comentario: "poner false antes del lanzamiento"). Selector creado tras `#portada-caso` con `diasDePrueba(calendario, titulares)` (el mes cargado) y `diaDePrueba(location.search, dias, nHoy)`; fecha efectiva `fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`; aviso `avisos.prueba` con `{n}`; `abrir-prueba` navega a `?prueba=1&dia={n}&reto={estado.reto}` (la recarga carga el mes de ese día, así que elegir un día de otro mes funciona igual). Almacenes en memoria; nunca se toca ninguna clave `identifaiit.*` del navegador.
-11. **Ficha** [D-88, D-104]: `abrirFicha(i, {conImagen})` como en la 1.3 en Images; en Headlines rellena el diálogo según 2.3 (desde `resultado` descifra en ese momento `desofuscarTexto` y `desofuscarNoticia`, sin guardarlos). El enlace solo recibe `href` si `urlFuenteValida`.
-12. **Enlaces a la fuente**: main.js no intercepta su clic; no hace ninguna petición al responder ni al abrir un enlace. Abrir el enlace oculta la pestaña del juego, pero en el veredicto ya no hay ausencia que medir.
+   - `MEDIANOCHE` → `iniciando` y repetir el punto 1 completo.
+5. **Entrada**: delegación como en la 1.3, más `change` en `input[name=reto]` → `ELEGIR_RETO` y `volver-portada` → `VOLVER_PORTADA`. [2.1] Teclado: en `caso/pregunta`, si no hay Ctrl, Alt ni Meta, `voto = votoDeTecla(estado.reto, evento.key)` y, si no es `null`, `VOTO {voto}`; Enter como en la 1.3. Mientras `dialog#ficha` está abierto, ningún atajo del juego.
+6. **`visibilitychange`** [D-115]: como en la 2.0 con `estado.reto === 'afirmaciones'` (variable de módulo `ausencia`, `medirOculta`, `VOLVIO {ocultoMs, indice}`, sin `setTimeout`, `blur`, `pagehide` ni `freeze`).
+7. **Otras pestañas** [D-51]: por reto.
+8. **Compartir**: `compartir.plantilla` con `nombreModo` (Images) o `compartir.plantilla_afirmaciones`, con la partida y la racha del reto mostrado.
+9. **Previsualización** [D-68]: sin cambios; carga solo el mes de `?fecha=`.
+10. **Modo prueba** [D-70, D-110, D-117]: `PRUEBAS_ABIERTAS` sin cambios; selector con `diasDePrueba(calendario, meses)` (opción con el tema del día; si los dos temas difieren, unidos por " / "); `abrir-prueba` navega a `?prueba=1&dia={n}&reto={estado.reto}`; almacenes en memoria.
+11. **Ficha** [D-88, D-126]: `abrirFicha(i, {conImagen})` como en la 1.3 en Images; en Fact or Fake, solo desde `resultado`, rellena el diálogo según 2.3 descifrando en ese momento `desofuscarAfirmacion` y `desofuscarAclaracion`, sin guardarlos.
+12. [2.1] **Sin enlaces**: Fact or Fake no tiene enlaces ni hace ninguna petición al responder.

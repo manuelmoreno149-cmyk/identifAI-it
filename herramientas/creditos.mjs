@@ -71,6 +71,10 @@ ${tipos}
     <h2 id="creditos-imagenes">${e(c.imagenes)}</h2>
 ${imagenes}
   </section>
+  <section id="creditos-afirmaciones">
+    <h2>${e(c.afirmaciones)}</h2>
+    <p>${e(c.afirmaciones_texto)}</p>
+  </section>
 </main>
 <footer id="creditos-pie">
   <a id="creditos-volver" href="index.html">${e(c.volver)}</a>

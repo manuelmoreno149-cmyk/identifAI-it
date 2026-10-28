@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { CUADROS, rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from '../js/compartir.js';
 import { TEXTOS } from '../js/textos.js';
 
+const EJEMPLO_AFIRMACIONES =
+  'identifAI-it Fact or Fake #12\n4/5 🟥🟩🟩🟩🟩\nStreak: 5\nhttps://usuario.github.io/identifAI-it/';
 const EJEMPLO =
-  'identifAI-it · Case #12\nMode: Bloodhound\n3/5 🟩🟩🟥🟩🟥\nStreak: 3\nhttps://usuario.github.io/identifAI-it/';
+  'identifAI-it Images #12\nMode: Bloodhound\n3/5 🟩🟩🟥🟩🟥\nStreak: 3\nhttps://usuario.github.io/identifAI-it/';
 
 test('33. cuadros', () => {
   assert.equal(cuadros('AAFAF'), '🟩🟩🟥🟩🟥');
@@ -27,18 +29,67 @@ test('34. textoCompartir coincide con el ejemplo literal', () => {
   assert.equal(texto.includes('\r'), false);
 });
 
-test('35. el texto no revela nada de las pruebas', () => {
-  const texto = textoCompartir({
-    plantilla: TEXTOS.compartir.plantilla,
-    n: 7,
-    nombreModo: 'Normal',
-    resultados: 'FAAFF',
-    racha: 1,
-    url: 'https://u.github.io/identifAI-it/'
+test('35. el texto no revela nada de las pruebas (excepciones: identifAI-it y "Fact or Fake" en la primera línea)', () => {
+  const casos = [
+    [TEXTOS.compartir.plantilla, 'Normal'],
+    [TEXTOS.compartir.plantilla_afirmaciones, undefined]
+  ];
+  for (const [plantilla, nombreModo] of casos) {
+    const texto = textoCompartir({
+      plantilla, n: 7, nombreModo, resultados: 'FAAFF', racha: 1, url: 'https://u.github.io/identifAI-it/'
+    });
+    const [primera, ...resto] = texto.split('\n');
+    const sinNombre = [primera.replace('identifAI-it', '').replace('Fact or Fake', ''), ...resto].join('\n');
+    assert.equal(/IA|AI|REAL|FACT|autentica|generada|⬛/i.test(sinNombre), false, texto);
+    assert.equal(/fake/i.test(sinNombre), false, texto);
+    assert.equal(/k3x9q2m7ab|[a-z0-9]{10}\.webp/.test(texto), false);
+  }
+  // "Fake" solo aparece en la primera línea del texto de Fact or Fake
+  const t = textoCompartir({
+    plantilla: TEXTOS.compartir.plantilla_afirmaciones, n: 7, resultados: 'FAAFF', racha: 1, url: 'https://u.github.io/identifAI-it/'
   });
-  const sinNombre = texto.replaceAll('identifAI-it', '');
-  assert.equal(/\bIA\b|\bREAL\b|autentica|generada/i.test(sinNombre), false);
-  assert.equal(/k3x9q2m7ab|[a-z0-9]{10}\.webp/.test(texto), false);
+  assert.equal(t.split('\n')[0].includes('Fact or Fake'), true);
+  assert.equal(t.split('\n').slice(1).join('\n').includes('Fake'), false);
+});
+
+test('177. textoCompartir de Fact or Fake coincide con el ejemplo literal, sin modo', () => {
+  const texto = textoCompartir({
+    plantilla: TEXTOS.compartir.plantilla_afirmaciones,
+    n: 12,
+    resultados: 'FAAAA',
+    racha: 5,
+    url: 'https://usuario.github.io/identifAI-it/'
+  });
+  assert.equal(texto, EJEMPLO_AFIRMACIONES);
+  assert.equal(texto.split('\n').length, 4);
+  assert.equal(texto.includes('Mode'), false);
+  assert.equal(texto.includes('undefined'), false);
+  // un nombreModo sobrante no aparece en la plantilla sin {modo}
+  assert.equal(
+    textoCompartir({ plantilla: TEXTOS.compartir.plantilla_afirmaciones, n: 12, nombreModo: 'Normal', resultados: 'FAAAA', racha: 5, url: 'https://usuario.github.io/identifAI-it/' }),
+    EJEMPLO_AFIRMACIONES
+  );
+});
+
+test('179. el texto compartido no revela afirmaciones, aclaraciones, detalles, prompts, temas ni mensajes (los dos retos)', () => {
+  const conocidos = [
+    'The Eiffel Tower grows taller in summer.', 'Metal expands when heated, so the tower gains a few inches.',
+    'Heat makes iron expand', 'a cat astronaut in watercolor, ultra detailed', 'Space cats',
+    TEXTOS.fichas.autentica, TEXTOS.fichas.sin_prompt, ...TEXTOS.final.mensajes, ...TEXTOS.final.mensajes_afirmaciones
+  ];
+  for (const [plantilla, nombreModo] of [
+    [TEXTOS.compartir.plantilla, 'Investigator'],
+    [TEXTOS.compartir.plantilla_afirmaciones, undefined]
+  ]) {
+    for (const resultados of ['AAAAA', 'FFFFF', 'FAAFA']) {
+      const texto = textoCompartir({ plantilla, n: 3, nombreModo, resultados, racha: 2, url: 'https://u.github.io/identifAI-it/' });
+      const [primera, ...resto] = texto.split('\n');
+      const sinNombre = [primera.replace('identifAI-it', '').replace('Fact or Fake', ''), ...resto].join('\n');
+      assert.equal(/AI|IA|REAL|FACT|fake|autentica|generada|⬛/i.test(sinNombre), false, texto);
+      for (const c of conocidos) assert.equal(texto.includes(c), false, c);
+      assert.equal(texto.includes('{'), false);
+    }
+  }
 });
 
 test('rellenar deja los marcadores sin valor', () => {

@@ -61,10 +61,40 @@
   font-size: clamp(1.125rem, 4dvh, 1.5rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 2px solid var(--color-tinta);
+  /* Boton base = contorno ambar sobre fondo oscuro (ambar sobre #0a0f17: 9:1). Antes quedaba el gris del
+     navegador con texto claro (1,1:1). Los primarios y de voto sobreescriben color, fondo y borde. */
+  color: var(--color-ambar);
+  background: transparent;
+  border: 2px solid var(--color-ambar);
   border-radius: var(--radio-2);
+  box-shadow: none;
+  transition: transform var(--duracion-corta), box-shadow var(--duracion-corta), filter var(--duracion-corta), background-color var(--duracion-corta);
+}
+
+.boton-primario,
+.boton-voto {
+  border-color: var(--color-tinta);
   box-shadow: var(--sombra-boton);
-  transition: transform var(--duracion-corta), box-shadow var(--duracion-corta), filter var(--duracion-corta);
+}
+
+.icono-compartir {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  background: url("../img/ui/compartir.svg") no-repeat center / contain;
+}
+
+@media (hover: hover) {
+  .boton:not(.boton-primario):not(.boton-voto):hover {
+    background: var(--color-ambar-suave);
+  }
+}
+
+/* Botones sueltos dentro de papel (selector del modo prueba) */
+#selector-prueba .boton {
+  color: var(--color-tinta);
+  background: var(--color-papel-2);
+  border-color: var(--color-tinta);
 }
 
 .boton:active {
@@ -76,6 +106,14 @@
   .boton:hover {
     filter: brightness(1.08);
   }
+}
+
+.boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+  box-shadow: none;
 }
 
 .boton-primario {
@@ -107,43 +145,46 @@
   }
 }
 
-/* ---------- Portada ---------- */
-#pantalla-portada {
-  background: url("../img/ui/huella.svg") no-repeat right -2.5rem bottom 4rem / min(12rem, 30dvh) auto;
-}
-
+/* ---------- Portada: dos expedientes ---------- */
 .portada-cabecera {
   flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(2px, 1dvh, var(--espacio-3));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "marca marca ayuda"
+    "caso tema tema"
+    "prueba prueba prueba";
+  align-items: center;
+  column-gap: var(--espacio-3);
+  row-gap: 2px;
+}
+
+.portada-marca {
+  grid-area: marca;
+  min-width: 0;
 }
 
 .portada-cabecera h1 {
-  font-size: clamp(2.25rem, min(14vw, 8dvh), 4.5rem);
+  font-size: clamp(1.75rem, min(9vw, 5.5dvh), 2.75rem);
+  line-height: 1;
   color: var(--color-papel);
   text-shadow: 0 0 24px rgba(242, 169, 59, 0.35);
 }
 
-.portada-cabecera h1::after {
-  content: "";
-  display: block;
-  width: 4rem;
-  height: 6px;
-  margin-top: clamp(4px, 1dvh, var(--espacio-3));
-  background: var(--color-sello-vivo);
-}
-
 .portada-lema {
-  font-size: clamp(1rem, 3dvh, var(--texto-grande));
+  font-size: clamp(0.875rem, 2.2dvh, 1rem);
   line-height: 1.3;
   color: var(--color-texto);
 }
 
 #portada-caso {
-  align-self: flex-start;
-  padding: 0 var(--espacio-3);
+  grid-area: caso;
+  justify-self: start;
+  padding: 0 var(--espacio-2);
   font-family: var(--fuente-datos);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--color-tinta);
   background: var(--color-papel);
   border-radius: var(--radio-1);
@@ -152,6 +193,7 @@
 
 #portada-tema,
 #caso-tema {
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
@@ -160,25 +202,232 @@
 }
 
 #portada-tema {
-  align-self: flex-start;
+  grid-area: tema;
+  font-size: 0.875rem;
+  color: var(--color-ambar);
 }
 
-#portada-modos {
-  flex: none;
+#portada-tema:not(:empty)::before {
+  content: "\00b7\00a0";
 }
 
-#portada-modos legend {
+/* Boton "How to play": en movil solo el icono (44 x 44); el texto sigue ahi para lectores */
+.boton-ayuda {
+  grid-area: ayuda;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-width: var(--tactil-min);
+  min-height: var(--tactil-min);
   padding: 0;
-  margin-bottom: clamp(2px, 1dvh, var(--espacio-3));
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ambar);
+  background: transparent;
+  border: 2px dashed var(--color-ambar);
+  border-radius: var(--radio-2);
+}
+
+.boton-ayuda:active {
+  transform: translateY(2px);
+}
+
+@media (hover: hover) {
+  .boton-ayuda:hover {
+    background: var(--color-ambar-suave);
+  }
+}
+
+.icono-ayuda {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: url("../img/ui/interrogacion.svg") no-repeat center / contain;
+}
+
+.boton-ayuda-texto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+#portada-retos {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#portada-retos legend {
+  padding: 0;
+  margin-bottom: clamp(2px, 1dvh, var(--espacio-2));
   font-family: var(--fuente-datos);
   color: var(--color-ambar);
 }
 
-/* Selector de modo: tres fichas en una fila */
+.retos {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(8px, 1.6dvh, var(--espacio-4));
+  max-height: 34rem;
+  margin-block: auto;
+}
+
+/* Tarjeta de reto: expediente de papel; la elegida lleva borde ambar continuo y la otra, discontinuo */
+.reto {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.8dvh, var(--espacio-2));
+  padding: clamp(10px, 2dvh, var(--espacio-4));
+  color: var(--color-tinta);
+  background-color: var(--color-papel-2);
+  background-image: url("../img/ui/papel.svg");
+  background-size: 240px 240px;
+  border: 3px dashed var(--color-texto-suave);
+  border-radius: var(--radio-2);
+  box-shadow: var(--sombra-papel);
+  cursor: pointer;
+  transition: transform var(--duracion-corta), background-color var(--duracion-corta);
+}
+
+.reto:has(.reto-radio:checked) {
+  background-color: var(--color-papel);
+  border-style: solid;
+  border-color: var(--color-ambar);
+  box-shadow: var(--sombra-papel), 0 0 0 1px var(--color-ambar), 0 0 22px rgba(242, 169, 59, 0.3);
+}
+
+/* Marca de elegida que no depende del color */
+.reto:has(.reto-radio:checked)::after {
+  content: "";
+  position: absolute;
+  top: -0.6rem;
+  right: -0.45rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: url("../img/ui/icono-acierto.svg") no-repeat center / contain;
+  pointer-events: none;
+}
+
+.reto:has(.reto-radio:focus-visible) {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 4px;
+}
+
+/* Foco de los botones que viven sobre papel: el amarillo del foco no se ve sobre papel (1,4:1) */
+.reto .boton:focus-visible {
+  outline-color: var(--color-tinta);
+}
+
+.reto-radio {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.reto-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.reto-expediente {
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  color: var(--color-sello);
+}
+
+.reto-estado {
+  min-width: 0;
+  padding: 0 var(--espacio-2);
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-tinta);
+  border: 1px dashed var(--color-tinta-suave);
+  border-radius: var(--radio-1);
+}
+
+.reto-estado:empty {
+  display: none;
+}
+
+.reto-nombre {
+  display: block;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.75rem, min(9vw, 6.5dvh), 3.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-tinta);
+  cursor: pointer;
+}
+
+.reto-desc {
+  font-size: 0.9375rem;
+  line-height: 1.3;
+  color: var(--color-tinta-suave);
+}
+
+.reto-accion {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 1dvh, var(--espacio-3));
+}
+
+.reto .boton {
+  position: relative;
+  width: 100%;
+  min-height: var(--tactil-min);
+  font-size: clamp(1.0625rem, 3.2dvh, 1.375rem);
+}
+
+#portada-regla {
+  min-height: var(--tactil-min);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--espacio-3);
+  font-family: var(--fuente-datos);
+  font-size: 0.9375rem;
+  line-height: 1.3;
+  color: var(--color-tinta);
+  border: 2px dashed var(--color-tinta-suave);
+  border-radius: var(--radio-2);
+}
+
+/* Modos de Images: tres botones en fila dentro de la tarjeta */
+#portada-modos {
+  min-width: 0;
+}
+
 .modos {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(4px, 1.5vw, var(--espacio-3));
+  gap: clamp(4px, 1.2vw, var(--espacio-2));
 }
 
 .modo {
@@ -204,13 +453,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-height: clamp(4rem, 11dvh, 6rem);
-  padding: var(--espacio-2) var(--espacio-1);
+  gap: 1px;
+  min-height: var(--tactil-min);
+  padding: 2px var(--espacio-1);
   text-align: center;
-  color: var(--color-texto);
-  background: var(--color-fondo-2);
-  border: 2px dashed var(--color-texto-suave);
+  color: var(--color-tinta);
+  background: transparent;
+  border: 2px dashed var(--color-tinta-suave);
   border-radius: var(--radio-2);
   transition: background-color var(--duracion-corta), transform var(--duracion-corta);
 }
@@ -219,8 +468,8 @@
   max-width: 100%;
   font-family: var(--fuente-titulos);
   font-weight: 600;
-  font-size: clamp(0.8rem, 3.6vw, 1.25rem);
-  line-height: 1.15;
+  font-size: clamp(0.8rem, 3.4vw, 1rem);
+  line-height: 1.1;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -228,152 +477,46 @@
 
 .modo-desc {
   font-family: var(--fuente-datos);
-  font-size: clamp(0.75rem, 3.4vw, 0.9rem);
-  line-height: 1.2;
-  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+  line-height: 1.1;
 }
 
 .modo input:checked + label {
-  color: var(--color-tinta);
   background: var(--color-ambar);
-  border: 3px solid var(--color-tinta);
+  border-style: solid;
+  border-color: var(--color-tinta);
   box-shadow: var(--sombra-boton);
-  transform: rotate(-1deg);
 }
 
-/* La ficha elegida lleva ademas una marca, no solo color */
 .modo input:checked + label::after {
   content: "";
   position: absolute;
-  top: -0.5rem;
+  top: -0.45rem;
   right: -0.3rem;
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.125rem;
+  height: 1.125rem;
   background: url("../img/ui/icono-acierto.svg") no-repeat center / contain;
 }
 
 .modo input:focus-visible + label {
-  outline: 3px solid var(--color-foco);
-  outline-offset: 3px;
+  outline: 3px solid var(--color-tinta);
+  outline-offset: 2px;
 }
 
-#portada-racha {
-  flex: none;
-  font-family: var(--fuente-datos);
-  font-size: clamp(1rem, 3dvh, var(--texto-grande));
-  color: var(--color-ambar);
-}
-
-#pantalla-portada .acciones {
-  flex: none;
-}
-
-/* Desplegable Como jugar: cerrado por defecto, en el flujo */
-#como-jugar {
-  flex: 0 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-#como-jugar::details-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-#como-jugar-resumen {
+/* Pie: racha a la izquierda y creditos pequenos a la derecha */
+#portada-pie {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--espacio-3);
   min-height: var(--tactil-min);
-  padding: 0 var(--espacio-3);
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: 1.125rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+}
+
+#portada-racha {
+  font-family: var(--fuente-datos);
+  font-size: 1rem;
   color: var(--color-ambar);
-  list-style: none;
-  cursor: pointer;
-  border: 2px dashed var(--color-ambar);
-  border-radius: var(--radio-2);
-}
-
-#como-jugar-resumen::-webkit-details-marker {
-  display: none;
-}
-
-#como-jugar-resumen::after {
-  content: "+" / "";
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-#como-jugar[open] > #como-jugar-resumen::after {
-  content: "\2212" / "";
-}
-
-#como-jugar[open] > #como-jugar-resumen {
-  border-style: solid;
-}
-
-#como-jugar-panel {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: 60dvh;
-  margin-top: var(--espacio-2);
-  padding: var(--espacio-3);
-  overflow-y: auto;
-  color: var(--color-tinta);
-  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
-  border-radius: var(--radio-1);
-  box-shadow: var(--sombra-papel);
-}
-
-#como-jugar-panel:focus-visible {
-  outline-color: var(--color-tinta);
-}
-
-#como-jugar-pasos {
-  counter-reset: paso;
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-2);
-  font-size: 0.9375rem;
-  line-height: 1.3;
-}
-
-#como-jugar-pasos li {
-  counter-increment: paso;
-  position: relative;
-  padding-left: 2.25rem;
-  min-height: 1.75rem;
-}
-
-#como-jugar-pasos li::before {
-  content: counter(paso);
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  font-family: var(--fuente-titulos);
-  font-size: 1.125rem;
-  color: var(--color-papel);
-  background: var(--color-sello);
-  border-radius: 50%;
-}
-
-#portada-pie {
-  flex: none;
-  margin-top: auto;
-  text-align: center;
 }
 
 #portada-creditos {
@@ -382,6 +525,7 @@
   justify-content: center;
   min-width: var(--tactil-min);
   min-height: var(--tactil-min);
+  margin-left: auto;
   padding: 0 var(--espacio-4);
   font-family: var(--fuente-cuerpo);
   font-size: var(--texto-pequeno);
@@ -390,140 +534,120 @@
   text-underline-offset: 3px;
 }
 
-/* Portada con el desplegable abierto en vertical: se compacta lo accesorio */
-@media (orientation: portrait) {
-  #pantalla-portada:has(#como-jugar[open]) .cinta-peligro,
-  #pantalla-portada:has(#como-jugar[open]) .portada-lema,
-  #pantalla-portada:has(#como-jugar[open]) .portada-cabecera h1::after {
+/* Vertical bajo: se comprime primero la descripcion (orden de R8) */
+@media (orientation: portrait) and (max-height: 600px) {
+  .reto-desc {
     display: none;
-  }
-
-  #pantalla-portada:has(#como-jugar[open]) .portada-cabecera h1 {
-    font-size: 2rem;
   }
 }
 
-/* Portada en horizontal: identidad a la izquierda, accion a la derecha */
-@media (orientation: landscape) {
-  #pantalla-portada:not([hidden]) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
-    column-gap: clamp(16px, 4vw, 48px);
-    align-items: start;
+/* Vertical hasta 740 px (360 x 640 con barra de prueba): leyenda solo para lectores y tarjetas mas compactas */
+@media (orientation: portrait) and (max-height: 740px) {
+  #portada-retos legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
-  #pantalla-portada > .cinta-peligro {
-    grid-column: 1 / -1;
-    grid-row: 1;
+  .reto {
+    padding: 10px 12px;
+    gap: 2px;
   }
 
-  #pantalla-portada > .portada-cabecera {
-    grid-column: 1;
-    grid-row: 2;
+  .reto-nombre {
+    font-size: clamp(1.5rem, min(9vw, 4.8dvh), 3.5rem);
   }
 
-  #pantalla-portada > #portada-racha {
-    grid-column: 1;
-    grid-row: 3;
+  #portada-pie,
+  #portada-creditos {
+    min-height: var(--tactil-min);
   }
+}
 
-  #pantalla-portada > #como-jugar {
-    grid-column: 1;
-    grid-row: 4;
-    align-self: stretch;
+/* Modo prueba (selector de dias): ocupa sitio, asi que se quita la descripcion en vertical */
+@media (orientation: portrait) {
+  #pantalla-portada:has(#selector-prueba) .reto-desc {
+    display: none;
   }
+}
 
-  #pantalla-portada > #portada-pie {
-    grid-column: 1;
-    grid-row: 5;
-    margin-top: 0;
-    text-align: left;
-  }
-
-  #pantalla-portada > #portada-modos {
-    grid-column: 2;
-    grid-row: 2 / 4;
-    align-self: end;
-  }
-
-  #pantalla-portada > .acciones {
-    grid-column: 2;
-    grid-row: 4;
-    align-self: start;
+/* Tarjetas lado a lado en cuanto caben */
+@media (min-width: 640px) {
+  .portada-cabecera {
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, max-content) auto;
+    grid-template-areas:
+      "marca . caso tema ayuda"
+      "prueba prueba prueba prueba prueba";
   }
 
   .portada-cabecera h1 {
-    font-size: clamp(2rem, 11dvh, 4.5rem);
+    font-size: clamp(1.75rem, min(5vw, 6dvh), 2.75rem);
   }
 
-  .portada-lema {
-    font-size: clamp(0.9375rem, 3.6dvh, var(--texto-grande));
+  .retos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    max-height: 26rem;
   }
 
-  /* Modos: lista vertical de filas compactas (nombre a la izquierda, descripcion a la derecha) */
+  .reto {
+    padding: clamp(12px, 2.4dvh, var(--espacio-5));
+  }
+
+  .reto-nombre {
+    font-size: clamp(1.75rem, min(5.2vw, 7.5dvh), 3.5rem);
+  }
+}
+
+/* Tarjetas lado a lado y estrechas (640 a 899 px): nombres de modo mas pequenos para que quepan en su caja */
+@media (min-width: 640px) and (max-width: 899px) {
   .modos {
-    grid-template-columns: minmax(0, 1fr);
     gap: 4px;
   }
 
   .modo label {
-    flex-direction: row;
-    justify-content: space-between;
-    gap: var(--espacio-3);
-    min-height: clamp(var(--tactil-min), 9dvh, 3.5rem);
-    padding: 2px var(--espacio-3);
-    text-align: left;
+    padding-inline: 2px;
   }
 
   .modo-nombre {
-    flex: none;
-    max-width: 60%;
-    font-size: clamp(1rem, 2.2vw + 0.4rem, 1.25rem);
+    font-size: 0.75rem;
+    letter-spacing: 0;
   }
 
   .modo-desc {
-    flex: 1 1 0;
-    min-width: 0;
     font-size: 0.75rem;
-    text-align: right;
-    overflow-wrap: break-word;
+  }
+}
+
+@media (min-width: 720px) {
+  .boton-ayuda {
+    padding: 0 var(--espacio-3) 0 var(--espacio-2);
   }
 
-  @media (min-width: 900px) {
-    .modo-desc {
-      font-size: 0.875rem;
-    }
+  .boton-ayuda-texto {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
   }
+}
 
-  /* Modo prueba: ocupa el hueco de la columna derecha, a la altura del pie */
-  #pantalla-portada {
-    position: relative;
-  }
-
-  #pantalla-portada #selector-prueba {
+/* Horizontal bajo (640 x 360): la leyenda pasa a ser solo para lectores */
+@media (max-height: 420px) {
+  #portada-retos legend {
     position: absolute;
-    right: clamp(12px, 4vw, var(--espacio-5));
-    bottom: clamp(8px, 2dvh, var(--espacio-5));
-    width: calc((100% - 2 * clamp(12px, 4vw, var(--espacio-5)) - clamp(16px, 4vw, 48px)) / 2);
-  }
-
-  /* Como jugar abierto: el panel toma la columna derecha entera, con su propio scroll */
-  #como-jugar[open] > #como-jugar-panel {
-    position: absolute;
-    z-index: 5;
-    top: clamp(8px, 2dvh, var(--espacio-5));
-    bottom: clamp(8px, 2dvh, var(--espacio-5));
-    left: calc(50% + clamp(16px, 4vw, 48px) / 2);
-    right: clamp(12px, 4vw, var(--espacio-5));
-    max-height: none;
-    margin-top: 0;
-  }
-
-  #pantalla-portada:has(#como-jugar[open]) > #portada-modos,
-  #pantalla-portada:has(#como-jugar[open]) > .acciones,
-  #pantalla-portada:has(#como-jugar[open]) #selector-prueba {
-    visibility: hidden;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
@@ -559,60 +683,341 @@
   background: url("../img/ui/huella.svg") no-repeat center / contain;
 }
 
-/* ---------- Caso (R5, R6, R7) ---------- */
-#pantalla-caso:not([hidden]) {
+/* ---------- Dialogos: ficha y como jugar ---------- */
+#ficha,
+#como-jugar {
+  width: min(36rem, calc(100vw - 2rem));
+  max-width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: clamp(12px, 3vw, var(--espacio-5));
+  overflow-y: auto;
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+  border: 3px solid var(--color-tinta);
+  border-radius: var(--radio-2);
+  box-shadow: var(--sombra-papel);
+}
+
+#ficha[open],
+#como-jugar[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+#ficha::backdrop,
+#como-jugar::backdrop {
+  background: rgba(5, 8, 13, 0.82);
+}
+
+#ficha :focus-visible,
+#como-jugar :focus-visible {
+  outline-color: var(--color-tinta);
+}
+
+#ficha-titulo,
+#como-jugar-titulo {
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  color: var(--color-sello);
+}
+
+#como-jugar-pasos {
+  counter-reset: paso;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+#como-jugar-pasos li {
+  counter-increment: paso;
+  position: relative;
+  padding-left: 2.5rem;
+  min-height: 1.75rem;
+}
+
+#como-jugar-pasos li::before {
+  content: counter(paso);
+  position: absolute;
+  left: 0;
+  top: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-family: var(--fuente-titulos);
+  font-size: 1.125rem;
+  color: var(--color-papel);
+  background: var(--color-sello);
+  border-radius: 50%;
+}
+
+#ficha-cerrar,
+#como-jugar-cerrar {
+  align-self: flex-start;
+  margin-top: var(--espacio-2);
+  color: var(--color-tinta);
+  background: var(--color-ambar);
+  border-color: var(--color-tinta);
+  box-shadow: var(--sombra-boton);
+}
+
+/* ---------- Caso ---------- */
+/* Columna flex: cabecera de su alto y escena con el resto (flex-basis 0 + min-height 0 = altura definida).
+   Asi las filas 1fr de la escena siempre se reparten el alto de la ventana y el boton nunca queda fuera. */
+#pantalla-caso:not([hidden]) {
+  flex: 1 1 0;
   gap: clamp(4px, 1.2dvh, var(--espacio-3));
   padding-block: clamp(6px, 1.5dvh, 12px);
 }
 
 #caso-cabecera {
-  grid-row: 1;
+  flex: none;
+}
+
+/* Cada reto muestra lo suyo: nombres, foto, tarjeta y temporizador */
+[data-reto-nombre] {
+  display: none;
+}
+
+#app[data-reto="imagenes"] [data-reto-nombre="imagenes"],
+#app[data-reto="afirmaciones"] [data-reto-nombre="afirmaciones"] {
+  display: inline;
+}
+
+/* Cabecera: reto y tema, cinco casillas de progreso, modo y aciertos */
+#caso-cabecera {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "titulo puntos"
+    "progreso progreso"
+    "aviso aviso";
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 2px var(--espacio-3);
+  gap: 4px var(--espacio-3);
   font-family: var(--fuente-datos);
 }
 
-#caso-tema {
-  flex: 0 0 100%;
+#caso-titulo {
+  grid-area: titulo;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-#caso-etiqueta {
-  padding: 0 var(--espacio-3);
+#caso-reto {
+  flex: none;
+  white-space: nowrap;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-tinta);
-  background: var(--color-papel);
-  border-radius: var(--radio-1);
-  transform: rotate(-1.5deg);
+  color: var(--color-papel);
+}
+
+#caso-tema {
+  font-size: 0.875rem;
+  line-height: 1.25;
+  color: var(--color-ambar);
+}
+
+#caso-puntuacion {
+  grid-area: puntos;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  text-align: right;
+}
+
+#caso-modo {
+  color: var(--color-texto-suave);
 }
 
 #caso-marcador {
   color: var(--color-ambar);
 }
 
-/* La escena es un contenedor: la imagen 4:5 toma el mayor tamano que cabe */
+#caso-progreso {
+  grid-area: progreso;
+  display: flex;
+  gap: 6px;
+  counter-reset: casilla;
+}
+
+#caso-progreso li {
+  counter-increment: casilla;
+  flex: 1 1 0;
+  display: grid;
+  place-items: center;
+  height: clamp(1.625rem, 4.2dvh, 2rem);
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-texto-suave);
+  border: 2px dashed var(--color-texto-suave);
+  border-radius: var(--radio-1);
+}
+
+#caso-progreso li::before {
+  content: counter(casilla);
+}
+
+#caso-progreso li[data-estado="actual"] {
+  color: var(--color-ambar);
+  background: var(--color-ambar-suave);
+  border: 2px solid var(--color-ambar);
+}
+
+#caso-progreso li[data-estado="acierto"],
+#caso-progreso li[data-estado="fallo"] {
+  border-style: solid;
+}
+
+#caso-progreso li[data-estado="acierto"] {
+  background: var(--color-acierto);
+  border-color: var(--color-sobre-estado);
+}
+
+#caso-progreso li[data-estado="fallo"] {
+  background: var(--color-fallo);
+  border-color: var(--color-sobre-estado);
+}
+
+/* Acierto y fallo llevan icono (check o X) en lugar del numero */
+#caso-progreso li[data-estado="acierto"]::before,
+#caso-progreso li[data-estado="fallo"]::before {
+  content: "";
+  width: 1.25rem;
+  height: 1.25rem;
+  background: no-repeat center / contain;
+}
+
+#caso-progreso li[data-estado="acierto"]::before {
+  background-image: url("../img/ui/icono-acierto.svg");
+}
+
+#caso-progreso li[data-estado="fallo"]::before {
+  background-image: url("../img/ui/icono-fallo.svg");
+}
+
+/* Aviso de ausencia: 14 px, contraste AA, dos lineas a 360 px */
+#caso-aviso {
+  grid-area: aviso;
+  padding: 2px var(--espacio-2);
+  font-family: var(--fuente-cuerpo);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  color: var(--color-texto);
+  background: var(--color-ambar-suave);
+  border-left: 3px solid var(--color-ambar);
+  border-radius: var(--radio-1);
+}
+
+#app[data-reto="afirmaciones"] #caso-modo {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  /* 640 a 899 px: titulo y puntuacion en dos lineas para que nada se trunque ni se pise */
+  #caso-cabecera {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "titulo progreso puntos"
+      "aviso aviso aviso";
+  }
+
+  #caso-progreso li {
+    flex: none;
+    width: 2rem;
+  }
+
+  #caso-puntuacion {
+    justify-self: end;
+  }
+}
+
+@media (min-width: 900px) {
+  #caso-cabecera {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  #caso-titulo {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--espacio-2);
+  }
+
+  #caso-reto::after {
+    content: "\00b7";
+    margin-left: var(--espacio-2);
+    color: var(--color-texto-suave);
+  }
+
+  #caso-progreso li {
+    width: 2.5rem;
+  }
+
+  #caso-puntuacion {
+    flex-direction: row;
+    align-items: baseline;
+  }
+
+  #caso-modo:not(:empty)::after {
+    content: "\00a0\00b7\00a0";
+  }
+}
+
+/* Escena: foto o tarjeta, temporizador y botones. Una sola cuadricula para las dos fases */
 #caso-escena {
-  grid-row: 2;
+  --margen-tarjeta: clamp(12px, 4vw, var(--espacio-5));
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: clamp(4px, 1.2dvh, var(--espacio-3));
+}
+
+#app[data-reto="afirmaciones"] #caso-escena {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+#app[data-reto="afirmaciones"] #prueba-vitrina,
+#app[data-reto="afirmaciones"] #temporizador,
+#app[data-reto="imagenes"] #afirmacion,
+#app[data-reto="imagenes"] #caso-aviso,
+#app[data-reto="imagenes"] #pantalla-caso[data-fase="pregunta"] #caso-tarjeta {
+  display: none;
+}
+
+/* La foto: contenedor de tamano; la caja 4:5 toma el mayor tamano que cabe */
+#prueba-vitrina {
   container-type: size;
+  min-width: 0;
+  min-height: 0;
   display: grid;
   place-items: center;
 }
 
-#prueba-marco,
-#prueba-sobre,
-#veredicto {
-  grid-area: 1 / 1;
+#prueba-caja {
+  position: relative;
   width: min(100cqw, 80cqh);
   aspect-ratio: 4 / 5;
+}
+
+#prueba-marco,
+#prueba-sobre {
+  position: absolute;
+  inset: 0;
 }
 
 #prueba-marco {
@@ -622,6 +1027,7 @@
   box-shadow: var(--sombra-foto);
 }
 
+/* La foto nunca se recorta: proporcion completa dentro del marco */
 .prueba-img {
   width: 100%;
   height: 100%;
@@ -629,9 +1035,21 @@
   background: var(--color-fondo);
 }
 
+/* Revelacion de Images: la foto llena el marco de papel (borde 8px), sin marco interior; el fondo de la
+   imagen es el del borde, asi la franja de ajuste de object-fit: contain no se nota */
+#pantalla-caso[data-fase="veredicto"] #prueba-marco {
+  padding: 0;
+  background: #c9bd9f;
+  border: 8px solid #c9bd9f;
+  box-sizing: border-box;
+}
+
+#pantalla-caso[data-fase="veredicto"] #prueba-marco .prueba-img {
+  background: #c9bd9f;
+}
+
 /* Prueba tapada: sobre sellado con la misma caja que el marco */
 #prueba-sobre {
-  position: relative;
   background: url("../img/ui/sobre.svg") no-repeat center / 100% 100%;
   border-radius: var(--radio-1);
   box-shadow: var(--sombra-foto);
@@ -664,51 +1082,76 @@
   }
 }
 
-/* Veredicto sobre la imagen */
-#veredicto {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-end;
-  padding: 6px;
-  background: rgba(10, 15, 23, 0.4);
-  border-radius: var(--radio-1);
+/* Revelacion de Images: etiqueta y sello pequenos en las esquinas, sin tapar el centro */
+#prueba-etiqueta,
+#prueba-sello {
+  position: absolute;
+  z-index: 2;
+  margin: 0;
+  pointer-events: none;
 }
 
-#veredicto-sello {
-  align-self: center;
-  margin-block: auto;
-  padding: var(--espacio-1) var(--espacio-4);
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: max(2.5rem, calc(min(100cqw, 80cqh) * 0.22));
-  line-height: 1.1;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-sello);
-  background: url("../img/ui/sello.svg") no-repeat center / 100% 100%, rgba(232, 220, 192, 0.95);
-  border-radius: var(--radio-2);
-  transform: rotate(-8deg);
-  animation: caer var(--duracion-sello) var(--curva-sello) both;
-}
-
-#veredicto-sello:empty {
+#pantalla-caso[data-fase="pregunta"] #prueba-etiqueta,
+#pantalla-caso[data-fase="pregunta"] #prueba-sello,
+#prueba-etiqueta:empty,
+#prueba-sello:empty {
   display: none;
 }
 
-#veredicto[data-estado="fallo"] #veredicto-sello {
-  animation: caer var(--duracion-sello) var(--curva-sello) both, sacudida 0.4s linear var(--duracion-sello);
+#prueba-etiqueta {
+  top: 0.4rem;
+  left: 0.4rem;
+  padding: 0 var(--espacio-2);
+  font-family: var(--fuente-datos);
+  font-size: clamp(0.75rem, calc(min(100cqw, 80cqh) * 0.05), 1rem);
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-tinta);
+  background: var(--color-papel);
+  border: 1px solid var(--color-tinta-suave);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  transform: rotate(-3deg);
 }
 
-@keyframes caer {
+#prueba-sello {
+  --giro: 8deg;
+  top: 0.4rem;
+  right: 0.4rem;
+  padding: 0 0.5rem;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.25rem, calc(min(100cqw, 80cqh) * 0.1), 2.25rem);
+  line-height: 1.25;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-hecho);
+  background: var(--color-papel);
+  border: 3px solid var(--color-hecho);
+  border-radius: var(--radio-1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+  transform: rotate(var(--giro));
+  animation: estampar var(--duracion-sello) var(--curva-estampa) both;
+}
+
+#caso-escena:has(#veredicto[data-verdad="generada"]) #prueba-sello {
+  color: var(--color-papel);
+  background: var(--color-sello);
+  border-color: var(--color-tinta);
+}
+
+#caso-escena:has(#veredicto[data-estado="fallo"]) #prueba-sello {
+  animation: estampar var(--duracion-sello) var(--curva-estampa) both, sacudida 0.4s linear var(--duracion-sello);
+}
+
+@keyframes estampar {
   from {
     opacity: 0;
-    transform: scale(2.6) rotate(-22deg);
+    transform: scale(2.4) rotate(calc(var(--giro) - 14deg));
   }
   to {
     opacity: 1;
-    transform: scale(1) rotate(-8deg);
+    transform: scale(1) rotate(var(--giro));
   }
 }
 
@@ -730,15 +1173,45 @@
   }
 }
 
-#veredicto-pie {
+/* Ficha de papel: afirmacion de Fact or Fake y revelacion de los dos retos */
+#caso-tarjeta {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+  border-radius: var(--radio-1);
+  box-shadow: var(--sombra-foto);
+}
+
+#caso-tarjeta :focus-visible {
+  outline-color: var(--color-tinta);
+}
+
+/* Franja de acierto o fallo; solo existe a la vista con la revelacion */
+#veredicto-banda {
   flex: none;
   display: flex;
   align-items: center;
   gap: var(--espacio-3);
-  padding: var(--espacio-1) var(--espacio-3);
-  color: var(--color-tinta);
-  background: var(--color-papel);
-  border-radius: var(--radio-1) var(--radio-1) 0 0;
+  padding: var(--espacio-2) var(--margen-tarjeta);
+  color: var(--color-sobre-estado);
+  background: var(--color-fondo-2);
+}
+
+#caso-tarjeta:has(> #veredicto[hidden]) > #veredicto-banda {
+  display: none;
+}
+
+#caso-tarjeta:has(#veredicto[data-estado="acierto"]) #veredicto-banda {
+  background: var(--color-acierto);
+}
+
+#caso-tarjeta:has(#veredicto[data-estado="fallo"]) #veredicto-banda {
+  background: var(--color-fallo);
 }
 
 #veredicto-icono {
@@ -748,81 +1221,386 @@
   background: no-repeat center / contain;
 }
 
-#veredicto[data-estado="acierto"] #veredicto-icono {
+#caso-tarjeta:has(#veredicto[data-estado="acierto"]) #veredicto-icono {
   background-image: url("../img/ui/icono-acierto.svg");
 }
 
-#veredicto[data-estado="fallo"] #veredicto-icono {
+#caso-tarjeta:has(#veredicto[data-estado="fallo"]) #veredicto-icono {
   background-image: url("../img/ui/icono-fallo.svg");
 }
 
-#veredicto-texto {
+#veredicto-banda-cuerpo {
   min-width: 0;
+}
+
+#veredicto-banda-texto {
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.15;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#veredicto-texto {
   font-family: var(--fuente-datos);
   font-size: 0.9375rem;
   line-height: 1.25;
 }
 
-/* Confesion: una linea recortada y, si hace falta, boton para leerla entera */
-#veredicto-confesion {
-  flex: none;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: var(--espacio-2);
-  padding: 2px var(--espacio-3) var(--espacio-1);
-  color: var(--color-tinta);
-  background: var(--color-papel);
-  border-top: 1px dashed var(--color-tinta-suave);
-  border-radius: 0 0 var(--radio-1) var(--radio-1);
-  box-shadow: var(--sombra-papel);
-}
-
+/* Etiquetas de seccion: THE CLAIM, THE VERDICT, THE TRUTH, THE SUSPECT'S CONFESSION */
+#afirmacion-titulo,
+#veredicto-titulo,
 #veredicto-confesion-titulo {
-  grid-column: 1 / -1;
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: 0.875rem;
-  letter-spacing: 0.06em;
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-sello);
 }
 
+/* Revelacion: sello, resumen, aclaracion y confesion */
+#veredicto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-2) var(--margen-tarjeta);
+}
+
+#veredicto-resumen {
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--color-tinta);
+}
+
+#veredicto-resumen:empty {
+  display: none;
+}
+
+#veredicto-sello:empty {
+  display: none;
+}
+
+#veredicto-aclaracion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  font-family: var(--fuente-cuerpo);
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--color-tinta);
+}
+
+#veredicto-aclaracion-texto {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+#veredicto-detalles,
+#ficha-detalles {
+  padding-left: 1.1rem;
+  list-style: disc;
+  color: var(--color-tinta-suave);
+}
+
+#veredicto-detalles li + li,
+#ficha-detalles li + li {
+  margin-top: 2px;
+}
+
+/* Confesion de Images: el prompt entero en una cita; scroll interno solo si desborda */
+#veredicto-confesion {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding-top: var(--espacio-2);
+  border-top: 2px dashed var(--color-tinta-suave);
+}
+
 #veredicto-confesion-texto {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding-left: var(--espacio-3);
+  overflow-y: auto;
   font-family: var(--fuente-datos);
   font-size: 0.9375rem;
+  line-height: 1.4;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  border-left: 4px solid var(--color-sello);
 }
 
-/* Sin boton, el texto es corto: puede ocupar hasta tres lineas */
-#veredicto-confesion:has([data-accion][hidden]) #veredicto-confesion-texto {
-  grid-column: 1 / -1;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  white-space: normal;
+/* La confesion nunca se oculta por falta de sitio: como minimo dos lineas y el resto se desplaza dentro */
+#veredicto-confesion-texto {
+  min-height: 2.8em;
 }
 
-#veredicto-confesion .boton {
-  min-height: var(--tactil-min);
-  padding: 0 var(--espacio-3);
-  font-size: 1rem;
-  color: var(--color-tinta);
-  background: var(--color-ambar);
+#app[data-reto="afirmaciones"] #veredicto-confesion,
+#app[data-reto="afirmaciones"] #veredicto-resumen,
+#veredicto[data-verdad="autentica"] #veredicto-confesion {
+  display: none;
 }
 
-#veredicto :focus-visible {
-  outline-color: var(--color-tinta);
+/* Images: la ficha reparte su alto entre franja, veredicto y confesion */
+#app[data-reto="imagenes"] #caso-tarjeta {
+  max-height: 40dvh;
+}
+
+#app[data-reto="imagenes"] #veredicto {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0;
+  padding-block: var(--espacio-3);
+}
+
+/* Revelacion de Images (movil, vertical): etiqueta, frase, linea, titulo y recuadro de la confesion */
+#app[data-reto="imagenes"] #veredicto-titulo {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: var(--color-nota);
+}
+
+#app[data-reto="imagenes"] #veredicto-resumen {
+  margin-top: 2px;
+  font-family: var(--fuente-cuerpo);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+#app[data-reto="imagenes"] #veredicto-confesion {
+  margin-top: var(--espacio-2);
+  padding-top: var(--espacio-2);
+  gap: var(--espacio-1);
+  border-top: 2px dashed #b9ad92;
+}
+
+#app[data-reto="imagenes"] #veredicto-confesion-titulo {
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  color: #b3261e;
+}
+
+#app[data-reto="imagenes"] #veredicto-confesion-texto {
+  min-height: 2.8em;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #2a2a2a;
+  background: #f3ead6;
+  border: 1px solid #cdbf9f;
+}
+
+#app[data-reto="imagenes"] #veredicto-confesion-texto::before {
+  content: "\201C";
+}
+
+#app[data-reto="imagenes"] #veredicto-confesion-texto::after {
+  content: "\201D";
+}
+
+/* Nota bajo la confesion y marca al pie: solo en el diseno horizontal */
+#veredicto-confesion-nota,
+#veredicto-marca,
+#app[data-reto="afirmaciones"] #veredicto-marca {
+  display: none;
+}
+
+#veredicto-confesion-nota {
+  flex: none;
+  margin: 0;
+  font-family: var(--fuente-cuerpo);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  color: var(--color-nota);
+}
+
+#veredicto-marca {
+  flex: none;
+  margin: auto 0 0;
+  padding: var(--espacio-2) var(--margen-tarjeta);
+  font-family: var(--fuente-datos);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--color-nota);
+}
+
+/* Fact or Fake: la tarjeta es la afirmacion; en la revelacion baja la aclaracion bajo una linea discontinua */
+#app[data-reto="afirmaciones"] #caso-tarjeta {
+  box-shadow: var(--sombra-foto), inset 0 0 0 5px var(--color-papel), inset 0 0 0 6px rgba(74, 63, 42, 0.55);
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
+  box-shadow: var(--sombra-foto), 0 0 0 3px var(--color-hecho);
+}
+
+#app[data-reto="afirmaciones"] #caso-tarjeta:has(#veredicto[data-verdad="generada"]) {
+  box-shadow: var(--sombra-foto), 0 0 0 3px var(--color-sello);
+}
+
+/* Bloqueo de copia (freno casual): solo en la afirmacion */
+#afirmacion {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#app[data-reto="afirmaciones"] #afirmacion:not([hidden]) {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: clamp(10px, 2.5dvh, var(--espacio-5)) var(--margen-tarjeta);
+}
+
+#afirmacion-texto {
+  overflow-wrap: anywhere;
+}
+
+#pantalla-caso[data-fase="pregunta"] #afirmacion-titulo {
+  display: none;
+}
+
+#pantalla-caso[data-fase="pregunta"] #afirmacion-texto {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: var(--texto-afirmacion);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+#afirmacion-marca {
+  flex: none;
+  padding-top: var(--espacio-2);
+  font-family: var(--fuente-datos);
+  font-size: 0.875rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--color-tinta-suave);
+  border-top: 1px dashed var(--color-tinta-suave);
+}
+
+/* Revelacion de Fact or Fake: la afirmacion en grande (tachada si es falsa) y la marca al pie.
+   El articulo pasa a display:contents para ordenar sus tres piezas en la columna de la tarjeta
+   (afirmacion, aclaracion, marca) sin posiciones absolutas: la marca va siempre la ultima, en el flujo. */
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion:not([hidden]) {
+  display: contents;
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-titulo,
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-texto {
+  order: 1;
+  flex: none;
+  margin-inline: var(--margen-tarjeta);
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-titulo {
+  margin-top: var(--espacio-3);
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-texto {
+  margin-bottom: var(--espacio-2);
+}
+
+#pantalla-caso[data-fase="veredicto"] #afirmacion-texto {
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 5.4vw, 1.875rem);
+  line-height: 1.2;
+  text-align: left;
+}
+
+#caso-tarjeta:has(#veredicto[data-verdad="generada"]) #afirmacion-texto {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-sello);
+  text-decoration-thickness: 0.12em;
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-marca {
+  order: 3;
+  margin: auto var(--margen-tarjeta) 0;
+  padding: var(--espacio-2) 0;
+  text-align: left;
+  border-top: 1px dashed var(--color-tinta-suave);
+}
+
+#app[data-reto="afirmaciones"] #veredicto {
+  order: 2;
+  flex: none;
+  margin-inline: var(--margen-tarjeta);
+  padding: var(--espacio-3) 0 var(--espacio-2);
+  border-top: 2px dashed var(--color-tinta-suave);
+}
+
+#app[data-reto="afirmaciones"] #veredicto-banda {
+  padding-right: calc(var(--margen-tarjeta) + 5.75rem);
+}
+
+/* Sello de Fact or Fake: grande y girado, en la esquina superior derecha de la tarjeta */
+#app[data-reto="afirmaciones"] #veredicto-sello {
+  --giro: -6deg;
+  position: absolute;
+  z-index: 3;
+  top: 0.5rem;
+  right: var(--margen-tarjeta);
+  padding: 0 0.6rem;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 8vw, 2.5rem);
+  line-height: 1.25;
+  letter-spacing: 0.12em;
+  color: var(--color-hecho);
+  background: var(--color-papel);
+  border: 4px solid var(--color-hecho);
+  border-radius: var(--radio-1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  transform: rotate(var(--giro));
+  pointer-events: none;
+  animation: estampar var(--duracion-sello) var(--curva-estampa) both;
+}
+
+/* FAKE: relleno rojo, invertido respecto al de FACT; ademas del color lo distingue el texto */
+#app[data-reto="afirmaciones"] #veredicto[data-verdad="generada"] #veredicto-sello {
+  --giro: -5deg;
+  color: var(--color-papel);
+  background: var(--color-sello);
+  border-color: var(--color-tinta);
+  box-shadow: 0 0 0 2px var(--color-papel), 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+#app[data-reto="afirmaciones"] #veredicto[data-estado="fallo"] #veredicto-sello {
+  animation: estampar var(--duracion-sello) var(--curva-estampa) both, sacudida 0.4s linear var(--duracion-sello);
+}
+
+/* En Images el sello visible esta sobre la foto; este solo lo leen los lectores de pantalla */
+#app[data-reto="imagenes"] #veredicto-sello {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Temporizador: cinta que se consume. Se oculta sin mover el diseno */
 #temporizador {
   --restante: 1;
-  grid-row: 3;
-  height: 8px;
+  height: 10px;
   overflow: hidden;
   background: var(--color-fondo-2);
   border: 1px solid var(--color-texto-suave);
@@ -847,12 +1625,12 @@
 }
 
 #pantalla-caso[data-fase="veredicto"] #temporizador {
-  opacity: 0.45;
+  display: none;
 }
 
 /* Botones de respuesta: zona del pulgar, en la mitad inferior */
 #caso-botones {
-  grid-row: 4;
+  min-width: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--espacio-3);
@@ -883,22 +1661,45 @@
   display: none;
 }
 
-/* Caso en horizontal: escena a la izquierda, controles apilados a la derecha */
+#pantalla-caso[data-fase="veredicto"] #caso-botones {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* El boton va por encima de la ficha en el orden de pintado (la ficha es position:relative y lo taparia) */
+#caso-botones {
+  position: relative;
+  z-index: 1;
+}
+
+/* Revelacion de Images en vertical: foto arriba (lo que quede libre), ficha debajo (hasta 40 dvh) y
+   boton fuera, en su propia fila final. Tres filas: 1fr / auto / auto. */
+#app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-escena {
+  grid-template-rows: minmax(0, 1fr) auto auto;
+}
+
+/* Revelacion de Fact or Fake en vertical: tarjeta arriba (su alto, con scroll interno si no cabe) y boton
+   fuera, a todo el ancho, en la fila final fija. */
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
+  align-self: start;
+  max-height: 100%;
+}
+
+/* ---------- Caso en horizontal: escena a la izquierda, controles a la derecha ---------- */
 @media (orientation: landscape) {
-  #pantalla-caso:not([hidden]) {
-    grid-template-columns: minmax(0, 1fr) clamp(12rem, 35vw, 22rem);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  #caso-escena {
+    grid-template-columns: minmax(0, 1fr) clamp(12rem, 32vw, 20rem);
+    grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
     column-gap: clamp(8px, 2vw, 24px);
   }
 
-  #caso-escena {
-    grid-column: 1;
-    grid-row: 1 / -1;
+  #app[data-reto="afirmaciones"] #caso-escena {
+    grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
   }
 
-  #caso-cabecera {
-    grid-column: 2;
-    grid-row: 1;
+  #prueba-vitrina,
+  #caso-tarjeta {
+    grid-column: 1;
+    grid-row: 1 / -1;
   }
 
   #temporizador {
@@ -908,149 +1709,740 @@
 
   #caso-botones {
     grid-column: 2;
-    grid-row: 4;
-    grid-template-columns: 1fr;
+    grid-row: 3;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Revelacion de Images: foto a la izquierda; a la derecha la ficha (1fr) y, pegado a su pie, el boton
+     (auto) en su propia fila. Dos filas: el boton nunca se superpone. */
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-escena {
+    grid-template-columns: minmax(0, 1fr) var(--ancho-ficha);
+    grid-template-rows: minmax(0, 1fr) auto;
+    row-gap: 0;
+    width: 100%;
+    max-width: 60rem;
+    align-self: center;
+  }
+
+  #pantalla-caso[data-fase="veredicto"] #prueba-vitrina {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    place-items: center end;
+  }
+
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
+    grid-column: 2;
+    grid-row: 1;
+    max-height: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  /* El boton cierra la ficha: barra oscura a todo su ancho, pegada al borde inferior, sin margen */
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 0;
+    gap: 0;
+    background: #1b1b1b;
+    border-radius: 0 0 var(--radio-1) var(--radio-1);
+  }
+
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones [data-accion="siguiente"] {
+    width: 100%;
+    height: 68px;
+    min-height: 0;
+    padding: 0 var(--espacio-3);
+    font-size: 28px;
+    letter-spacing: 0.06em;
+    color: #e9dcc0;
+    background: #1b1b1b;
+    border: 0;
+    border-radius: 0 0 var(--radio-1) var(--radio-1);
+    box-shadow: none;
+  }
+
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones [data-accion="siguiente"]:focus-visible {
+    outline-offset: -5px;
+  }
+
+  /* Ficha en ordenador: frase grande, confesion amplia, nota y marca al pie */
+  #app[data-reto="imagenes"] #veredicto-resumen {
+    margin-top: var(--espacio-1);
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  #app[data-reto="imagenes"] #veredicto-confesion {
+    margin-top: var(--espacio-3);
+    padding-top: var(--espacio-3);
+    gap: var(--espacio-2);
+  }
+
+  #app[data-reto="imagenes"] #veredicto-confesion-texto {
+    padding: 18px 20px;
+    font-size: 19px;
+  }
+
+  #app[data-reto="imagenes"] #veredicto-confesion-nota,
+  #app[data-reto="imagenes"] #veredicto-marca {
+    display: block;
+  }
+
+  /* Revelacion de Fact or Fake: una tarjeta centrada (su alto, con scroll interno) y el boton en la fila
+     de debajo, a la derecha, con el mismo papel. */
+  #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-escena {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, auto) auto;
+    row-gap: 0;
+    align-content: center;
+    justify-items: center;
+    width: 100%;
+    max-width: var(--ancho-tarjeta);
+    align-self: center;
+  }
+
+  #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: stretch;
+    max-height: none;
+    width: 100%;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-botones {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+    justify-items: end;
+    padding: var(--espacio-2) var(--margen-tarjeta) var(--espacio-3);
+    background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+    border-radius: 0 0 var(--radio-1) var(--radio-1);
+  }
+
+  #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-botones [data-accion="siguiente"] {
+    min-width: 13rem;
+  }
+
+  #pantalla-caso[data-fase="veredicto"] #caso-botones [data-accion="siguiente"] {
+    min-height: 2.75rem;
   }
 }
 
-/* ---------- Resultado (R9) ---------- */
-#pantalla-resultado .tarjeta {
+/* Horizontal bajo (640 x 360): todo mas compacto */
+@media (orientation: landscape) and (max-height: 420px) {
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones,
+  #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-botones {
+    padding-block: var(--espacio-1) var(--espacio-2);
+  }
+
+  #veredicto-banda {
+    padding-block: var(--espacio-1);
+  }
+
+  #veredicto-banda-texto {
+    font-size: 1rem;
+  }
+
+  #veredicto-texto {
+    font-size: 0.875rem;
+  }
+
+  #veredicto-icono {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  #pantalla-caso[data-fase="veredicto"] #afirmacion-texto {
+    font-size: 1.125rem;
+  }
+
+  #veredicto-resumen {
+    font-size: 1.0625rem;
+  }
+
+  #app[data-reto="afirmaciones"] #veredicto-sello {
+    font-size: 1.5rem;
+  }
+}
+
+/* Horizontal con poco alto (<= 520 px): la ficha de Images se compacta y prioriza la confesion completa
+   (con scroll interno); sin nota ni marca, y la barra del boton baja de 68 a 44 px */
+@media (orientation: landscape) and (max-height: 520px) {
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones {
+    padding: 0;
+  }
+
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones [data-accion="siguiente"] {
+    height: 44px;
+    font-size: 20px;
+  }
+
+  #app[data-reto="imagenes"] #veredicto-resumen {
+    font-size: 17px;
+  }
+
+  #app[data-reto="imagenes"] #veredicto-confesion {
+    margin-top: var(--espacio-2);
+    padding-top: var(--espacio-2);
+    gap: var(--espacio-1);
+  }
+
+  #app[data-reto="imagenes"] #veredicto-confesion-texto {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  #app[data-reto="imagenes"] #veredicto-confesion-nota,
+  #app[data-reto="imagenes"] #veredicto-marca {
+    display: none;
+  }
+}
+
+/* ---------- Resultado: tablon de pruebas ---------- */
+#pantalla-resultado:not([hidden]) {
+  max-width: 64rem;
+}
+
+/* Franja de papel: puntuacion | etiqueta y mensaje | sello (el sello solo desde 640 px) */
+#resultado-franja {
   flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--espacio-4);
+  padding: clamp(6px, 1.5dvh, var(--espacio-4)) var(--espacio-4);
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+  border-radius: var(--radio-1);
+  box-shadow: var(--sombra-papel);
 }
 
 #resultado-aciertos {
   font-family: var(--fuente-titulos);
   font-weight: 600;
-  font-size: clamp(3rem, 12dvh, 5rem);
+  font-size: clamp(2.5rem, 11dvh, 6rem);
   line-height: 1;
   color: var(--color-sello);
 }
 
+#resultado-datos {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#resultado-reto {
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-nota);
+}
+
 #resultado-mensaje {
   font-family: var(--fuente-datos);
-  font-size: clamp(1rem, 2.6dvh + 0.5rem, var(--texto-grande));
-  line-height: 1.3;
+  font-size: clamp(0.9375rem, 2.2dvh + 0.4rem, 1.375rem);
+  line-height: 1.25;
+  color: var(--color-tinta);
+}
+
+#resultado-sello {
+  display: none;
+  --giro: -8deg;
+  padding: 0.1em 0.5em;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 4.5dvh, 2.25rem);
+  line-height: 1.1;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--color-sello);
+  border: 4px solid var(--color-sello);
+  border-radius: var(--radio-1);
+  box-shadow: inset 0 0 0 2px var(--color-papel), inset 0 0 0 3px var(--color-sello);
+  opacity: 0.9;
+  transform: rotate(var(--giro));
+  pointer-events: none;
+  animation: estampar var(--duracion-sello) var(--curva-estampa) 250ms both;
+}
+
+/* Tablon: superficie oscura donde se clavan las pruebas */
+#resultado-tablon {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: clamp(4px, 1dvh, var(--espacio-3)) clamp(6px, 2vw, var(--espacio-4));
+  background: var(--color-fondo-2);
+  border: 2px solid var(--color-borde);
+  border-radius: var(--radio-2);
+  box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.55);
 }
 
 #resultado-revision {
-  flex: none;
+  flex: 1 1 0;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(4px, 1.5vw, 12px);
-  align-items: center;
+  grid-template-rows: minmax(0, 1fr);
+  align-content: center;
+  gap: clamp(8px, 2dvh, 16px) clamp(8px, 2vw, 18px);
+  padding: 8px 4px 4px;
+  /* Bloqueo de copia casual de las afirmaciones del tablon */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
+/* Cada prueba: un li de tamano de contenedor (con inclinacion y chincheta) y dentro el boton */
 #resultado-revision li {
-  width: 100%;
-  max-width: 7rem;
-  justify-self: center;
-}
-
-.miniatura {
   position: relative;
-  display: block;
+  container-type: size;
+  align-self: center;
   width: 100%;
-  min-width: var(--tactil-min);
-  aspect-ratio: 4 / 5;
-  padding: 0;
-  background: var(--color-fondo-2);
-  border: 3px solid var(--color-papel);
-  border-radius: var(--radio-1);
-  box-shadow: var(--sombra-foto);
+  max-height: 100%;
+  aspect-ratio: 5 / 8;
+  transform: rotate(var(--giro-prueba, 0deg));
   transition: transform var(--duracion-corta);
 }
 
-.miniatura[data-estado="acierto"] {
-  border-color: var(--color-acierto);
+#resultado-revision li:nth-child(1) { --giro-prueba: -1.6deg; }
+#resultado-revision li:nth-child(2) { --giro-prueba: 1.2deg; }
+#resultado-revision li:nth-child(3) { --giro-prueba: -0.7deg; }
+#resultado-revision li:nth-child(4) { --giro-prueba: 1.8deg; }
+#resultado-revision li:nth-child(5) { --giro-prueba: -1.1deg; }
+
+#app[data-reto="afirmaciones"] #resultado-revision li {
+  aspect-ratio: 4 / 5;
+}
+
+/* Chincheta decorativa */
+#resultado-revision li::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: -6px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle at 35% 30%, #ff9b8f 0 12%, #c4302b 45%, #6e1414 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  #resultado-revision li:hover {
+    transform: rotate(var(--giro-prueba, 0deg)) translateY(-3px);
+  }
+}
+
+.miniatura {
+  --pie: 2.6rem;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+  /* Borde de 4 px siempre (transparente salvo fallo): la tarjeta no cambia de tamano */
+  border: 4px solid transparent;
+  border-radius: var(--radio-1);
+  box-shadow: var(--sombra-foto);
+  text-align: center;
 }
 
 .miniatura[data-estado="fallo"] {
   border-color: var(--color-fallo);
 }
 
-.miniatura img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+@container (min-width: 11rem) {
+  .miniatura {
+    --pie: 1.6rem;
+  }
 }
 
-/* Icono de acierto o fallo en la esquina: el estado no depende solo del color */
-.miniatura::after {
+/* Sello pequeno: verde en autentica, rojo en generada; el texto lo pone main.js */
+.mini-sello {
+  --giro: 7deg;
+  padding: 0 0.35em;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(0.75rem, 11cqw, 1.125rem);
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-verdad);
+  background: var(--color-papel);
+  border: 2px solid var(--color-verdad);
+  border-radius: var(--radio-1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: rotate(var(--giro));
+}
+
+.miniatura[data-verdad="generada"] .mini-sello {
+  color: var(--color-sello);
+  border-color: var(--color-sello);
+}
+
+.mini-numero {
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1rem, 11cqw, 1.5rem);
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+}
+
+.mini-voto {
+  font-family: var(--fuente-datos);
+  font-size: clamp(0.6875rem, 8cqw, 1rem);
+  line-height: 1.2;
+}
+
+.mini-pie {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+}
+
+/* Images: foto 4:5 completa, con sello arriba a la derecha y marca de acierto abajo a la izquierda */
+.mini-foto {
+  position: relative;
+  flex: none;
+  width: min(100cqw - 16px, (100cqh - 16px - var(--pie) - 4px) * 0.8);
+  aspect-ratio: 4 / 5;
+  background: var(--color-fondo);
+}
+
+.mini-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mini-foto .mini-sello {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.mini-foto::after {
   content: "";
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 1.375rem;
-  height: 1.375rem;
+  left: 4px;
+  bottom: 4px;
+  width: clamp(1.25rem, 22cqw, 1.75rem);
+  height: clamp(1.25rem, 22cqw, 1.75rem);
   background: no-repeat center / contain;
 }
 
-.miniatura[data-estado="acierto"]::after {
+.miniatura[data-estado="acierto"] .mini-foto::after {
   background-image: url("../img/ui/icono-acierto.svg");
 }
 
-.miniatura[data-estado="fallo"]::after {
+.miniatura[data-estado="fallo"] .mini-foto::after {
   background-image: url("../img/ui/icono-fallo.svg");
 }
 
-@media (hover: hover) {
-  .miniatura:hover {
-    transform: translateY(-2px);
+/* Cuando cabe, numero y voto van en una linea: "#1 · You said Real" */
+@container (min-width: 11rem) {
+  .mini-foto + .mini-pie {
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.4em;
   }
+
+  .mini-foto + .mini-pie .mini-numero::after {
+    content: "\00a0\00b7";
+  }
+}
+
+/* Fact or Fake: numero y sello arriba, afirmacion, voto y marca abajo */
+.mini-cabecera {
+  flex: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.mini-texto {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--lineas, 3);
+  line-clamp: var(--lineas, 3);
+  overflow: hidden;
+  font-family: var(--fuente-datos);
+  font-size: clamp(0.75rem, 7cqw, 1.125rem);
+  line-height: 1.25;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.miniatura[data-verdad="generada"] .mini-texto {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-sello);
+  text-decoration-thickness: 0.12em;
+}
+
+.mini-texto + .mini-pie {
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.mini-texto + .mini-pie::after {
+  content: "";
+  flex: none;
+  width: clamp(1.25rem, 14cqw, 1.75rem);
+  height: clamp(1.25rem, 14cqw, 1.75rem);
+  background: no-repeat center / contain;
+}
+
+.miniatura[data-estado="acierto"] .mini-texto + .mini-pie::after {
+  background-image: url("../img/ui/icono-acierto.svg");
+}
+
+.miniatura[data-estado="fallo"] .mini-texto + .mini-pie::after {
+  background-image: url("../img/ui/icono-fallo.svg");
+}
+
+/* Nota bajo las pruebas */
+#resultado-nota {
+  flex: none;
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--color-texto-suave);
+}
+
+/* Pie: tres datos y dos botones */
+#resultado-pie {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 1.2dvh, var(--espacio-3));
 }
 
 #resultado-rachas {
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  column-gap: var(--espacio-4);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--espacio-2);
   font-family: var(--fuente-datos);
-  text-align: center;
 }
 
-#pantalla-resultado .acciones {
+.dato {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dato-etiqueta {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-texto-suave);
+}
+
+.dato-valor {
+  font-size: 1.125rem;
+  line-height: 1.25;
+  color: var(--color-texto);
+}
+
+.dato-ambar {
+  color: var(--color-ambar);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "New case available": sustituye a la cuenta atras; ocupa las dos columnas de la derecha */
+#resultado-nuevo-caso {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+#resultado-nuevo-caso p {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  color: var(--color-ambar);
+}
+
+#resultado-nuevo-caso .boton {
   flex: none;
-  margin-top: auto;
+  min-height: var(--tactil-min);
+  padding-inline: var(--espacio-4);
+  font-size: 1rem;
 }
 
+#resultado-pie .acciones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+#resultado-pie .acciones .boton {
+  max-width: none;
+  padding-inline: var(--espacio-3);
+}
+
+/* Vertical (portada del movil y tabletas): 3 + 2 en Images, 2 + 2 + 1 en Fact or Fake */
+@media (orientation: portrait) {
+  #resultado-revision {
+    --lineas: 3;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+
+  #resultado-revision li {
+    grid-column: span 2;
+  }
+
+  #resultado-revision li:nth-child(4) {
+    grid-column: 2 / 4;
+  }
+
+  #resultado-revision li:nth-child(5) {
+    grid-column: 4 / 6;
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision li:nth-child(4) {
+    grid-column: span 2;
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision li:nth-child(5) {
+    grid-column: 2 / 4;
+  }
+}
+
+@media (orientation: portrait) and (min-height: 740px) {
+  #resultado-revision {
+    --lineas: 6;
+  }
+}
+
+/* Horizontal o ancho: cinco en fila, sello y pie en una sola fila */
 @media (orientation: landscape) {
-  #pantalla-resultado:not([hidden]) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto auto auto 1fr;
-    column-gap: clamp(16px, 4vw, 48px);
-    align-content: start;
+  #resultado-revision {
+    --lineas: 7;
+  }
+}
+
+@media (orientation: landscape) and (min-height: 600px) {
+  #resultado-revision {
+    --lineas: 9;
+  }
+}
+
+@media (min-width: 640px) {
+  #resultado-franja {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: var(--espacio-5);
   }
 
-  #pantalla-resultado > .cinta-peligro {
-    grid-column: 1 / -1;
+  #resultado-datos {
+    text-align: center;
   }
 
-  #pantalla-resultado > .tarjeta {
-    grid-column: 1;
-    grid-row: 2;
+  #resultado-reto {
+    font-size: 0.9375rem;
   }
 
-  #pantalla-resultado > #resultado-rachas {
-    grid-column: 1;
-    grid-row: 3;
-    justify-content: flex-start;
-    text-align: left;
+  #resultado-sello {
+    display: block;
   }
 
-  #pantalla-resultado > .acciones {
-    grid-column: 1;
-    grid-row: 4;
-    align-self: start;
-    margin-top: 0;
+  #resultado-pie {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--espacio-3);
   }
 
-  #pantalla-resultado > #resultado-revision {
-    grid-column: 2;
-    grid-row: 2 / 5;
-    align-self: center;
+  #resultado-rachas {
+    flex: 1 1 auto;
+    max-width: 30rem;
+    gap: var(--espacio-3);
   }
+
+  #resultado-pie .acciones {
+    flex: none;
+    width: auto;
+    grid-template-columns: repeat(2, minmax(7.5rem, 11rem));
+  }
+
+  .dato-valor {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 900px) {
+  #resultado-pie {
+    gap: var(--espacio-5);
+  }
+
+  #resultado-rachas {
+    gap: var(--espacio-4);
+  }
+
+  #resultado-pie .acciones {
+    grid-template-columns: repeat(2, minmax(8.5rem, 11rem));
+  }
+
+  .dato-valor {
+    font-size: 1.25rem;
+  }
+}
+
+/* Resultado y ya jugado de afirmaciones (R17): acciones del ya jugado en una fila */
+#ya-jugado-reto {
+  font-family: var(--fuente-datos);
+  font-size: 0.9375rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-tinta-suave);
+}
+
+#app[data-reto="afirmaciones"] #pantalla-ya-jugado .acciones {
+  flex-direction: row;
+}
+
+#app[data-reto="afirmaciones"] #pantalla-ya-jugado .acciones .boton {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: var(--espacio-3);
 }
 
 /* ---------- Ya jugado ---------- */
@@ -1116,39 +2508,6 @@
 }
 
 /* ---------- Dialogo de ficha (R11) ---------- */
-#ficha {
-  width: min(36rem, calc(100vw - 2rem));
-  max-width: min(36rem, calc(100vw - 2rem));
-  max-height: calc(100dvh - 2rem);
-  margin: auto;
-  padding: clamp(12px, 3vw, var(--espacio-5));
-  overflow-y: auto;
-  color: var(--color-tinta);
-  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
-  border: 3px solid var(--color-tinta);
-  border-radius: var(--radio-2);
-  box-shadow: var(--sombra-papel);
-}
-
-#ficha[open] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-2);
-}
-
-#ficha::backdrop {
-  background: rgba(5, 8, 13, 0.82);
-}
-
-#ficha :focus-visible {
-  outline-color: var(--color-tinta);
-}
-
-#ficha-titulo {
-  font-size: clamp(1.5rem, 6vw, 2rem);
-  color: var(--color-sello);
-}
-
 #ficha-img {
   align-self: center;
   width: auto;
@@ -1181,11 +2540,53 @@
   overflow-wrap: anywhere;
 }
 
-#ficha-cerrar {
-  align-self: flex-start;
-  margin-top: var(--espacio-2);
-  color: var(--color-tinta);
-  background: var(--color-ambar);
+/* Afirmacion y aclaracion en el dialogo (R11) */
+#ficha-afirmacion {
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 5vw, 1.75rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+#ficha-aclaracion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding-top: var(--espacio-2);
+  font-family: var(--fuente-cuerpo);
+  font-size: 1rem;
+  line-height: 1.4;
+  border-top: 1px dashed var(--color-tinta-suave);
+}
+
+@media (max-height: 420px) {
+  #ficha,
+  #como-jugar {
+    padding: var(--espacio-2) var(--espacio-4);
+  }
+
+  #ficha[open],
+  #como-jugar[open] {
+    gap: var(--espacio-1);
+  }
+
+  #ficha-titulo,
+  #como-jugar-titulo {
+    font-size: 1.25rem;
+  }
+
+  #como-jugar-pasos {
+    gap: var(--espacio-2);
+  }
+
+  #ficha-afirmacion {
+    font-size: 1.125rem;
+  }
+
+  #ficha-era {
+    font-size: 1rem;
+  }
 }
 
 @media (orientation: landscape) {
@@ -1279,13 +2680,14 @@
   line-height: 1.2;
 }
 
-/* Modo prueba [D-70]: una sola fila (select + boton); la etiqueta queda solo para lectores */
+/* Modo prueba [D-70]: una fila (select + boton) bajo la cabecera de la portada; la etiqueta queda solo para lectores */
 #selector-prueba {
-  flex: none;
+  grid-area: prueba;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: var(--espacio-2);
+  margin-top: var(--espacio-1);
   padding: 2px var(--espacio-2);
   font-family: var(--fuente-datos);
   font-size: var(--texto-pequeno);

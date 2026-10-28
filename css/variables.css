@@ -20,6 +20,7 @@
   --color-papel-2: #d6c7a2;
   --color-tinta: #17120a;        /* sobre papel: 13:1 */
   --color-tinta-suave: #4a3f2a;  /* sobre papel: 7:1 */
+  --color-nota: #625a49;         /* gris de notas sobre papel: 5:1 (sustituye a #6b6352, que daba 4,4:1) */
 
   /* Luz ambar de flexo */
   --color-ambar: #f2a93b;
@@ -32,6 +33,10 @@
   /* Estados (los iconos llevan su propio disco de color) */
   --color-acierto: #1f7a46;
   --color-fallo: #c4302b;
+  --color-verdad: #1e5d3a;       /* sello pequeno de prueba autentica en el tablon: 5,6:1 sobre papel */
+  --color-hecho: #14532d;       /* sello de afirmacion verdadera sobre papel: 7:1 */
+
+  --color-sobre-estado: #ffffff; /* texto sobre franjas de acierto/fallo: 5.4:1 y 8.1:1 */
 
   /* Cinta de no pasar */
   --color-cinta: #f5c518;
@@ -54,6 +59,11 @@
   --ancho-lectura: 65ch;
   --tactil-min: 44px;
   --alto-boton: 4rem;
+  --alto-sello: 2.75rem;         /* banda superior de la tarjeta de afirmacion en el veredicto */
+  --alto-ficha-reto: clamp(2.75rem, 8dvh, 4rem);
+  --alto-pie: 3.75rem;           /* pie de la ficha de revelacion: marca y boton Next en ordenador */
+  --ancho-ficha: clamp(15rem, 38vw, 26rem); /* columna de la ficha de Images en horizontal */
+  --ancho-tarjeta: 48rem;        /* tarjeta de Fact or Fake en horizontal */
 
   /* Radios */
   --radio-1: 2px;
@@ -77,4 +87,6 @@
   --texto-pequeno: 0.875rem;
   --texto-grande: 1.25rem;
   --texto-titulo: clamp(2.6rem, 14vw, 4.5rem);
+  --texto-afirmacion: clamp(1.25rem, min(7vw, 6.5dvh + 0.5rem), 2.5rem); /* 20 px como minimo */
+  --curva-estampa: cubic-bezier(0.2, 1.3, 0.4, 1);
 }

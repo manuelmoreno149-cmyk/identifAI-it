@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
   analizarCarpeta, temaDeCarpeta, contienePalabraProhibida, fuenteDeArchivo, planificar,
   barajar, nuevoId, distanciaHamming, compararPesos, avisosMezcla, analizarPesos,
+  buscarCalidad, avisosPesoPorDia, avisosPesoMediana, PESO_MIN_KB, PESO_MAX_KB, CALIDAD_MIN, CALIDAD_MAX,
   POSICIONES_RECORTE, analizarLote, analizarArgumentos, comprobarReimportacion, mensajeReimportacion,
-  analizarPruebasAbiertas, normalizarFicha, calendarioAnteriorValido
+  analizarPruebasAbiertas, normalizarFicha, calendarioAnteriorValido,
+  analizarArgumentosLanzamiento, comprobarCambioLanzamiento, migrarCalendario, migrarBanco, borrarAntiguas
 } from '../herramientas/temas.mjs';
 
 const nombres = ['01-fireworks', '02-dogs', '03-people-eating', '04-people-drinking', '05-table-with-food', '06-nightclub', '07-people-fighting'];
@@ -354,15 +356,270 @@ test('146 planificar con fichas en inglés (.en.txt)', () => {
 
 test('145 calendarioAnteriorValido', () => {
   const dia = (n) => ({ n, fecha: `2026-11-0${n}`, pruebas: ['a', 'b', 'c', 'd', 'e'] });
+  const dia4 = (n) => ({ n, pruebas: ['a', 'b', 'c', 'd', 'e'] });
   const cal = (version) => ({ version, lanzamiento: '2026-11-01', dias: [dia(1), dia(2)] });
+  const cal4 = (lanzamiento) => ({ version: 4, lanzamiento, dias: [dia4(1), dia4(2)] });
   assert.equal(calendarioAnteriorValido(cal(2)), true);
   assert.equal(calendarioAnteriorValido(cal(3)), true);
   assert.equal(calendarioAnteriorValido({ version: 3, lanzamiento: '2026-11-01', dias: [] }), true);
+  assert.equal(calendarioAnteriorValido(cal4(null)), true);
+  assert.equal(calendarioAnteriorValido(cal4('2026-12-15')), true);
+  assert.equal(calendarioAnteriorValido(cal4('2026-02-30')), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(3), lanzamiento: null }), false); // null solo en la 4
+  assert.equal(calendarioAnteriorValido({ ...cal(3), lanzamiento: '2099-01-01' }), true); // ya no hay fecha fija
   assert.equal(calendarioAnteriorValido(cal(1)), false);
-  assert.equal(calendarioAnteriorValido({ ...cal(2), lanzamiento: '2026-10-19' }), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(5) }), false);
   assert.equal(calendarioAnteriorValido(null), false);
   assert.equal(calendarioAnteriorValido({}), false);
   assert.equal(calendarioAnteriorValido([]), false);
   assert.equal(calendarioAnteriorValido({ ...cal(2), dias: [{ ...dia(1), pruebas: ['a', 'b', 'c', 'd'] }] }), false);
+  assert.equal(calendarioAnteriorValido({ ...cal4(null), dias: [{ ...dia4(1), pruebas: ['a', 'b', 'c', 'd'] }] }), false);
   assert.equal(calendarioAnteriorValido({ ...cal(2), dias: [{ ...dia(0) }] }), false);
+  assert.equal(calendarioAnteriorValido({ ...cal(3), dias: [{ n: 1, pruebas: dia(1).pruebas }] }), false); // la 3 exige fecha
+});
+
+test('planificar con lanzamiento null: fechas null y sin comprobar el pasado', () => {
+  const r = planificar({ ultimoDia: 0, hoyISO: '2030-01-01', lanzamiento: null, carpetas: carpetas() });
+  assert.deepEqual(r.errores, []);
+  assert.equal(r.nuevos.length, 7);
+  assert.ok(r.nuevos.every((d) => d.fecha === null));
+  // Con fecha pasada sí falla.
+  const p = planificar({ ultimoDia: 0, hoyISO: '2030-01-01', lanzamiento: '2026-11-01', carpetas: carpetas() });
+  assert.ok(p.errores.some((e) => /ya ha llegado/.test(e)));
+});
+
+test('comprobarReimportacion con lanzamiento null o derivado de la fecha', () => {
+  const dias4 = Array.from({ length: 7 }, (_, i) => ({ n: i + 1 }));
+  const b = { nombresCarpetas: nombres, hoyISO: '2030-01-01' };
+  assert.deepEqual(comprobarReimportacion({ ...b, calendario: { lanzamiento: null, dias: dias4 } }), []);
+  assert.deepEqual(comprobarReimportacion({ ...b, calendario: { lanzamiento: '2031-01-01', dias: dias4 } }), []);
+  const e = comprobarReimportacion({ ...b, calendario: { lanzamiento: '2029-12-30', dias: dias4 } });
+  assert.match(e[0], /^El día 01 \(2029-12-30\) ya ha llegado/);
+});
+
+test('151 analizarArgumentosLanzamiento', () => {
+  assert.deepEqual(analizarArgumentosLanzamiento([]), { accion: 'mostrar', fecha: null, errores: [] });
+  assert.deepEqual(analizarArgumentosLanzamiento(['2026-12-01']), { accion: 'fijar', fecha: '2026-12-01', errores: [] });
+  assert.deepEqual(analizarArgumentosLanzamiento(['--sin-fecha']), { accion: 'quitar', fecha: null, errores: [] });
+  assert.equal(analizarArgumentosLanzamiento(['x']).errores.length, 1);
+  assert.equal(analizarArgumentosLanzamiento(['2026-02-30']).errores.length, 1);
+  assert.equal(analizarArgumentosLanzamiento(['2026-12-01', '--sin-fecha']).errores.length, 1);
+});
+
+test('151 comprobarCambioLanzamiento', () => {
+  const hoyISO = '2026-10-26';
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-27', hoyISO }), []);
+  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-26', hoyISO }).length, 1);
+  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-01', hoyISO }).length, 1);
+  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-13-01', hoyISO }).length, 1);
+  assert.match(comprobarCambioLanzamiento({ actual: '2026-10-26', nuevo: '2026-12-01', hoyISO })[0], /^El juego se lanzó el 2026-10-26: cambiar la fecha renumeraría/);
+  assert.equal(comprobarCambioLanzamiento({ actual: '2026-10-01', nuevo: null, hoyISO }).length, 1);
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: '2026-11-01', nuevo: '2026-12-01', hoyISO }), []);
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: '2026-11-01', nuevo: null, hoyISO }), []);
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: null, nuevo: null, hoyISO }), []);
+});
+
+test('152 migrarCalendario y migrarBanco', () => {
+  const dia = (n) => ({ n, fecha: `2099-01-0${n}`, tema: `Tema ${n}`, pruebas: ['a', 'b', 'c', 'd', 'e'], clave: 'Mpb9Ycc=', fichas: ['f1', 'f2', 'f3', 'f4', 'f5'] });
+  const v3 = { version: 3, lanzamiento: '2099-01-01', dias: [dia(1), dia(2)] };
+  const copia = JSON.parse(JSON.stringify(v3));
+  const { calendario, errores } = migrarCalendario(v3);
+  assert.deepEqual(errores, []);
+  assert.deepEqual(v3, copia); // no muta
+  assert.equal(calendario.version, 4);
+  assert.equal(calendario.lanzamiento, '2099-01-01');
+  assert.deepEqual(calendario.dias.map((d) => Object.keys(d)), [['n', 'tema', 'pruebas', 'clave', 'fichas'], ['n', 'tema', 'pruebas', 'clave', 'fichas']]);
+  calendario.dias.forEach((d, i) => {
+    const { fecha, ...resto } = v3.dias[i];
+    assert.deepEqual(d, resto);
+  });
+  assert.deepEqual(migrarCalendario(calendario), { calendario, errores: [] }); // idempotente
+  const mala = { ...v3, dias: [dia(1), { ...dia(2), fecha: '2099-01-09' }] };
+  assert.equal(migrarCalendario(mala).errores.length, 1);
+  assert.equal(migrarCalendario({ ...v3, version: 2 }).errores.length, 1);
+  assert.equal(migrarCalendario(null).errores.length, 1);
+  assert.equal(migrarCalendario({ ...v3, lanzamiento: null }).errores.length, 1);
+
+  const b2 = { version: 2, imagenes: [{ id: 'abc', tipo: 'autentica', dia: 1, fecha: '2099-01-01', dhash: '00' }] };
+  const copiaB = JSON.parse(JSON.stringify(b2));
+  const mb = migrarBanco(b2);
+  assert.deepEqual(mb.errores, []);
+  assert.deepEqual(b2, copiaB);
+  assert.deepEqual(mb.banco, { version: 3, imagenes: [{ id: 'abc', tipo: 'autentica', dia: 1, dhash: '00' }] });
+  assert.deepEqual(migrarBanco(mb.banco), { banco: mb.banco, errores: [] });
+  assert.equal(migrarBanco({ version: 1, imagenes: [] }).errores.length, 1);
+  assert.equal(migrarBanco(null).errores.length, 1);
+});
+
+// ---------- 224 planificar: archivos ignorados y carpetas sin imágenes [D-139] ----------
+
+const sinImgs = (nombre, sueltos = ['facts.txt']) => ({ nombre, subcarpetas: [], sueltos, ia: [], real: [] });
+
+test('224 planificar: facts.txt, facts.en.txt, datos.txt y datos.original.txt se ignoran sin errores ni avisos', () => {
+  const c = { ...carpeta('01-fireworks'), sueltos: ['facts.txt', 'facts.en.txt', 'datos.txt', 'datos.original.txt'] };
+  const r = planificar({ ...base, carpetas: [c] });
+  assert.deepEqual(r.errores, []);
+  // Los únicos avisos posibles son los de «sin ficha» de las generadas; ninguno menciona los archivos ignorados.
+  assert.ok(r.avisos.every((x) => /no tiene ficha/.test(x) && !/facts|datos/.test(x)));
+  assert.deepEqual(r.pendientes, []);
+  assert.equal(r.nuevos.length, 1);
+});
+
+test('224 planificar: otros archivos sueltos siguen siendo error', () => {
+  for (const nombre of ['Datos.txt', 'notas.txt', 'FACTS.TXT']) {
+    const r = planificar({ ...base, carpetas: [{ ...carpeta('01-fireworks'), sueltos: ['datos.txt', nombre] }] });
+    assert.ok(r.errores.some((e) => e.includes('no admitidos') && e.includes(nombre)), nombre);
+  }
+});
+
+test('224 planificar: carpetas finales sin imágenes quedan pendientes con aviso', () => {
+  let r = planificar({ ...base, carpetas: [carpeta('01-dogs'), carpeta('02-cats'), sinImgs('03-birds'), sinImgs('04-fish', ['datos.txt', 'datos.original.txt'])] });
+  assert.deepEqual(r.errores, []);
+  assert.deepEqual(r.nuevos.map((d) => d.n), [1, 2]);
+  assert.deepEqual(r.pendientes, [3, 4]);
+  assert.ok(r.avisos.includes('03-birds y siguientes no tienen imágenes: Images se queda en el día 2.'));
+  r = planificar({ ...base, carpetas: [sinImgs('01-dogs')] });
+  assert.deepEqual(r.errores, []);
+  assert.deepEqual(r.pendientes, [1]);
+  assert.equal(r.nuevos.length, 0);
+});
+
+test('224 planificar: carpeta sin imágenes seguida de otra con imágenes es un hueco; con solo ia/ es error', () => {
+  let r = planificar({ ...base, carpetas: [carpeta('01-dogs'), sinImgs('02-cats'), carpeta('03-birds')] });
+  assert.ok(r.errores.some((e) => e.includes('02-cats') && /hueco/.test(e)));
+  assert.deepEqual(r.pendientes, []);
+  r = planificar({ ...base, carpetas: [{ ...carpeta('01-dogs'), subcarpetas: ['ia'], real: [] }] });
+  assert.ok(r.errores.length > 0);
+  r = planificar({ ...base, carpetas: [sinImgs('01-dogs', ['facts.txt', 'notas.txt'])] });
+  assert.ok(r.errores.some((e) => e.includes('notas.txt')));
+});
+
+test('92 planificar: sin lanzamiento (null) los días no tienen fecha ni error de fecha', () => {
+  const r = planificar({ ...base, lanzamiento: null, hoyISO: '2099-01-01', carpetas: carpetas() });
+  assert.deepEqual(r.errores, []);
+  assert.ok(r.nuevos.every((d) => d.fecha === null));
+});
+
+// ---------- Calidad WebP variable y avisos de peso (D-149) ----------
+
+const KB = 1024;
+// Codificador simulado: peso(q) = a + b * q bytes.
+const fake = (peso) => {
+  const llamadas = [];
+  const f = async (q) => {
+    llamadas.push(q);
+    return Buffer.alloc(Math.round(peso(q)));
+  };
+  f.llamadas = llamadas;
+  return f;
+};
+
+test('buscarCalidad: elige la mayor calidad que cabe en la franja', async () => {
+  const cod = fake((q) => 2 * KB * q - 40 * KB); // q=90 -> 140 KB: cabe con la calidad máxima
+  const r = await buscarCalidad(cod);
+  assert.equal(r.fuera, null);
+  assert.ok(r.buffer.length >= PESO_MIN_KB * KB && r.buffer.length <= PESO_MAX_KB * KB);
+  assert.equal(r.calidad, CALIDAD_MAX);
+  assert.ok(r.calidad >= CALIDAD_MIN && r.calidad <= CALIDAD_MAX);
+});
+
+test('buscarCalidad: si con la calidad máxima ya entra, usa la máxima', async () => {
+  const r = await buscarCalidad(fake(() => 130 * KB));
+  assert.equal(r.calidad, CALIDAD_MAX);
+  assert.equal(r.fuera, null);
+});
+
+test('buscarCalidad: busca la calidad más alta por debajo del máximo de la franja', async () => {
+  // peso(q) = 3 KB * q: 160 KB -> q = 53,3; con mínimo 55 no cabe; probamos con 2 KB * q: q = 80.
+  const r = await buscarCalidad(fake((q) => 2 * KB * q));
+  assert.equal(r.calidad, 80);
+  assert.equal(r.fuera, null);
+});
+
+test('buscarCalidad: nunca sale de 55 a 90 y avisa si no entra (demasiado pesada)', async () => {
+  const cod = fake(() => 400 * KB);
+  const r = await buscarCalidad(cod);
+  assert.equal(r.calidad, CALIDAD_MIN);
+  assert.equal(r.fuera, 'alto');
+  assert.ok(cod.llamadas.every((q) => q >= CALIDAD_MIN && q <= CALIDAD_MAX));
+});
+
+test('buscarCalidad: avisa si ni con la calidad máxima llega a la franja (demasiado ligera)', async () => {
+  const cod = fake(() => 40 * KB);
+  const r = await buscarCalidad(cod);
+  assert.equal(r.calidad, CALIDAD_MAX);
+  assert.equal(r.fuera, 'bajo');
+});
+
+test('buscarCalidad: respeta los límites de calidad aunque la franja pida otra', async () => {
+  const cod = fake((q) => 10 * KB * q); // 160 KB -> q = 16, fuera de rango
+  const r = await buscarCalidad(cod);
+  assert.equal(r.calidad, CALIDAD_MIN);
+  assert.equal(r.fuera, 'alto');
+});
+
+test('buscarCalidad: salto sobre la franja usa la calidad más cercana y avisa', async () => {
+  // Hasta q=70 pesa 100 KB (bajo la franja); desde q=71 pesa 200 KB.
+  const r = await buscarCalidad(fake((q) => (q <= 70 ? 100 * KB : 200 * KB)));
+  assert.equal(r.calidad, 70);
+  assert.equal(r.fuera, 'bajo');
+});
+
+test('buscarCalidad: pocas llamadas (búsqueda binaria)', async () => {
+  const cod = fake((q) => 2 * KB * q);
+  await buscarCalidad(cod);
+  assert.ok(cod.llamadas.length <= 9);
+});
+
+const desofPeso = (clave, n, i) => (i < 2 ? 1 : 0); // las dos primeras son generadas
+const diaPeso = (n) => ({ n, pruebas: [`a${n}`, `b${n}`, `c${n}`, `d${n}`, `e${n}`], clave: 'x' });
+const tam = (n, pesos) => Object.fromEntries(pesos.map((p, i) => [`${'abcde'[i]}${n}`, p * KB]));
+
+test('avisosPesoPorDia: avisa solo los días con más de un 15 % de diferencia y no dice qué tipo pesa más', () => {
+  const dias = [diaPeso(1), diaPeso(2)];
+  const tamanos = { ...tam(1, [120, 120, 120, 120, 120]), ...tam(2, [150, 150, 120, 120, 120]) };
+  const av = avisosPesoPorDia({ dias, tamanos, desofuscar: desofPeso });
+  assert.equal(av.length, 1);
+  assert.match(av[0], /^Día 2: .* 25 %/);
+  assert.ok(!/generada|auténtica/.test(av[0]));
+});
+
+test('avisosPesoPorDia: exactamente 15 % no avisa; ignora días sin un tipo', () => {
+  const dias = [diaPeso(1)];
+  const tamanos = tam(1, [115, 115, 100, 100, 100]);
+  assert.deepEqual(avisosPesoPorDia({ dias, tamanos, desofuscar: desofPeso }), []);
+  assert.deepEqual(avisosPesoPorDia({ dias, tamanos, desofuscar: () => 1 }), []);
+});
+
+test('avisosPesoMediana: avisa por la imagen que pesa más de 1,5 veces la mediana de su día', () => {
+  const dias = [diaPeso(1), diaPeso(2)];
+  const tamanos = { ...tam(1, [100, 100, 100, 100, 151]), ...tam(2, [100, 100, 100, 100, 150]) };
+  const av = avisosPesoMediana({ dias, tamanos });
+  assert.equal(av.length, 1);
+  assert.match(av[0], /^Día 1: casos\/e1\.webp pesa 151 KB.*mediana de su día \(100 KB\)/);
+});
+
+test('avisosPesoMediana: acepta Map y omite ids sin tamaño', () => {
+  const dias = [diaPeso(1)];
+  const tamanos = new Map([['a1', 100 * KB], ['b1', 100 * KB], ['c1', 400 * KB]]);
+  assert.equal(avisosPesoMediana({ dias, tamanos }).length, 1);
+});
+
+test('borrarAntiguas cuenta las borradas de verdad y no se detiene si una falla', () => {
+  const presentes = new Set(['a.webp', 'b.webp', 'c.webp', 'd.webp', 'e.webp']);
+  const r = borrarAntiguas({
+    antiguas: new Set(['a.webp', 'b.webp', 'c.webp', 'd.webp', 'e.webp']),
+    nuevosIds: new Set(['e']),
+    borrar: (f) => {
+      if (f === 'b.webp') throw Object.assign(new Error('x'), { code: 'EPERM' });
+      if (f !== 'c.webp') presentes.delete(f); // c.webp: "borra" sin efecto
+    },
+    existe: (f) => presentes.has(f)
+  });
+  assert.equal(r.borradas, 2);
+  assert.equal(r.conservadas, 1);
+  assert.equal(r.fallidas.length, 2);
+  assert.match(r.fallidas[0], /^b\.webp: EPERM/);
+  assert.match(r.fallidas[1], /^c\.webp/);
+  assert.ok(presentes.has('e.webp'));
 });

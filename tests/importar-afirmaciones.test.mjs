@@ -1,0 +1,416 @@
+// Tests del importador de Fact or Fake (tarea 73; criterios 200, 201, 214, 215, 239 y 240).
+// Todo ocurre en carpetas temporales con una copia de data/: nunca contra entrada/ ni data/ reales.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { importarAfirmaciones } from '../herramientas/importar-afirmaciones.mjs';
+import { lanzar } from '../herramientas/lanzamiento.mjs';
+import { LISTA_REVISION, leerAfirmacionesMensuales, unirMeses } from '../herramientas/afirmaciones.mjs';
+import { desofuscar, desofuscarAfirmacion, desofuscarAclaracion, validarAfirmaciones } from '../js/diario.js';
+
+const REAL = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
+const HOY = '2026-10-27';
+const MARCA = 'ZQXMARCA';
+
+const temporal = () => fs.mkdtempSync(path.join(os.tmpdir(), 'afirmaciones-'));
+const limpiar = (r) => fs.rmSync(r, { recursive: true, force: true });
+
+// Raíz de prueba: copia del calendario real (sin lanzamiento) y data/facts/ vacío.
+function raizDePrueba() {
+  const raiz = temporal();
+  fs.mkdirSync(path.join(raiz, 'data', 'facts'), { recursive: true });
+  fs.copyFileSync(path.join(REAL, 'data', 'calendario.json'), path.join(raiz, 'data', 'calendario.json'));
+  return raiz;
+}
+
+const calendario = (raiz) => JSON.parse(fs.readFileSync(path.join(raiz, 'data', 'calendario.json'), 'utf8'));
+const NOMBRES = ['fireworks', 'dogs', 'people-eating', 'people-drinking', 'table-with-food', 'nightclub', 'people-fighting'];
+const nombreCarpeta = (n) => `${String(n).padStart(2, '0')}-${NOMBRES[n - 1] ?? `topic-${n}`}`;
+
+// Bloques de un día: `falsas` falsas (1 a 4); el largo de las falsas se puede alargar con `relleno`.
+function textoDia(n, falsas = 2, relleno = '') {
+  const bloques = [];
+  for (let i = 1; i <= 5; i++) {
+    const esFalsa = i <= falsas;
+    bloques.push(
+      [
+        `answer: ${esFalsa ? 'fake' : 'fact'}`,
+        `claim: ${MARCA} claim ${n}-${i}${esFalsa ? relleno : ''}.`,
+        `truth: ${MARCA} truth ${n}-${i}.`,
+        `details: ${MARCA} detail ${n}-${i}.`
+      ].join('\n')
+    );
+  }
+  return bloques.join('\n---\n') + '\n';
+}
+
+function ponerDias(raiz, desde, hasta, { falsas = 2, relleno = '' } = {}) {
+  for (let n = desde; n <= hasta; n++) {
+    const d = path.join(raiz, 'entrada', 'temas', nombreCarpeta(n));
+    fs.mkdirSync(path.join(d, 'ia'), { recursive: true });
+    fs.mkdirSync(path.join(d, 'real'), { recursive: true });
+    fs.writeFileSync(path.join(d, 'facts.en.txt'), textoDia(n, falsas, relleno));
+  }
+}
+
+// Calendario de Images con tantos días como pidamos (solo n y tema importan al importador).
+function calendarioConDias(raiz, hasta, lanzamiento = null) {
+  const c = calendario(raiz);
+  const dias = [];
+  for (let n = 1; n <= hasta; n++) {
+    const base = c.dias[(n - 1) % c.dias.length];
+    dias.push({ ...base, n, tema: n <= NOMBRES.length ? c.dias[n - 1].tema : `Topic ${n}` });
+  }
+  fs.writeFileSync(path.join(raiz, 'data', 'calendario.json'), JSON.stringify({ ...c, lanzamiento, dias }, null, 2) + '\n');
+}
+
+const correr = (raiz, ...argv) => importarAfirmaciones({ raiz, argv, hoyISO: HOY });
+const salida = (r) => r.mensajes.join('\n');
+
+function arbol(dir) {
+  const res = new Map();
+  if (!fs.existsSync(dir)) return res;
+  const rec = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) rec(p);
+      else res.set(path.relative(dir, p), fs.readFileSync(p));
+    }
+  };
+  rec(dir);
+  return res;
+}
+const igual = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.has(k) && b.get(k).equals(v));
+
+test('200 --simular y sin --revisado no escriben, muestran la lista y el destino, y no filtran contenido', () => {
+  const raiz = raizDePrueba();
+  try {
+    ponerDias(raiz, 1, 7);
+    const antes = arbol(path.join(raiz, 'data'));
+    const sim = correr(raiz, '--simular');
+    assert.equal(sim.codigo, 0);
+    const sin = correr(raiz);
+    assert.equal(sin.codigo, 1);
+    assert.match(salida(sin), /con --revisado/);
+    for (const r of [sim, sin]) {
+      const s = salida(r);
+      assert.match(s, /2000-01\.json/);
+      for (const punto of LISTA_REVISION) assert.ok(s.includes(punto));
+      assert.ok(!s.includes(MARCA), 'no muestra afirmaciones, aclaraciones ni detalles');
+      assert.match(s, /5 afirmaciones: 2 fake, 3 fact/);
+    }
+    assert.ok(igual(antes, arbol(path.join(raiz, 'data'))), 'no se ha escrito nada');
+    assert.ok(!fs.existsSync(path.join(raiz, 'herramientas')));
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+function comprobarDescifrado(raiz, hasta) {
+  const unidos = unirMeses(leerAfirmacionesMensuales(path.join(raiz, 'data', 'facts')), { lanzamiento: null });
+  assert.deepEqual(unidos.errores, []);
+  assert.equal(unidos.dias.length, hasta);
+  const temas = new Map(calendario(raiz).dias.map((d) => [d.n, d.tema]));
+  for (const d of unidos.dias) {
+    if (temas.has(d.n)) assert.equal(d.tema, temas.get(d.n));
+    const originales = fs.readFileSync(path.join(raiz, 'entrada', 'temas', nombreCarpeta(d.n), 'facts.en.txt'), 'utf8').split('\n---\n');
+    const porNumero = new Map(originales.map((b, i) => [`${MARCA} claim ${d.n}-${i + 1}.`, b]));
+    for (let i = 0; i < 5; i++) {
+      const claim = desofuscarAfirmacion(d.textos[i], d.clave, d.n, i);
+      const ficha = desofuscarAclaracion(d.fichas[i], d.clave, d.n, i);
+      const bloque = porNumero.get(claim) ?? porNumero.get(claim.replace(/ made up\.$/, '.'));
+      assert.ok(bloque, 'la afirmación descifrada es una de las originales');
+      assert.equal(desofuscar(d.clave, d.n, i), bloque.includes('answer: fake') ? 1 : 0);
+      assert.equal(ficha.aclaracion, bloque.match(/truth: (.*)/)[1]);
+      assert.deepEqual(ficha.detalles, [bloque.match(/details: (.*)/)[1]]);
+    }
+  }
+  return unidos.dias;
+}
+
+test('201 con 40 carpetas y lanzamiento null crea 2000-01 (1 a 31) y 2000-02 (32 a 40) descifrables; la segunda vez no cambia nada', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 40);
+    const entradaAntes = arbol(path.join(raiz, 'entrada'));
+    const r = correr(raiz, '--revisado');
+    assert.equal(r.codigo, 0, salida(r));
+    assert.ok(!salida(r).includes(MARCA));
+    const dirFacts = path.join(raiz, 'data', 'facts');
+    assert.deepEqual(fs.readdirSync(dirFacts).sort(), ['2000-01.json', '2000-02.json']);
+    const m1 = JSON.parse(fs.readFileSync(path.join(dirFacts, '2000-01.json'), 'utf8'));
+    const m2 = JSON.parse(fs.readFileSync(path.join(dirFacts, '2000-02.json'), 'utf8'));
+    assert.ok(validarAfirmaciones(m1, '2000-01') && validarAfirmaciones(m2, '2000-02'));
+    assert.deepEqual([m1.dias[0].n, m1.dias.at(-1).n, m2.dias[0].n, m2.dias.at(-1).n], [1, 31, 32, 40]);
+    const dias = comprobarDescifrado(raiz, 40);
+    // Barajado: ni todos los días tienen el mismo orden de respuestas ni las claves se repiten.
+    assert.ok(new Set(dias.map((d) => d.clave)).size > 30);
+    assert.ok(!fs.existsSync(path.join(raiz, 'herramientas')));
+    assert.ok(igual(entradaAntes, arbol(path.join(raiz, 'entrada'))));
+
+    const antes = arbol(dirFacts);
+    const otra = correr(raiz, '--revisado');
+    assert.equal(otra.codigo, 0);
+    assert.match(salida(otra), /No hay afirmaciones nuevas por importar/);
+    assert.ok(igual(antes, arbol(dirFacts)));
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('214 con 1-40 ya importados y 25 carpetas nuevas reescribe 2000-02, crea 2000-03 y deja 2000-01 idéntico', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 40);
+    assert.equal(correr(raiz, '--revisado').codigo, 0);
+    const dirFacts = path.join(raiz, 'data', 'facts');
+    const antes = arbol(dirFacts);
+    ponerDias(raiz, 41, 65);
+    const r = correr(raiz, '--revisado');
+    assert.equal(r.codigo, 0, salida(r));
+    const despues = arbol(dirFacts);
+    assert.deepEqual([...despues.keys()].sort(), ['2000-01.json', '2000-02.json', '2000-03.json']);
+    assert.ok(despues.get('2000-01.json').equals(antes.get('2000-01.json')));
+    assert.ok(!despues.get('2000-02.json').equals(antes.get('2000-02.json')));
+    const dias = comprobarDescifrado(raiz, 65);
+    assert.equal(dias.length, 65);
+    // Los días antiguos de 2000-02 conservan sus bloques.
+    const viejo = JSON.parse(antes.get('2000-02.json').toString('utf8')).dias;
+    const nuevo = JSON.parse(despues.get('2000-02.json').toString('utf8')).dias.slice(0, viejo.length);
+    assert.deepEqual(nuevo, viejo);
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('215 npm run lanzamiento con los datos del 214 reparte data/facts en meses reales y --sin-fecha lo deshace', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 65);
+    assert.equal(correr(raiz, '--revisado').codigo, 0);
+    const dirFacts = path.join(raiz, 'data', 'facts');
+    const claro = (dias) => dias.map((d) => [d.n, d.clave, d.textos, d.fichas]);
+    const base = unirMeses(leerAfirmacionesMensuales(dirFacts), { lanzamiento: null }).dias;
+    const original = arbol(dirFacts);
+
+    const r = lanzar({ raiz, argv: ['2026-12-15'], hoyISO: HOY });
+    assert.equal(r.codigo, 0, r.mensajes.join('\n'));
+    assert.deepEqual(fs.readdirSync(dirFacts).sort(), ['2026-12.json', '2027-01.json', '2027-02.json']);
+    const nuevos = unirMeses(leerAfirmacionesMensuales(dirFacts), { lanzamiento: '2026-12-15' });
+    assert.deepEqual(nuevos.errores, []);
+    assert.deepEqual(claro(nuevos.dias), claro(base));
+    for (const d of nuevos.dias) {
+      for (let i = 0; i < 5; i++) assert.ok(desofuscarAfirmacion(d.textos[i], d.clave, d.n, i) !== null);
+    }
+
+    const copia = arbol(dirFacts);
+    assert.equal(lanzar({ raiz, argv: ['2026-12-15'], hoyISO: HOY }).codigo, 0);
+    assert.ok(igual(copia, arbol(dirFacts)), 'repetir no cambia nada');
+
+    assert.equal(lanzar({ raiz, argv: ['--sin-fecha'], hoyISO: HOY }).codigo, 0);
+    assert.ok(igual(original, arbol(dirFacts)), '--sin-fecha vuelve al reparto 2000-*');
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('239 datos.txt y datos.original.txt (no UTF-8, con { source: ---) no se abren, no se muestran y no cambian', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 3);
+    // Una carpeta final con solo notas: cuenta como carpeta sin archivo (pendiente).
+    const soloNotas = path.join(raiz, 'entrada', 'temas', nombreCarpeta(4));
+    fs.mkdirSync(soloNotas, { recursive: true });
+    const notas = [];
+    const basura = Buffer.concat([Buffer.from(`${MARCA} {x} source: http://x\n---\n`), Buffer.from([0xff, 0xfe, 0xc3, 0x28, 0x80])]);
+    for (const nombre of ['datos.txt', 'datos.original.txt']) {
+      for (const n of [1, 2, 3, 4]) {
+        const p = path.join(raiz, 'entrada', 'temas', nombreCarpeta(n), nombre);
+        fs.writeFileSync(p, basura);
+        const t = new Date('2020-01-01T00:00:00Z');
+        fs.utimesSync(p, t, t);
+        notas.push(p);
+      }
+    }
+    const huellas = () => notas.map((p) => [fs.readFileSync(p), fs.statSync(p).mtimeMs]);
+    const antes = huellas();
+    const sim = correr(raiz, '--simular');
+    assert.equal(sim.codigo, 0, salida(sim));
+    assert.ok(!salida(sim).includes(MARCA));
+    assert.ok(!/datos/.test(salida(sim)), 'ni las nombra');
+    assert.ok(!sim.mensajes.some((m) => /ERROR/.test(m)));
+    const real = correr(raiz, '--revisado');
+    assert.equal(real.codigo, 0, salida(real));
+    assert.ok(!salida(real).includes(MARCA));
+    const despues = huellas();
+    notas.forEach((_, i) => {
+      assert.ok(despues[i][0].equals(antes[i][0]));
+      assert.equal(despues[i][1], antes[i][1]);
+    });
+    assert.equal(unirMeses(leerAfirmacionesMensuales(path.join(raiz, 'data', 'facts')), { lanzamiento: null }).dias.length, 3);
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('240 un día con falsas un 50 % más largas muestra el aviso, escribe el día y termina con código 0', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 1, { falsas: 2, relleno: ' with a considerably longer and padded wording here' });
+    const r = correr(raiz, '--revisado');
+    assert.equal(r.codigo, 0, salida(r));
+    assert.match(salida(r), /AVISO: día 1: las afirmaciones falsas miden de media un \d+ % más/);
+    assert.ok(fs.existsSync(path.join(raiz, 'data', 'facts', '2000-01.json')));
+    assert.ok(!salida(r).includes(MARCA));
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('--reimportar: sin --confirmar solo muestra el plan; con --confirmar regenera claves y exige carpetas', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 3);
+    assert.equal(correr(raiz, '--reimportar').codigo, 1, 'sin nada importado no hay qué reimportar');
+    assert.equal(correr(raiz, '--revisado').codigo, 0);
+    const dirFacts = path.join(raiz, 'data', 'facts');
+    const antes = arbol(dirFacts);
+
+    const plan = correr(raiz, '--reimportar', '--revisado');
+    assert.equal(plan.codigo, 0, salida(plan));
+    assert.ok(igual(antes, arbol(dirFacts)), 'sin --confirmar no escribe');
+    assert.ok(!salida(plan).includes(MARCA));
+
+    assert.equal(correr(raiz, '--reimportar', '--confirmar').codigo, 1, 'falta --revisado');
+    assert.ok(igual(antes, arbol(dirFacts)));
+
+    const r = correr(raiz, '--reimportar', '--confirmar', '--revisado');
+    assert.equal(r.codigo, 0, salida(r));
+    assert.ok(!igual(antes, arbol(dirFacts)), 'claves y bloques nuevos');
+    comprobarDescifrado(raiz, 3);
+
+    fs.rmSync(path.join(raiz, 'entrada', 'temas', nombreCarpeta(2)), { recursive: true });
+    const sinCarpeta = correr(raiz, '--reimportar', '--confirmar', '--revisado');
+    assert.equal(sinCarpeta.codigo, 1);
+    assert.match(salida(sinCarpeta), /falta la carpeta del día 02|numeración no es consecutiva/);
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('--reimportar se niega cuando un día ya ha llegado', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7, '2026-12-15');
+    ponerDias(raiz, 1, 3);
+    assert.equal(correr(raiz, '--revisado').codigo, 0);
+    const antes = arbol(path.join(raiz, 'data', 'facts'));
+    const tarde = importarAfirmaciones({ raiz, argv: ['--reimportar', '--confirmar', '--revisado'], hoyISO: '2026-12-16' });
+    assert.equal(tarde.codigo, 1);
+    assert.match(salida(tarde), /ya ha llegado/);
+    assert.ok(igual(antes, arbol(path.join(raiz, 'data', 'facts'))));
+    const pronto = importarAfirmaciones({ raiz, argv: ['--reimportar', '--confirmar', '--revisado'], hoyISO: '2026-12-01' });
+    assert.equal(pronto.codigo, 0, salida(pronto));
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('con lanzamiento reparte por meses reales y no admite días que ya han llegado', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7, '2026-12-15');
+    ponerDias(raiz, 1, 20);
+    assert.equal(correr(raiz, '--revisado').codigo, 0);
+    assert.deepEqual(fs.readdirSync(path.join(raiz, 'data', 'facts')).sort(), ['2026-12.json', '2027-01.json']);
+    ponerDias(raiz, 21, 22);
+    const tarde = importarAfirmaciones({ raiz, argv: ['--revisado'], hoyISO: '2027-01-10' });
+    assert.equal(tarde.codigo, 1);
+    assert.match(salida(tarde), /ya ha llegado/);
+  } finally {
+    limpiar(raiz);
+  }
+});
+
+test('errores: duplicadas, UTF-8 inválido, tema distinto al de Images, hueco, argumentos y sin carpetas', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 2);
+    // Duplicada entre días del mismo lote.
+    const d2 = path.join(raiz, 'entrada', 'temas', nombreCarpeta(2), 'facts.en.txt');
+    fs.writeFileSync(d2, textoDia(1));
+    let r = correr(raiz, '--simular');
+    assert.equal(r.codigo, 1);
+    assert.match(salida(r), /02-dogs, bloque \d: la afirmación está repetida/);
+    assert.ok(!salida(r).includes(MARCA));
+    fs.writeFileSync(d2, textoDia(2));
+
+    // UTF-8 inválido.
+    fs.writeFileSync(d2, Buffer.from([0xff, 0xfe, 0x00]));
+    r = correr(raiz, '--simular');
+    assert.equal(r.codigo, 1);
+    assert.match(salida(r), /no es UTF-8 válido/);
+    fs.writeFileSync(d2, textoDia(2));
+
+    // Hueco: carpeta sin archivo seguida de otra con archivo.
+    fs.unlinkSync(d2);
+    ponerDias(raiz, 3, 3);
+    r = correr(raiz, '--simular');
+    assert.equal(r.codigo, 1);
+    assert.match(salida(r), /no puede haber huecos/);
+
+    // Pendientes al final: aviso y código 0.
+    fs.rmSync(path.join(raiz, 'entrada', 'temas', nombreCarpeta(3)), { recursive: true });
+    r = correr(raiz, '--simular');
+    assert.equal(r.codigo, 0);
+    assert.match(salida(r), /AVISO: 02-dogs .*facts\.txt/);
+
+    // Tema distinto del de Images.
+    fs.renameSync(path.join(raiz, 'entrada', 'temas', nombreCarpeta(1)), path.join(raiz, 'entrada', 'temas', '01-other'));
+    r = correr(raiz, '--simular');
+    assert.equal(r.codigo, 1);
+    assert.match(salida(r), /no coincide con el del día 1 de Images/);
+
+    // Argumentos.
+    assert.equal(correr(raiz, '--nada').codigo, 1);
+    assert.equal(correr(raiz, '--confirmar').codigo, 1);
+  } finally {
+    limpiar(raiz);
+  }
+  const vacia = raizDePrueba();
+  try {
+    const r = correr(vacia, '--simular');
+    assert.equal(r.codigo, 0);
+    assert.match(salida(r), /No hay carpetas en entrada\/temas/);
+  } finally {
+    limpiar(vacia);
+  }
+});
+
+test('un día con una afirmación publicada repetida en un lote nuevo es un error; el importador no toca herramientas/', () => {
+  const raiz = raizDePrueba();
+  try {
+    calendarioConDias(raiz, 7);
+    ponerDias(raiz, 1, 2);
+    assert.equal(correr(raiz, '--revisado').codigo, 0);
+    ponerDias(raiz, 3, 3);
+    fs.writeFileSync(path.join(raiz, 'entrada', 'temas', nombreCarpeta(3), 'facts.en.txt'), textoDia(1));
+    const antes = arbol(path.join(raiz, 'data'));
+    const r = correr(raiz, '--revisado');
+    assert.equal(r.codigo, 1);
+    assert.match(salida(r), /03-people-eating, bloque \d: la afirmación está repetida \(ya aparece en el día 1 ya publicado\)/);
+    assert.ok(igual(antes, arbol(path.join(raiz, 'data'))));
+    assert.ok(!fs.existsSync(path.join(raiz, 'herramientas')));
+  } finally {
+    limpiar(raiz);
+  }
+});
