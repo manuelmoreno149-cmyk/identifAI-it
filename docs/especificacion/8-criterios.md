@@ -142,13 +142,13 @@ Parte de la especificación 2.1 (índice en `docs/ESPECIFICACION.md`) [D-120]. S
 182. [2.1] **Sin deslizar** (método del criterio 126, en 360 x 640, 640 x 360, 1280 x 720, 390 x 844 y 768 x 1024):
     - `portada` con Images elegido y con Fact or Fake elegido; con el desplegable cerrado y abierto, en modo prueba con selector y aviso, y con `#aviso-almacen`;
     - `caso` de Fact or Fake en `pregunta` con una afirmación de 140 caracteres (texto de prueba en inglés con palabras largas) y con una de 30, **en la prueba 1 (con `#caso-aviso`)** y en la prueba 2;
-    - `caso/veredicto` de Fact or Fake FACT y FAKE con aclaración de 160 y 3 detalles de 80, y con aclaración corta y 0 detalles, y el veredicto por ausencia; en 640 x 360 se comprueba además que la afirmación se oculta en el veredicto (R16) y en los demás tamaños que sigue visible;
+    - `caso/veredicto` de Fact or Fake FACT y FAKE con aclaración de 160 y 3 detalles de 80, y con aclaración corta y 0 detalles, y el veredicto por ausencia; en todos los tamaños, también 640 x 360, se comprueba que la afirmación sigue visible en el veredicto (R16, D-148);
     - `resultado` (con el mensaje más largo de `final.mensajes_afirmaciones`) y `ya-jugado` de Fact or Fake (también con `avisos.otra_pestana`), y `sin-casos` con `sin_lanzamiento`.
 183. [2.1] Las dos fichas de reto están en una fila, miden al menos 44 px de alto, muestran el nombre en una línea ("Fact or Fake" incluido) y el estado entero; con Fact or Fake elegido, `#portada-modos` tiene `hidden` y no se alcanza con Tab, y `#portada-regla` es visible.
 184. [2.1] Bloqueo de copia en `#afirmacion`: doble clic, triple clic, arrastrar y pulsación larga no seleccionan texto; Ctrl+C y el menú contextual sobre la tarjeta no copian. Fuera de `#afirmacion` el menú contextual funciona.
 185. [2.1] Lectores de pantalla (NVDA y VoiceOver en iOS): al entrar en cada prueba se lee la afirmación con la navegación normal (la tarjeta se anuncia con "Claim N/5"); `#afirmacion-marca` no se lee; en la prueba 1 se anuncia una vez el aviso de ausencia; en el veredicto se leen sello, pie, aclaración y detalles (como lista).
 186. [2.1] Resultado de Fact or Fake: 5 `button.miniatura` numerados en una fila, de al menos 44 x 44 px, con nombre accesible "Claim N: correct|wrong"; al activarlos se abre el diálogo con la afirmación completa, "It was: FACT|FAKE", la aclaración y los detalles, sin título de confesión.
-187. [2.1] En el veredicto y el diálogo, los sellos dicen exactamente "FACT" y "FAKE", tienen contraste AA, son distintos entre sí sin depender del color (texto), y la afirmación sigue legible debajo (salvo en `max-height: 420px`, R16).
+187. [2.1] En el veredicto y el diálogo, los sellos dicen exactamente "FACT" y "FAKE", tienen contraste AA, son distintos entre sí sin depender del color (texto), y la afirmación sigue visible y legible (R16, D-148).
 
 ## 8.23 main.js con Fact or Fake (manual con `npx serve`)
 188. [2.1] Partida completa de Fact or Fake con ratón, con teclado (F, K y Enter) y en un móvil de 360 px en vertical y horizontal; no pasa por `cargando` ni `cuenta-atras` y no hay temporizador.
