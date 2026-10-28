@@ -2366,6 +2366,245 @@
   }
 }
 
+/* Movil vertical (hasta 600 px): la pantalla es una columna cerrada (franja | tablon | pie) y cada
+   prueba se ajusta a su celda. Safari iOS no resuelve bien alturas en % ni aspect-ratio dentro de celdas
+   con container-type: size, asi que el li se estira con la celda y la tarjeta se coloca en absoluto. */
+@media (max-width: 600px) and (orientation: portrait) {
+  #pantalla-resultado:not([hidden]) {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #pantalla-resultado .cinta-peligro {
+    flex: none;
+  }
+
+  /* Franja compacta */
+  #resultado-franja {
+    column-gap: var(--espacio-3);
+    padding: 6px var(--espacio-3);
+  }
+
+  #resultado-aciertos {
+    font-size: 64px;
+  }
+
+  #resultado-reto {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  #resultado-mensaje {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  /* Tablon: rejilla de dos filas (cuadricula y nota); la cuadricula toma todo el alto libre */
+  #resultado-tablon {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 2px;
+    padding: 4px 6px;
+    overflow: hidden;
+  }
+
+  #resultado-nota {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  #resultado-revision {
+    min-height: 0;
+    min-width: 0;
+    height: auto;
+    align-content: stretch;
+    gap: 10px;
+    padding: 8px 2px 2px;
+    overflow: hidden;
+  }
+
+  #resultado-revision li {
+    align-self: stretch;
+    justify-self: stretch;
+    width: auto;
+    height: auto;
+    max-height: none;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: auto;
+    transform: rotate(var(--giro-prueba, 0deg));
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision li {
+    aspect-ratio: auto;
+  }
+
+  /* Giros pequenos: con el gap no invaden a la vecina */
+  #resultado-revision li:nth-child(1) { --giro-prueba: -0.8deg; }
+  #resultado-revision li:nth-child(2) { --giro-prueba: 0.6deg; }
+  #resultado-revision li:nth-child(3) { --giro-prueba: -0.4deg; }
+  #resultado-revision li:nth-child(4) { --giro-prueba: 0.9deg; }
+  #resultado-revision li:nth-child(5) { --giro-prueba: -0.6deg; }
+
+  #resultado-revision li::before {
+    top: -5px;
+    width: 12px;
+    height: 12px;
+  }
+
+  #resultado-revision li:hover,
+  #resultado-revision li:active {
+    transform: rotate(var(--giro-prueba, 0deg));
+  }
+
+  .miniatura {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 2px;
+    gap: 2px;
+    overflow: hidden;
+    border-width: 3px;
+  }
+
+  /* Images: fotos 4:5 completas (3 + 2); el lado limitante es el ancho o el alto de la celda */
+  .mini-foto {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    width: min(100cqw - 12px, (100cqh - 12px - var(--pie) - 2px) * 0.8);
+  }
+
+  /* Fact or Fake: 2 columnas y la #5 ocupa las dos */
+  #app[data-reto="afirmaciones"] #resultado-revision {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision li,
+  #app[data-reto="afirmaciones"] #resultado-revision li:nth-child(4) {
+    grid-column: auto;
+  }
+
+  #app[data-reto="afirmaciones"] #resultado-revision li:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  /* Cabecera y pie fijos; solo cede la zona de texto */
+  .mini-cabecera,
+  .mini-texto + .mini-pie {
+    flex: none;
+    margin-top: auto;
+  }
+
+  /* Misma fuente y altura de linea en todas las celdas (tambien la #5). Altura exacta de
+     N lineas (mismo N en el line-clamp, ver umbrales abajo): sin linea a medias y, si el
+     texto excede N lineas, la ultima termina en "...". El hueco sobrante queda libre y
+     el pie se ancla abajo con margin-top:auto. */
+  .mini-texto {
+    --lineas: 1; /* anula el 3 heredado de #resultado-revision; los umbrales lo suben */
+    flex: 0 1 auto;
+    height: calc(var(--lineas, 1) * 0.9375rem);
+    max-height: calc(var(--lineas, 1) * 0.9375rem);
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0.75rem;
+    line-height: 0.9375rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--lineas, 1);
+    line-clamp: var(--lineas, 1);
+  }
+
+  .mini-voto {
+    font-size: 0.75rem;
+  }
+
+  .mini-texto + .mini-pie::after {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  /* Lineas segun el alto H de la celda. Fijo: borde 6 + padding 4 + gaps 4 + cabecera ~27
+     + pie 24 = 65 px; N = floor((H - 71) / 15) deja 6 px de holgura. Minimo 1 linea. */
+  @container (min-height: 6.3125rem) { .mini-texto { --lineas: 2; } }  /* H >= 101 */
+  @container (min-height: 7.25rem) { .mini-texto { --lineas: 3; } }    /* H >= 116 */
+  @container (min-height: 8.1875rem) { .mini-texto { --lineas: 4; } }  /* H >= 131 */
+  @container (min-height: 9.125rem) { .mini-texto { --lineas: 5; } }   /* H >= 146 */
+  @container (min-height: 10.0625rem) { .mini-texto { --lineas: 6; } } /* H >= 161 */
+  @container (min-height: 11rem) { .mini-texto { --lineas: 7; } }      /* H >= 176 */
+  @container (min-height: 11.9375rem) { .mini-texto { --lineas: 8; } } /* H >= 191 */
+
+  /* Pie siempre visible: estadisticas en una linea y dos botones de 52 px */
+  #resultado-pie {
+    flex: none;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #resultado-rachas {
+    gap: var(--espacio-2);
+    align-items: end;
+  }
+
+  .dato-etiqueta {
+    font-size: 0.6875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dato-valor {
+    font-size: 1rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  #resultado-pie .acciones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--espacio-3);
+  }
+
+  #resultado-pie .acciones .boton {
+    height: 52px;
+    min-height: 52px;
+    padding-block: 0;
+    padding-inline: clamp(0.375rem, 2.2vw, 0.75rem);
+    gap: clamp(0.25rem, 1.8vw, 0.5rem);
+    font-size: clamp(0.8125rem, 4vw, 1.125rem);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  #resultado-pie .acciones .boton .boton-texto {
+    white-space: nowrap;
+  }
+
+  #resultado-pie .acciones .icono-compartir {
+    width: 1.05em;
+    height: 1.05em;
+  }
+}
+
 @media (min-width: 640px) {
   #resultado-franja {
     grid-template-columns: auto minmax(0, 1fr) auto;
