@@ -408,6 +408,23 @@ export function comprobarReimportacion({ calendario, nombresCarpetas, hoyISO, di
   return errores;
 }
 
+// Borra las imágenes antiguas de una reimportación sin perder la cuenta real: nunca toca las que sigan en uso
+// (nuevosIds), no se detiene si una falla y comprueba con existe() que el archivo desapareció.
+export function borrarAntiguas({ antiguas, nuevosIds, borrar, existe }) {
+  const r = { borradas: 0, conservadas: 0, fallidas: [] };
+  for (const f of antiguas) {
+    if (nuevosIds.has(f.replace(/\.webp$/i, ''))) { r.conservadas++; continue; }
+    try {
+      borrar(f);
+      if (existe(f)) r.fallidas.push(`${f}: sigue en casos/ tras borrarla`);
+      else r.borradas++;
+    } catch (e) {
+      r.fallidas.push(`${f}: ${e.code ?? e.message}`);
+    }
+  }
+  return r;
+}
+
 export function mensajeReimportacion({ dias, borradas }) {
   if (dias.length === 0) return '';
   const rango = dias[0].fecha ? `${dias[0].fecha} a ${dias[dias.length - 1].fecha}` : 'sin fecha de lanzamiento';
@@ -523,6 +540,41 @@ export function distanciaHamming(a, b) {
 
 // ---------- Pesos y mezcla ----------
 
+// Franja común de peso de las imágenes publicadas y límites de calidad WebP (D-149).
+export const PESO_MIN_KB = 110;
+export const PESO_MAX_KB = 160;
+export const CALIDAD_MIN = 55;
+export const CALIDAD_MAX = 90;
+
+// Busca la calidad entera entre CALIDAD_MIN y CALIDAD_MAX cuyo peso caiga en la franja.
+// codificar(calidad) -> Promise<Buffer>. Devuelve { buffer, calidad, fuera: null|'bajo'|'alto' }.
+// Si ninguna calidad entra, usa la más cercana (el límite) y lo indica en fuera.
+export async function buscarCalidad(codificar, { minBytes = PESO_MIN_KB * 1024, maxBytes = PESO_MAX_KB * 1024, calidadMin = CALIDAD_MIN, calidadMax = CALIDAD_MAX } = {}) {
+  const memo = new Map();
+  const probar = async (q) => {
+    if (!memo.has(q)) memo.set(q, await codificar(q));
+    return memo.get(q);
+  };
+  const res = (q, buffer) => ({ buffer, calidad: q, fuera: buffer.length < minBytes ? 'bajo' : buffer.length > maxBytes ? 'alto' : null });
+  const alta = await probar(calidadMax);
+  if (alta.length <= maxBytes) return res(calidadMax, alta);
+  const baja = await probar(calidadMin);
+  if (baja.length >= maxBytes) return res(calidadMin, baja);
+  // Invariante: peso(lo) <= maxBytes < peso(hi)
+  let lo = calidadMin;
+  let hi = calidadMax;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if ((await probar(mid)).length <= maxBytes) lo = mid;
+    else hi = mid;
+  }
+  const mejor = await probar(lo);
+  if (mejor.length >= minBytes) return res(lo, mejor);
+  // Salto sobre la franja: se elige la calidad más cercana a ella.
+  const sobre = await probar(hi);
+  return sobre.length - maxBytes < minBytes - mejor.length ? res(hi, sobre) : res(lo, mejor);
+}
+
 const media = (l) => l.reduce((s, x) => s + x, 0) / l.length;
 
 export function compararPesos(pesosAutenticas, pesosGeneradas) {
@@ -569,6 +621,48 @@ export function mensajePeso({ global, diasAfectados }) {
     `AVISO: las imágenes de un tipo pesan de media un ${pct} % más que las del otro (${kb(mayor)} frente a ${kb(menor)}; pesan más ${quien}). ` +
     `El tamaño de archivo podría delatar la respuesta. Días afectados: ${diasAfectados.length ? diasAfectados.join(', ') : 'ninguno por separado'}.`
   );
+}
+
+export const UMBRAL_PESO_DIA = 0.15;
+export const UMBRAL_MEDIANA = 1.5;
+
+const pesoDe = (tamanos, id) => (tamanos instanceof Map ? tamanos.get(id) : tamanos[id]);
+
+// Por día: aviso si el peso medio de las auténticas y el de las generadas difieren más de un 15 %.
+// No dice qué tipo pesa más: el texto no debe ser una pista si se copia.
+export function avisosPesoPorDia({ dias, tamanos, desofuscar }) {
+  const avisos = [];
+  for (const d of dias) {
+    const a = [];
+    const g = [];
+    d.pruebas.forEach((id, i) => {
+      const bytes = pesoDe(tamanos, id);
+      if (typeof bytes !== 'number') return;
+      (desofuscar(d.clave, d.n, i) === 1 ? g : a).push(bytes);
+    });
+    const c = compararPesos(a, g);
+    if (c && c.diferencia > UMBRAL_PESO_DIA) {
+      avisos.push(`Día ${d.n}: el peso medio de las imágenes de un tipo difiere un ${Math.round(c.diferencia * 100)} % del otro (más del ${Math.round(UMBRAL_PESO_DIA * 100)} %); el tamaño de archivo podría delatar la respuesta.`);
+    }
+  }
+  return avisos;
+}
+
+// Por día: aviso por cada imagen que pesa más de 1,5 veces la mediana de las de su día.
+export function avisosPesoMediana({ dias, tamanos }) {
+  const avisos = [];
+  for (const d of dias) {
+    const pesos = d.pruebas.map((id) => [id, pesoDe(tamanos, id)]).filter(([, b]) => typeof b === 'number');
+    if (pesos.length < 3) continue;
+    const orden = pesos.map(([, b]) => b).sort((x, y) => x - y);
+    const m = orden.length % 2 ? orden[(orden.length - 1) / 2] : (orden[orden.length / 2 - 1] + orden[orden.length / 2]) / 2;
+    for (const [id, bytes] of pesos) {
+      if (bytes > UMBRAL_MEDIANA * m) {
+        avisos.push(`Día ${d.n}: casos/${id}.webp pesa ${Math.round(bytes / 1024)} KB, más de 1,5 veces la mediana de su día (${Math.round(m / 1024)} KB): reexpórtala con menos calidad.`);
+      }
+    }
+  }
+  return avisos;
 }
 
 export function avisosMezcla(generadasPorDia) {

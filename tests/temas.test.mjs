@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {
   analizarCarpeta, temaDeCarpeta, contienePalabraProhibida, fuenteDeArchivo, planificar,
   barajar, nuevoId, distanciaHamming, compararPesos, avisosMezcla, analizarPesos,
+  buscarCalidad, avisosPesoPorDia, avisosPesoMediana, PESO_MIN_KB, PESO_MAX_KB, CALIDAD_MIN, CALIDAD_MAX,
   POSICIONES_RECORTE, analizarLote, analizarArgumentos, comprobarReimportacion, mensajeReimportacion,
   analizarPruebasAbiertas, normalizarFicha, calendarioAnteriorValido,
-  analizarArgumentosLanzamiento, comprobarCambioLanzamiento, migrarCalendario, migrarBanco
+  analizarArgumentosLanzamiento, comprobarCambioLanzamiento, migrarCalendario, migrarBanco, borrarAntiguas
 } from '../herramientas/temas.mjs';
 
 const nombres = ['01-fireworks', '02-dogs', '03-people-eating', '04-people-drinking', '05-table-with-food', '06-nightclub', '07-people-fighting'];
@@ -497,4 +498,128 @@ test('92 planificar: sin lanzamiento (null) los días no tienen fecha ni error d
   const r = planificar({ ...base, lanzamiento: null, hoyISO: '2099-01-01', carpetas: carpetas() });
   assert.deepEqual(r.errores, []);
   assert.ok(r.nuevos.every((d) => d.fecha === null));
+});
+
+// ---------- Calidad WebP variable y avisos de peso (D-149) ----------
+
+const KB = 1024;
+// Codificador simulado: peso(q) = a + b * q bytes.
+const fake = (peso) => {
+  const llamadas = [];
+  const f = async (q) => {
+    llamadas.push(q);
+    return Buffer.alloc(Math.round(peso(q)));
+  };
+  f.llamadas = llamadas;
+  return f;
+};
+
+test('buscarCalidad: elige la mayor calidad que cabe en la franja', async () => {
+  const cod = fake((q) => 2 * KB * q - 40 * KB); // q=90 -> 140 KB: cabe con la calidad máxima
+  const r = await buscarCalidad(cod);
+  assert.equal(r.fuera, null);
+  assert.ok(r.buffer.length >= PESO_MIN_KB * KB && r.buffer.length <= PESO_MAX_KB * KB);
+  assert.equal(r.calidad, CALIDAD_MAX);
+  assert.ok(r.calidad >= CALIDAD_MIN && r.calidad <= CALIDAD_MAX);
+});
+
+test('buscarCalidad: si con la calidad máxima ya entra, usa la máxima', async () => {
+  const r = await buscarCalidad(fake(() => 130 * KB));
+  assert.equal(r.calidad, CALIDAD_MAX);
+  assert.equal(r.fuera, null);
+});
+
+test('buscarCalidad: busca la calidad más alta por debajo del máximo de la franja', async () => {
+  // peso(q) = 3 KB * q: 160 KB -> q = 53,3; con mínimo 55 no cabe; probamos con 2 KB * q: q = 80.
+  const r = await buscarCalidad(fake((q) => 2 * KB * q));
+  assert.equal(r.calidad, 80);
+  assert.equal(r.fuera, null);
+});
+
+test('buscarCalidad: nunca sale de 55 a 90 y avisa si no entra (demasiado pesada)', async () => {
+  const cod = fake(() => 400 * KB);
+  const r = await buscarCalidad(cod);
+  assert.equal(r.calidad, CALIDAD_MIN);
+  assert.equal(r.fuera, 'alto');
+  assert.ok(cod.llamadas.every((q) => q >= CALIDAD_MIN && q <= CALIDAD_MAX));
+});
+
+test('buscarCalidad: avisa si ni con la calidad máxima llega a la franja (demasiado ligera)', async () => {
+  const cod = fake(() => 40 * KB);
+  const r = await buscarCalidad(cod);
+  assert.equal(r.calidad, CALIDAD_MAX);
+  assert.equal(r.fuera, 'bajo');
+});
+
+test('buscarCalidad: respeta los límites de calidad aunque la franja pida otra', async () => {
+  const cod = fake((q) => 10 * KB * q); // 160 KB -> q = 16, fuera de rango
+  const r = await buscarCalidad(cod);
+  assert.equal(r.calidad, CALIDAD_MIN);
+  assert.equal(r.fuera, 'alto');
+});
+
+test('buscarCalidad: salto sobre la franja usa la calidad más cercana y avisa', async () => {
+  // Hasta q=70 pesa 100 KB (bajo la franja); desde q=71 pesa 200 KB.
+  const r = await buscarCalidad(fake((q) => (q <= 70 ? 100 * KB : 200 * KB)));
+  assert.equal(r.calidad, 70);
+  assert.equal(r.fuera, 'bajo');
+});
+
+test('buscarCalidad: pocas llamadas (búsqueda binaria)', async () => {
+  const cod = fake((q) => 2 * KB * q);
+  await buscarCalidad(cod);
+  assert.ok(cod.llamadas.length <= 9);
+});
+
+const desofPeso = (clave, n, i) => (i < 2 ? 1 : 0); // las dos primeras son generadas
+const diaPeso = (n) => ({ n, pruebas: [`a${n}`, `b${n}`, `c${n}`, `d${n}`, `e${n}`], clave: 'x' });
+const tam = (n, pesos) => Object.fromEntries(pesos.map((p, i) => [`${'abcde'[i]}${n}`, p * KB]));
+
+test('avisosPesoPorDia: avisa solo los días con más de un 15 % de diferencia y no dice qué tipo pesa más', () => {
+  const dias = [diaPeso(1), diaPeso(2)];
+  const tamanos = { ...tam(1, [120, 120, 120, 120, 120]), ...tam(2, [150, 150, 120, 120, 120]) };
+  const av = avisosPesoPorDia({ dias, tamanos, desofuscar: desofPeso });
+  assert.equal(av.length, 1);
+  assert.match(av[0], /^Día 2: .* 25 %/);
+  assert.ok(!/generada|auténtica/.test(av[0]));
+});
+
+test('avisosPesoPorDia: exactamente 15 % no avisa; ignora días sin un tipo', () => {
+  const dias = [diaPeso(1)];
+  const tamanos = tam(1, [115, 115, 100, 100, 100]);
+  assert.deepEqual(avisosPesoPorDia({ dias, tamanos, desofuscar: desofPeso }), []);
+  assert.deepEqual(avisosPesoPorDia({ dias, tamanos, desofuscar: () => 1 }), []);
+});
+
+test('avisosPesoMediana: avisa por la imagen que pesa más de 1,5 veces la mediana de su día', () => {
+  const dias = [diaPeso(1), diaPeso(2)];
+  const tamanos = { ...tam(1, [100, 100, 100, 100, 151]), ...tam(2, [100, 100, 100, 100, 150]) };
+  const av = avisosPesoMediana({ dias, tamanos });
+  assert.equal(av.length, 1);
+  assert.match(av[0], /^Día 1: casos\/e1\.webp pesa 151 KB.*mediana de su día \(100 KB\)/);
+});
+
+test('avisosPesoMediana: acepta Map y omite ids sin tamaño', () => {
+  const dias = [diaPeso(1)];
+  const tamanos = new Map([['a1', 100 * KB], ['b1', 100 * KB], ['c1', 400 * KB]]);
+  assert.equal(avisosPesoMediana({ dias, tamanos }).length, 1);
+});
+
+test('borrarAntiguas cuenta las borradas de verdad y no se detiene si una falla', () => {
+  const presentes = new Set(['a.webp', 'b.webp', 'c.webp', 'd.webp', 'e.webp']);
+  const r = borrarAntiguas({
+    antiguas: new Set(['a.webp', 'b.webp', 'c.webp', 'd.webp', 'e.webp']),
+    nuevosIds: new Set(['e']),
+    borrar: (f) => {
+      if (f === 'b.webp') throw Object.assign(new Error('x'), { code: 'EPERM' });
+      if (f !== 'c.webp') presentes.delete(f); // c.webp: "borra" sin efecto
+    },
+    existe: (f) => presentes.has(f)
+  });
+  assert.equal(r.borradas, 2);
+  assert.equal(r.conservadas, 1);
+  assert.equal(r.fallidas.length, 2);
+  assert.match(r.fallidas[0], /^b\.webp: EPERM/);
+  assert.match(r.fallidas[1], /^c\.webp/);
+  assert.ok(presentes.has('e.webp'));
 });

@@ -486,25 +486,29 @@ test('.gitignore sin los archivos privados es error', async () => {
   });
 });
 
-test('aviso (no error) si una imagen pesa más del doble de la media de las demás', async () => {
+test('aviso (no error) si una imagen pesa más de 1,5 veces la mediana de su día', async () => {
   const pesada = await sharp({ create: { width: 1080, height: 1350, channels: 3, noise: { type: 'gaussian', mean: 128, sigma: 60 } } })
     .webp({ quality: 95 })
     .toBuffer();
-  assert.ok(pesada.length > 2 * WEBP.length);
+  assert.ok(pesada.length > 1.5 * WEBP.length);
   await proyecto(
     async (p) => {
       const r = await p.ejecutar();
       assert.deepEqual(r.errores, []);
       assert.equal(r.codigo, 0);
-      assert.equal(r.avisos.filter((a) => /más del doble de la media/.test(a)).length, 1);
+      const avisos = r.avisos.filter((a) => /más de 1,5 veces la mediana/.test(a));
+      assert.equal(avisos.length, 1);
+      assert.match(avisos[0], /^Día 1: /);
+      assert.ok(r.avisos.some((a) => /^Día 1: el peso medio .* difiere/.test(a)));
     },
     { extra: ({ escribe }) => escribe(`casos/${idDe(1, 0)}.webp`, pesada) }
   );
 });
 
-test('sin imágenes desproporcionadas no hay aviso de peso individual', async () => {
+test('sin imágenes desproporcionadas no hay avisos de peso por imagen ni por día', async () => {
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(!hay(r.avisos, /más del doble de la media/));
+    assert.ok(!hay(r.avisos, /mediana de su día/));
+    assert.ok(!hay(r.avisos, /el peso medio de las imágenes de un tipo difiere/));
   });
 });

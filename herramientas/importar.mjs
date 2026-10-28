@@ -14,11 +14,17 @@ import {
   calendarioAnteriorValido,
   normalizarFicha,
   mensajeReimportacion,
+  borrarAntiguas,
   planificar,
   barajar,
   nuevoId,
   distanciaHamming,
   analizarPesos,
+  buscarCalidad,
+  PESO_MIN_KB,
+  PESO_MAX_KB,
+  CALIDAD_MIN,
+  CALIDAD_MAX,
   mensajePeso,
   avisosMezcla,
   POSICIONES_RECORTE,
@@ -382,7 +388,7 @@ async function main() {
     diasNuevos.push({ n: d.n, tema: d.tema, pruebas: ids, clave, fichas });
     orden.forEach((img, i) => {
       const recorte = recortes[img.ruta] ?? 'atencion';
-      trabajos.push({ id: ids[i], origen: join(RUTA_TEMAS, img.ruta), recorte });
+      trabajos.push({ id: ids[i], origen: join(RUTA_TEMAS, img.ruta), ruta: img.ruta, recorte });
       entradasBanco.push({
         id: ids[i],
         tipo: img.tipo,
@@ -397,14 +403,29 @@ async function main() {
       });
     });
   }
+  // Calidad WebP variable (D-149): el recorte se calcula una sola vez y se busca la calidad que deja el peso en la franja común.
+  const avisosPeso = [];
+  const calidades = [];
   for (const t of barajar(trabajos, aleatorio)) {
     const destino = join(RUTA_CASOS, `${t.id}.webp`);
     const position = t.recorte === 'atencion' ? sharp.strategy.attention : POSICIONES_RECORTE[t.recorte];
-    await sharp(t.origen)
+    const { data, info } = await sharp(t.origen)
       .rotate()
       .resize(1080, 1350, { fit: 'cover', position })
-      .webp({ quality: 80, effort: 6 })
-      .toFile(destino);
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const codificar = (quality) =>
+      sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
+        .webp({ quality, effort: 6 })
+        .toBuffer();
+    const r = await buscarCalidad(codificar);
+    writeFileSync(destino, r.buffer);
+    calidades.push(r.calidad);
+    if (r.fuera) {
+      avisosPeso.push(
+        `${t.ruta} pesa ${(r.buffer.length / 1024).toFixed(0)} KB con calidad ${r.calidad}, ${r.fuera === 'alto' ? 'por encima' : 'por debajo'} de la franja de ${PESO_MIN_KB}-${PESO_MAX_KB} KB (calidad permitida ${CALIDAD_MIN}-${CALIDAD_MAX}); se usa el límite más cercano.`
+      );
+    }
     await comprobarArchivo(destino);
   }
 
@@ -416,21 +437,26 @@ async function main() {
   escribirCreditos({ banco: nuevoBanco });
 
   let borradas = 0;
+  let fallidas = [];
   if (reimportar) {
     const nuevosIds = new Set(diasNuevos.flatMap((d) => d.pruebas));
-    for (const f of antiguas) {
-      if (nuevosIds.has(f.replace(/\.webp$/, ''))) continue;
-      unlinkSync(join(RUTA_CASOS, f));
-      borradas++;
-    }
+    const r = borrarAntiguas({
+      antiguas,
+      nuevosIds,
+      borrar: (f) => unlinkSync(join(RUTA_CASOS, f)),
+      existe: (f) => existsSync(join(RUTA_CASOS, f))
+    });
+    borradas = r.borradas;
+    fallidas = r.fallidas;
   }
 
   // Informe
   console.log(reimportar ? 'Días reimportados:' : 'Días añadidos:');
   for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${textoFecha(fechaDe(d.n))} · ${d.tema}`);
   console.log(`Recortes manuales (lote.json): ${manuales.length}. El resto usa el recorte por atención.`);
+  if (calidades.length > 0) console.log(`Calidad WebP usada: de ${Math.min(...calidades)} a ${Math.max(...calidades)} (franja ${PESO_MIN_KB}-${PESO_MAX_KB} KB).`);
   console.log(`Fichas: ${frase({ con: sumaFichas('con'), sin: sumaFichas('sin'), recortadas: sumaFichas('recortadas'), sinIngles: sumaFichas('sinIngles') })}.`);
-  for (const a of avisos) console.log(`AVISO: ${a}`);
+  for (const a of [...avisos, ...avisosPeso]) console.log(`AVISO: ${a}`);
   const gen = nuevoCalendario.dias.map((d) => d.pruebas.reduce((s, _, i) => s + desofuscar(d.clave, d.n, i), 0));
   for (const a of avisosMezcla(gen)) console.log(a);
   const tamanos = new Map();
@@ -440,8 +466,9 @@ async function main() {
   console.log('Los originales y los .txt (y .en.txt) siguen en entrada/temas/; el importador no los mueve ni los borra. Puedes archivarlos a mano.');
   if (reimportar) {
     console.log(
-      `Reimportados ${diasNuevos.length} días; borradas ${borradas} imágenes antiguas de casos/. Copia del banco anterior en herramientas/banco.anterior.json.`
+      `Reimportados ${diasNuevos.length} días; borradas ${borradas} de ${antiguas.size} imágenes antiguas de casos/. Copia del banco anterior en herramientas/banco.anterior.json.`
     );
+    for (const f of fallidas) console.log(`AVISO: no se pudo borrar ${f}`);
   }
   console.log('Guarda una copia privada de herramientas/banco.json fuera del repositorio.');
 }
