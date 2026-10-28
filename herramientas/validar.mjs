@@ -448,6 +448,17 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
   const generadasPorDia = dias.map((d) => d.pruebas.reduce((s, _, i) => s + (generadaDe(d, i) ?? 0), 0));
   for (const a of avisosMezcla(generadasPorDia)) aviso(`Images: ${a.replace(/^AVISO: /, '')}`);
 
+  // Una imagen muy pesada (más del doble de la media de las demás) delata su contenido por el peso del archivo.
+  if (tamanos.size >= 2) {
+    const total = [...tamanos.values()].reduce((a, b) => a + b, 0);
+    for (const [id, bytes] of tamanos) {
+      const media = (total - bytes) / (tamanos.size - 1);
+      if (bytes > 2 * media) {
+        aviso(`casos/${id}.webp pesa ${(bytes / 1024).toFixed(0)} KB, más del doble de la media de las demás (${(media / 1024).toFixed(0)} KB): reexpórtala con menos calidad.`);
+      }
+    }
+  }
+
   const resumenPeso = analizarPesos({ dias, tamanos, desofuscar: (c, n, i) => generadaDe({ clave: c, n }, i) });
   const msgPeso = mensajePeso(resumenPeso);
   if (msgPeso) aviso(msgPeso.replace(/^AVISO: /, ''));

@@ -485,3 +485,26 @@ test('.gitignore sin los archivos privados es error', async () => {
     }
   });
 });
+
+test('aviso (no error) si una imagen pesa más del doble de la media de las demás', async () => {
+  const pesada = await sharp({ create: { width: 1080, height: 1350, channels: 3, noise: { type: 'gaussian', mean: 128, sigma: 60 } } })
+    .webp({ quality: 95 })
+    .toBuffer();
+  assert.ok(pesada.length > 2 * WEBP.length);
+  await proyecto(
+    async (p) => {
+      const r = await p.ejecutar();
+      assert.deepEqual(r.errores, []);
+      assert.equal(r.codigo, 0);
+      assert.equal(r.avisos.filter((a) => /más del doble de la media/.test(a)).length, 1);
+    },
+    { extra: ({ escribe }) => escribe(`casos/${idDe(1, 0)}.webp`, pesada) }
+  );
+});
+
+test('sin imágenes desproporcionadas no hay aviso de peso individual', async () => {
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(!hay(r.avisos, /más del doble de la media/));
+  });
+});
