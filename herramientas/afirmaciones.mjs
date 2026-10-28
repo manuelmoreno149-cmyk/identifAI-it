@@ -35,6 +35,27 @@ const RE_URL = /(?:https?:\/\/|www\.)/i;
 const bytes = (t) => new TextEncoder().encode(t).length;
 const puntos = (t) => Array.from(t).length;
 
+// Abreviaturas inglesas cuyo punto no cierra frase (sin el punto final, en minúsculas).
+const ABREVIATURAS = new Set([
+  'sgt', 'dr', 'mr', 'mrs', 'ms', 'st', 'jr', 'sr', 'vs', 'etc', 'u.s', 'u.k', 'e.g', 'i.e', 'a.m', 'p.m'
+]);
+
+// Cuenta finales de frase: [.!?] seguido de espacio o del final, salvo el punto de una
+// abreviatura habitual (no cuenta si le sigue más texto). Los decimales (3.5) no llevan espacio tras el punto.
+export function contarFrases(texto) {
+  const t = String(texto ?? '');
+  let n = 0;
+  for (const m of t.matchAll(/[.!?](?=\s|$)/g)) {
+    const fin = m.index + 1;
+    if (t[m.index] === '.' && fin < t.length) {
+      const palabra = t.slice(0, m.index).split(/\s/).pop().replace(/^[("'“‘]+/, '').toLowerCase();
+      if (ABREVIATURAS.has(palabra)) continue;
+    }
+    n++;
+  }
+  return n;
+}
+
 export function elegirArchivo(archivos) {
   const lista = Array.isArray(archivos) ? archivos : [];
   return ARCHIVOS_AFIRMACIONES.find((a) => lista.includes(a)) ?? null;
@@ -138,7 +159,7 @@ export function analizarAfirmaciones(texto, ruta, { maxBytes = AFIRMACION_MAX_BY
         err.push(`${donde}: truth y details juntos pasan de ${maxBytes} bytes.`);
       }
 
-      const frases = (s) => (s.match(/[.!?](?=\s|$)/g) ?? []).length;
+      const frases = contarFrases;
       if (frases(afirmacion) > 1) avisos.push(`AVISO: ${donde}: la afirmación tiene más de una frase.`);
       if (frases(aclaracion) > 1) avisos.push(`AVISO: ${donde}: la aclaración tiene más de una frase.`);
       if (afirmacion !== '' && !/[.!?]["')”’]?$/.test(afirmacion)) avisos.push(`AVISO: ${donde}: la afirmación no acaba en punto.`);

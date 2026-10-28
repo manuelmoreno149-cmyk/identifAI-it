@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   analizarAfirmaciones, planificarAfirmaciones, medias, avisosLongitud, analizarArgumentosAfirmaciones,
   unirMeses, repartirPorMes, leerAfirmacionesMensuales, escribirAfirmacionesMensuales,
-  elegirArchivo, normalizarParaDuplicados,
+  elegirArchivo, normalizarParaDuplicados, contarFrases,
   LISTA_REVISION, ARCHIVO_MES, ARCHIVOS_AFIRMACIONES, CAMPOS_AFIRMACION,
   AFIRMACION_MAX, ACLARACION_MAX, DETALLE_MAX, UMBRAL_LONGITUD
 } from '../herramientas/afirmaciones.mjs';
@@ -397,4 +397,24 @@ test('213 escribirAfirmacionesMensuales: solo cambia lo que cambia y borra solo 
     assert.ok(!fs.existsSync(path.join(dir, '2000-03.json')));
     assert.throws(() => escribirAfirmacionesMensuales(dir, [{ version: 1, mes: '../x', dias: [] }]), RangeError);
   });
+});
+
+test('contarFrases: abreviaturas y decimales no cierran frase', () => {
+  for (const t of [
+    "It ends Sgt. Pepper's Lonely Hearts Club Band.", 'Dr. Smith met Mr. Jones and Mrs. Lee.',
+    'Ms. Ray and St. Louis fans.', 'Jr. and Sr. played.', 'The U.S. has 13,700 stores.', 'The U.K. and the U.S. agree.',
+    'Cats vs. dogs, etc. are common.', 'Pets, e.g. dogs, i.e. animals, rest.', 'It starts at 5 a.m. and ends at 9 p.m. today.',
+    'It weighs 3.5 kg and costs 2.25 dollars.', 'It is about 3.5 times larger.'
+  ]) assert.equal(contarFrases(t), 1, t);
+  assert.equal(contarFrases('One. Two!'), 2);
+  assert.equal(contarFrases('Is it? Yes. Sure.'), 3);
+  assert.equal(contarFrases('Dr. Who. Then another.'), 2);
+  assert.equal(contarFrases(''), 0);
+  assert.equal(contarFrases(undefined), 0);
+});
+
+test('analizarAfirmaciones: abreviaturas y decimales no disparan el aviso de varias frases', () => {
+  const r = analizarAfirmaciones(con(0, 'answer: fact\nclaim: The U.S. has 3.5 million km of roads.\ntruth: Sgt. Pepper (1967) ends with a tone.\ndetails: x.'), 'x');
+  assert.deepEqual(r.errores, []);
+  assert.ok(!r.avisos.some((a) => a.includes('más de una frase')));
 });
