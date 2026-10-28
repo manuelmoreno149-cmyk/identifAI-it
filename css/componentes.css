@@ -681,12 +681,16 @@
 }
 
 /* ---------- Caso ---------- */
+/* Columna flex: cabecera de su alto y escena con el resto (flex-basis 0 + min-height 0 = altura definida).
+   Asi las filas 1fr de la escena siempre se reparten el alto de la ventana y el boton nunca queda fuera. */
 #pantalla-caso:not([hidden]) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
+  flex: 1 1 0;
   gap: clamp(4px, 1.2dvh, var(--espacio-3));
   padding-block: clamp(6px, 1.5dvh, 12px);
+}
+
+#caso-cabecera {
+  flex: none;
 }
 
 /* Cada reto muestra lo suyo: nombres, foto, tarjeta y temporizador */
@@ -876,6 +880,7 @@
 /* Escena: foto o tarjeta, temporizador y botones. Una sola cuadricula para las dos fases */
 #caso-escena {
   --margen-tarjeta: clamp(12px, 4vw, var(--espacio-5));
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -1059,7 +1064,6 @@
 
 /* Ficha de papel: afirmacion de Fact or Fake y revelacion de los dos retos */
 #caso-tarjeta {
-  --pie-tarjeta: 2.5rem;
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -1222,10 +1226,70 @@
   border-left: 4px solid var(--color-sello);
 }
 
+/* La confesion nunca se oculta por falta de sitio: como minimo dos lineas y el resto se desplaza dentro */
+#veredicto-confesion-texto {
+  min-height: 2.8em;
+}
+
 #app[data-reto="afirmaciones"] #veredicto-confesion,
 #app[data-reto="afirmaciones"] #veredicto-resumen,
 #veredicto[data-verdad="autentica"] #veredicto-confesion {
   display: none;
+}
+
+/* Consejo del detective (solo Images, tras la confesion). Es lo primero que cede si falta sitio:
+   se encoge antes que nada (flex-shrink alto) y se oculta del todo en pantallas bajas */
+#veredicto-consejo {
+  flex: 0 100 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--espacio-1);
+  padding: var(--espacio-2) var(--espacio-3);
+  color: var(--color-tinta);
+  background: var(--color-ambar-suave);
+  border: 1px dashed var(--color-tinta-suave);
+  border-left: 4px solid var(--color-ambar);
+  border-radius: var(--radio-1);
+}
+
+#veredicto-consejo-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-family: var(--fuente-datos);
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-sello);
+}
+
+#veredicto-consejo-icono {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  background: url("../img/ui/lupa-tinta.svg") no-repeat center / contain;
+}
+
+#veredicto-consejo-texto {
+  font-family: var(--fuente-cuerpo);
+  font-size: 0.9375rem;
+  line-height: 1.3;
+}
+
+#app[data-reto="afirmaciones"] #veredicto-consejo,
+#pantalla-caso[data-fase="pregunta"] #veredicto-consejo,
+#veredicto-consejo:has(#veredicto-consejo-texto:empty) {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-height: 700px), (orientation: landscape) and (max-height: 520px) {
+  #veredicto-consejo {
+    display: none;
+  }
 }
 
 /* Images: la ficha reparte su alto entre franja, veredicto y confesion */
@@ -1245,7 +1309,6 @@
 }
 
 #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
-  padding-bottom: var(--pie-tarjeta);
   box-shadow: var(--sombra-foto), 0 0 0 3px var(--color-hecho);
 }
 
@@ -1301,11 +1364,26 @@
   border-top: 1px dashed var(--color-tinta-suave);
 }
 
-/* Revelacion de Fact or Fake: la afirmacion en grande (tachada si es falsa) y la marca al pie */
-#pantalla-caso[data-fase="veredicto"] #afirmacion:not([hidden]) {
+/* Revelacion de Fact or Fake: la afirmacion en grande (tachada si es falsa) y la marca al pie.
+   El articulo pasa a display:contents para ordenar sus tres piezas en la columna de la tarjeta
+   (afirmacion, aclaracion, marca) sin posiciones absolutas: la marca va siempre la ultima, en el flujo. */
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion:not([hidden]) {
+  display: contents;
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-titulo,
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-texto {
+  order: 1;
   flex: none;
-  gap: var(--espacio-1);
-  padding-block: var(--espacio-3) var(--espacio-2);
+  margin-inline: var(--margen-tarjeta);
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-titulo {
+  margin-top: var(--espacio-3);
+}
+
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-texto {
+  margin-bottom: var(--espacio-2);
 }
 
 #pantalla-caso[data-fase="veredicto"] #afirmacion-texto {
@@ -1322,23 +1400,19 @@
   text-decoration-thickness: 0.12em;
 }
 
-#pantalla-caso[data-fase="veredicto"] #afirmacion-marca {
-  position: absolute;
-  left: var(--margen-tarjeta);
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  max-width: calc(100% - 2 * var(--margen-tarjeta));
-  height: var(--pie-tarjeta);
-  padding: 0;
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-marca {
+  order: 3;
+  margin: auto var(--margen-tarjeta) 0;
+  padding: var(--espacio-2) 0;
   text-align: left;
-  border-top: 0;
+  border-top: 1px dashed var(--color-tinta-suave);
 }
 
 #app[data-reto="afirmaciones"] #veredicto {
+  order: 2;
   flex: none;
   margin-inline: var(--margen-tarjeta);
-  padding: var(--espacio-3) 0 0;
+  padding: var(--espacio-3) 0 var(--espacio-2);
   border-top: 2px dashed var(--color-tinta-suave);
 }
 
@@ -1461,9 +1535,23 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Revelacion de Images en vertical: foto arriba (lo que quede libre), ficha debajo y boton fuera, abajo */
+/* El boton va por encima de la ficha en el orden de pintado (la ficha es position:relative y lo taparia) */
+#caso-botones {
+  position: relative;
+  z-index: 1;
+}
+
+/* Revelacion de Images en vertical: foto arriba (lo que quede libre), ficha debajo (hasta 40 dvh) y
+   boton fuera, en su propia fila final. Tres filas: 1fr / auto / auto. */
 #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-escena {
-  grid-template-rows: minmax(9rem, 1fr) minmax(0, max-content) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+}
+
+/* Revelacion de Fact or Fake en vertical: tarjeta arriba (su alto, con scroll interno si no cabe) y boton
+   fuera, a todo el ancho, en la fila final fija. */
+#app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
+  align-self: start;
+  max-height: 100%;
 }
 
 /* ---------- Caso en horizontal: escena a la izquierda, controles a la derecha ---------- */
@@ -1495,18 +1583,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  #caso-tarjeta {
-    --pie-tarjeta: var(--alto-pie);
-  }
-
-  /* Revelacion de Images: foto a la izquierda, ficha del mismo alto a la derecha, Next al pie de la ficha */
+  /* Revelacion de Images: foto a la izquierda; a la derecha la ficha (1fr) y, pegado a su pie, el boton
+     (auto) en su propia fila. Dos filas: el boton nunca se superpone. */
   #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-escena {
     grid-template-columns: minmax(0, 1fr) var(--ancho-ficha);
-    grid-template-rows: minmax(0, 1fr) var(--alto-pie);
+    grid-template-rows: minmax(0, 1fr) auto;
     row-gap: 0;
     width: 100%;
     max-width: 60rem;
-    justify-self: center;
+    align-self: center;
   }
 
   #pantalla-caso[data-fase="veredicto"] #prueba-vitrina {
@@ -1517,47 +1602,58 @@
 
   #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
     grid-column: 2;
-    grid-row: 1 / 3;
+    grid-row: 1;
     max-height: none;
-    padding-bottom: var(--alto-pie);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 
-  #pantalla-caso[data-fase="veredicto"] #caso-botones {
+  /* El boton cierra la ficha: mismo papel, a todo su ancho */
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones {
     grid-column: 2;
     grid-row: 2;
-    align-self: center;
-    padding-inline: var(--margen-tarjeta);
+    padding: var(--espacio-2) var(--margen-tarjeta) var(--espacio-3);
+    color: var(--color-tinta);
+    background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+    border-top: 2px dashed var(--color-tinta-suave);
+    border-radius: 0 0 var(--radio-1) var(--radio-1);
   }
 
-  /* Revelacion de Fact or Fake: una tarjeta centrada con la marca y el Next en su pie */
+  /* Revelacion de Fact or Fake: una tarjeta centrada (su alto, con scroll interno) y el boton en la fila
+     de debajo, a la derecha, con el mismo papel. */
   #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-escena {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, max-content) var(--alto-pie);
+    grid-template-rows: minmax(0, auto) auto;
     row-gap: 0;
     align-content: center;
     justify-items: center;
+    width: 100%;
+    max-width: var(--ancho-tarjeta);
+    align-self: center;
   }
 
   #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-tarjeta {
     grid-column: 1;
-    grid-row: 1 / 3;
+    grid-row: 1;
+    align-self: stretch;
+    max-height: none;
     width: 100%;
-    max-width: var(--ancho-tarjeta);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 
   #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-botones {
     grid-column: 1;
+    grid-row: 2;
     width: 100%;
-    max-width: var(--ancho-tarjeta);
     justify-items: end;
+    padding: var(--espacio-2) var(--margen-tarjeta) var(--espacio-3);
+    background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+    border-radius: 0 0 var(--radio-1) var(--radio-1);
   }
 
   #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-botones [data-accion="siguiente"] {
     min-width: 13rem;
-  }
-
-  #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #afirmacion-marca {
-    max-width: calc(100% - 2 * var(--margen-tarjeta) - 14rem);
   }
 
   #pantalla-caso[data-fase="veredicto"] #caso-botones [data-accion="siguiente"] {
@@ -1567,12 +1663,9 @@
 
 /* Horizontal bajo (640 x 360): todo mas compacto */
 @media (orientation: landscape) and (max-height: 420px) {
-  #caso-tarjeta {
-    --pie-tarjeta: 3.25rem;
-  }
-
-  #caso-escena {
-    --alto-pie: 3.25rem;
+  #app[data-reto="imagenes"] #pantalla-caso[data-fase="veredicto"] #caso-botones,
+  #app[data-reto="afirmaciones"] #pantalla-caso[data-fase="veredicto"] #caso-botones {
+    padding-block: var(--espacio-1) var(--espacio-2);
   }
 
   #veredicto-banda {

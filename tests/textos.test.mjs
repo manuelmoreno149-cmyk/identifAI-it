@@ -46,7 +46,8 @@ const CLAVES = {
   creditos: [
     'titulo_pagina', 'titulo', 'intro', 'tipografias', 'imagenes', 'imagenes_intro', 'sin_imagenes',
     'afirmaciones', 'afirmaciones_texto', 'ver_licencia', 'volver'
-  ]
+  ],
+  consejo: ['titulo', 'lista']
 };
 
 function cadenas(valor, ruta = '') {
@@ -173,6 +174,7 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado', () => {
     if (ruta.startsWith('fichas.') || esPlantillaCompartir(ruta)) continue;
     const largo = [...valor].length;
     if (ruta.startsWith('como_jugar.pasos')) assert.ok(largo <= 80, `${ruta} mide ${largo}`);
+    else if (ruta.startsWith('consejo.lista')) assert.ok(largo <= 110, `${ruta} mide ${largo}`);
     else if (ruta === 'creditos.afirmaciones_texto') {
       assert.equal(largo, 114); // la spec dice 113, pero el texto exacto mide 114
       assert.ok(largo <= 120);
@@ -249,6 +251,19 @@ test('avisos.previsualizacion: valor exacto, un marcador y longitud', () => {
   assert.equal(t, 'Preview of {fecha}: nothing gets saved.');
   assert.deepEqual(t.match(/\{[^}]+\}/g), ['{fecha}']);
   assert.ok(t.replace('{fecha}', 'Nov 3, 2026').length <= 90);
+});
+
+test('consejo: título, 20 consejos distintos, máximo 110 caracteres y sin promesas absolutas', () => {
+  const c = TEXTOS.consejo;
+  assert.equal(c.titulo, "DETECTIVE'S TIP");
+  assert.equal(c.lista.length, 20);
+  assert.equal(new Set(c.lista).size, 20, 'consejos repetidos');
+  const promesa = /\b(always|never|proves?|guarantee[sd]?|definitely|certainly|impossible)\b/i;
+  c.lista.forEach((t, i) => {
+    assert.ok([...t].length <= 110, `consejo.lista[${i}] mide ${[...t].length}`);
+    assert.equal(promesa.test(t), false, `consejo.lista[${i}] promete demasiado`);
+    assert.equal(/[{}]/.test(t), false, `consejo.lista[${i}] tiene llaves`);
+  });
 });
 
 test('prueba.*: valores, marcadores, longitud y palabras prohibidas', async () => {
