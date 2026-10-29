@@ -1,4 +1,4 @@
-// Validador (spec 4.4.3 y 4.12). Código 1 si hay errores; los avisos no fallan (salvo lo que dice --estricto).
+// Validador (spec 4.4.3, 4.12 y 4.22). Código 1 si hay errores; los avisos no fallan (salvo lo que dice --estricto).
 // Lógica en `validar({raiz, estricto, hoyISO, git})` para poder probarla con raíces temporales; no lee entrada/ [D-139].
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -7,6 +7,7 @@ import { dirname, resolve, join, posix } from 'node:path';
 import sharp from 'sharp';
 import {
   DETALLES_MAX,
+  IDIOMAS,
   desofuscar,
   desofuscarAclaracion,
   desofuscarAfirmacion,
@@ -40,10 +41,11 @@ import {
   normalizarParaDuplicados,
   unirMeses
 } from './afirmaciones.mjs';
-import { TIPOGRAFIAS, creditosParaBanco } from './creditos.mjs';
+import { TIPOGRAFIAS, ARCHIVOS_CREDITOS, creditosParaBanco } from './creditos.mjs';
 
 const RAIZ_REAL = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const puntos = (t) => Array.from(t).length;
+const NOMBRE_IDIOMA = { en: 'inglés', es: 'español' };
 // La fecha del antiguo lanzamiento fijo no puede aparecer en el código [D-95]; se arma por partes para que este archivo no la contenga.
 const FECHA_FIJA_ANTIGUA = ['2026', '11', '01'].join('-');
 
@@ -109,25 +111,29 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
       error('data/calendario.json es de la versión 2 (sin fichas): reimporta con npm run importar -- --reimportar --confirmar.');
     } else if (calendario.version === 3) {
       error('data/calendario.json es de la versión 3: conviértelo con npm run lanzamiento.');
-    } else if (calendario.version !== 4) {
-      error(`data/calendario.json: version debe ser 4 (es ${calendario.version}).`);
+    } else if (calendario.version === 4) {
+      error('data/calendario.json es de la versión 4: rehazlo con npm run importar -- --reimportar --confirmar.');
+    } else if (calendario.version !== 5) {
+      error(`data/calendario.json: version debe ser 5 (es ${calendario.version}).`);
     } else {
       if (calendario.lanzamiento === null) lanzamiento = null;
       else if (fechaIso(calendario.lanzamiento)) lanzamiento = calendario.lanzamiento;
       else error(`data/calendario.json: lanzamiento debe ser null o una fecha ISO válida (es ${JSON.stringify(calendario.lanzamiento)}).`);
       if (!validarCalendario(calendario)) {
-        error('data/calendario.json no cumple la estructura de la versión 4 (campos, tema, 5 ids distintos, clave de 5 bytes, 5 fichas, sin fecha por día).');
+        error('data/calendario.json no cumple la estructura de la versión 5 (campos, tema y fichas en inglés y español, 5 ids distintos, clave de 5 bytes, sin fecha por día).');
       }
     }
-    if (calendario.version === 4 && Array.isArray(calendario.dias)) dias.push(...calendario.dias.filter(diaImagenesUtil));
+    if (calendario.version === 5 && Array.isArray(calendario.dias)) dias.push(...calendario.dias.filter(diaImagenesUtil));
   }
-  const version4 = calendario?.version === 4;
+  const version5 = calendario?.version === 5;
 
   const vistos = new Map();
   for (const d of dias) {
     const etiqueta = `Día ${d.n}`;
-    const pal = contienePalabraProhibida(d.tema ?? '');
-    if (pal) error(`${etiqueta}: el tema "${d.tema}" contiene la palabra prohibida "${pal}".`);
+    for (const idioma of IDIOMAS) {
+      const pal = contienePalabraProhibida(d.tema?.[idioma] ?? '');
+      if (pal) error(`${etiqueta}: el tema en ${NOMBRE_IDIOMA[idioma]} contiene la palabra prohibida "${pal}".`);
+    }
     let g = 0;
     d.pruebas.forEach((id, i) => {
       if (vistos.has(id)) error(`${etiqueta}: el id ${id} ya aparece en el día ${vistos.get(id)}.`);
@@ -139,33 +145,35 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     if (g < 1 || g > 4) error(`${etiqueta}: tiene ${g} generadas; debe tener entre 1 y 4.`);
   }
 
-  // ---------- Fichas de Images [D-86, D-87] ----------
+  // ---------- Fichas de Images [D-86, D-87, 4.22] ----------
 
-  const sinPromptPorDia = new Map();
   {
-    const { autentica, sin_prompt: sinPrompt } = TEXTOS?.fichas ?? {};
+    const autentica = Object.fromEntries(IDIOMAS.map((i) => [i, TEXTOS?.[i]?.fichas?.autentica]));
     const textoOk = (t) => typeof t === 'string' && t.trim() !== '';
-    if (!textoOk(autentica) || !textoOk(sinPrompt) || autentica === sinPrompt) {
-      error('TEXTOS.fichas (js/textos.js) no es válido: autentica y sin_prompt deben existir, no estar vacías y ser distintas.');
-    } else if (version4) {
+    if (!IDIOMAS.every((i) => textoOk(autentica[i])) || autentica.en === autentica.es) {
+      error('TEXTOS.{en,es}.fichas.autentica (js/textos.js) no es válido: debe existir en los dos idiomas, no estar vacío y ser distinto entre idiomas.');
+    } else if (version5) {
       for (const d of dias) {
-        if (!Array.isArray(d.fichas)) continue;
-        let descifrables = true;
-        let descuadre = false;
-        d.pruebas.forEach((_, i) => {
-          const texto = desofuscarFicha(d.fichas[i], d.clave, d.n, i);
-          if (texto === null) {
-            descifrables = false;
-            error(`La ficha ${i + 1} del día ${d.n} no se puede descifrar.`);
-            return;
-          }
-          const generada = generadaDe(d, i) === 1;
-          if (generadaDe(d, i) === null) return;
-          if (!generada && texto !== autentica) descuadre = true;
-          if (generada && texto === autentica) descuadre = true;
-          if (generada && texto === sinPrompt) sinPromptPorDia.set(d.n, (sinPromptPorDia.get(d.n) ?? 0) + 1);
-        });
-        if (descifrables && descuadre) error(`El día ${d.n} tiene fichas que no cuadran con su clave.`);
+        if (!d.fichas || typeof d.fichas !== 'object') continue;
+        for (const idioma of IDIOMAS) {
+          if (!Array.isArray(d.fichas[idioma])) continue;
+          let descifrables = true;
+          let descuadre = false;
+          d.pruebas.forEach((_, i) => {
+            const texto = desofuscarFicha(d.fichas[idioma][i], d.clave, d.n, i, idioma);
+            if (texto === null) {
+              descifrables = false;
+              error(`La ficha ${i + 1} del día ${d.n} (${NOMBRE_IDIOMA[idioma]}) no se puede descifrar.`);
+              return;
+            }
+            const gen = generadaDe(d, i);
+            if (gen === null) return;
+            // Las auténticas son exactamente la ficha del idioma; las generadas no son la de ninguno de los dos.
+            if (gen === 0 && texto !== autentica[idioma]) descuadre = true;
+            if (gen === 1 && IDIOMAS.some((o) => texto === autentica[o])) descuadre = true;
+          });
+          if (descifrables && descuadre) error(`El día ${d.n} tiene fichas (${NOMBRE_IDIOMA[idioma]}) que no cuadran con su clave.`);
+        }
       }
     }
   }
@@ -214,47 +222,61 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
 
   const fakesPorDia = [];
   const longitudes = [];
-  const vistasAfirmaciones = new Map();
+  const vistasAfirmaciones = { en: new Map(), es: new Map() };
   for (const d of diasFact) {
     const etiqueta = `Día ${d.n} de Fact or Fake`;
-    const pal = contienePalabraProhibida(d.tema ?? '');
-    if (pal) error(`${etiqueta}: el tema "${d.tema}" contiene la palabra prohibida "${pal}".`);
-    if (temasImagenes.has(d.n) && temasImagenes.get(d.n) !== d.tema) {
-      error(`El tema del día ${d.n} no coincide entre Images y Fact or Fake.`);
+    for (const idioma of IDIOMAS) {
+      const pal = contienePalabraProhibida(d.tema?.[idioma] ?? '');
+      if (pal) error(`${etiqueta}: el tema en ${NOMBRE_IDIOMA[idioma]} contiene la palabra prohibida "${pal}".`);
+      if (temasImagenes.has(d.n) && temasImagenes.get(d.n)?.[idioma] !== d.tema?.[idioma]) {
+        error(`El tema en ${NOMBRE_IDIOMA[idioma]} del día ${d.n} no coincide entre Images y Fact or Fake.`);
+      }
     }
     let falsas = 0;
-    const afirmaciones = [];
-    for (let i = 0; i < 5; i++) {
-      const esFalsa = generadaDe(d, i) === 1;
-      if (esFalsa) falsas++;
-      const claim = desofuscarAfirmacion(d.textos[i], d.clave, d.n, i);
-      if (claim === null) {
-        error(`La afirmación ${i + 1} del día ${d.n} de Fact or Fake no se puede descifrar.`);
-      } else {
-        if (puntos(claim) > AFIRMACION_MAX) error(`La afirmación ${i + 1} del día ${d.n} de Fact or Fake supera ${AFIRMACION_MAX} caracteres.`);
-        afirmaciones.push({ tipo: esFalsa ? 'generada' : 'autentica', afirmacion: claim });
-        const clave = normalizarParaDuplicados(claim);
-        const previa = vistasAfirmaciones.get(clave);
-        if (previa) {
-          error(`Afirmación repetida en Fact or Fake: la ${i + 1} del día ${d.n} es igual a la ${previa.i + 1} del día ${previa.n}.`);
+    for (let i = 0; i < 5; i++) if (generadaDe(d, i) === 1) falsas++;
+    const porIdioma = {};
+    const detalles = {};
+    for (const idioma of IDIOMAS) {
+      const afirmaciones = [];
+      const de = NOMBRE_IDIOMA[idioma];
+      for (let i = 0; i < 5; i++) {
+        const esFalsa = generadaDe(d, i) === 1;
+        const claim = desofuscarAfirmacion(d.textos[idioma][i], d.clave, d.n, i, idioma);
+        if (claim === null) {
+          error(`La afirmación ${i + 1} del día ${d.n} de Fact or Fake (${de}) no se puede descifrar.`);
         } else {
-          vistasAfirmaciones.set(clave, { n: d.n, i });
+          if (puntos(claim) > AFIRMACION_MAX) error(`La afirmación ${i + 1} del día ${d.n} de Fact or Fake (${de}) supera ${AFIRMACION_MAX} caracteres.`);
+          afirmaciones.push({ tipo: esFalsa ? 'generada' : 'autentica', afirmacion: claim });
+          const clave = normalizarParaDuplicados(claim);
+          const previa = vistasAfirmaciones[idioma].get(clave);
+          if (previa) {
+            error(`Afirmación repetida en Fact or Fake (${de}): la ${i + 1} del día ${d.n} es igual a la ${previa.i + 1} del día ${previa.n}.`);
+          } else {
+            vistasAfirmaciones[idioma].set(clave, { n: d.n, i });
+          }
+        }
+        const ficha = desofuscarAclaracion(d.fichas[idioma][i], d.clave, d.n, i, idioma);
+        if (ficha === null) {
+          error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake (${de}) no se puede descifrar.`);
+        } else {
+          (detalles[i] ??= {})[idioma] = ficha.detalles.length;
+          if (puntos(ficha.aclaracion) > ACLARACION_MAX) error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake (${de}) supera ${ACLARACION_MAX} caracteres.`);
+          if (ficha.detalles.length > DETALLES_MAX) error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake (${de}) tiene más de ${DETALLES_MAX} detalles.`);
+          if (ficha.detalles.some((t) => puntos(t) > DETALLE_MAX)) {
+            error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake (${de}) tiene un detalle de más de ${DETALLE_MAX} caracteres.`);
+          }
         }
       }
-      const ficha = desofuscarAclaracion(d.fichas[i], d.clave, d.n, i);
-      if (ficha === null) {
-        error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake no se puede descifrar.`);
-      } else {
-        if (puntos(ficha.aclaracion) > ACLARACION_MAX) error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake supera ${ACLARACION_MAX} caracteres.`);
-        if (ficha.detalles.length > DETALLES_MAX) error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake tiene más de ${DETALLES_MAX} detalles.`);
-        if (ficha.detalles.some((t) => puntos(t) > DETALLE_MAX)) {
-          error(`La aclaración ${i + 1} del día ${d.n} de Fact or Fake tiene un detalle de más de ${DETALLE_MAX} caracteres.`);
-        }
+      porIdioma[idioma] = afirmaciones;
+    }
+    for (const [i, cuenta] of Object.entries(detalles)) {
+      if (cuenta.en !== undefined && cuenta.es !== undefined && cuenta.en !== cuenta.es) {
+        aviso(`La prueba ${Number(i) + 1} del día ${d.n} de Fact or Fake tiene distinto número de detalles en inglés y en español.`);
       }
     }
     if (falsas < 1 || falsas > 4) error(`${etiqueta}: tiene ${falsas} falsas; debe tener entre 1 y 4.`);
     fakesPorDia.push(falsas);
-    longitudes.push({ n: d.n, afirmaciones });
+    longitudes.push({ n: d.n, afirmaciones: porIdioma });
   }
   // Solo avisos, nunca errores, tampoco con --estricto [D-140].
   for (const a of avisosLongitud(longitudes)) aviso(a.replace(/^AVISO: /, ''));
@@ -264,7 +286,7 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
 
   // ---------- Archivos publicados ----------
 
-  for (const f of ['.nojekyll', 'creditos.html', 'index.html']) {
+  for (const f of ['.nojekyll', ...Object.values(ARCHIVOS_CREDITOS), 'index.html']) {
     if (!existsSync(p(f))) error(`Falta ${f} en la raíz.`);
   }
 
@@ -308,6 +330,9 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
         if (a === 'id' || a === 'class' || a === 'alt' || a.startsWith('data-')) {
           const pv = contienePalabraProhibida(valor);
           if (pv) error(`${nombre}: ${a}="${valor}" contiene la palabra prohibida "${pv}".`);
+          if (a === 'class' && valor.split(/\s+/).some((c) => /^dato/i.test(c))) {
+            error(`${nombre}: class="${valor}" contiene una clase que empieza por dato.`);
+          }
         } else if (a === 'href' || a === 'src') {
           const pv = contienePalabraProhibida(valor);
           if (pv) error(`${nombre}: ${a}="${valor}" contiene la palabra prohibida "${pv}".`);
@@ -321,7 +346,7 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
   };
 
   revisarHtml('index.html');
-  revisarHtml('creditos.html');
+  for (const f of Object.values(ARCHIVOS_CREDITOS)) revisarHtml(f);
 
   // Nombres de archivos publicados.
   const recorrer = (dir) => {
@@ -340,7 +365,7 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
   }
 
   // URL externas y fecha de lanzamiento fija.
-  for (const f of ['index.html', 'creditos.html', ...recorrer('css'), ...recorrer('js')]) {
+  for (const f of ['index.html', ...Object.values(ARCHIVOS_CREDITOS), ...recorrer('css'), ...recorrer('js')]) {
     if (!existsSync(p(f))) continue;
     const t = leer(f);
     if (/https?:\/\//i.test(t)) error(`${f}: contiene una URL externa (http:// o https://).`);
@@ -352,19 +377,23 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     if (leer(f).includes(FECHA_FIJA_ANTIGUA)) error(`${f}: contiene la fecha fija ${FECHA_FIJA_ANTIGUA}; el lanzamiento vive solo en data/calendario.json [D-95].`);
   }
 
-  // creditos.html
-  if (existsSync(p('creditos.html')) && existsSync(p('index.html'))) {
-    const c = leer('creditos.html');
+  // creditos.html (en) y creditos.es.html (es)
+  if (existsSync(p('index.html'))) {
     const cspIndex = leer('index.html').match(/<meta http-equiv="Content-Security-Policy"[^>]*>/)?.[0];
-    if (!/<html lang="en">/.test(c)) error('creditos.html: falta <html lang="en">.');
-    if (!/<title>[^<]+<\/title>/.test(c)) error('creditos.html: falta <title>.');
-    if (!/<meta name="viewport"/.test(c)) error('creditos.html: falta el viewport.');
-    if (!cspIndex || !c.includes(cspIndex)) error('creditos.html: la CSP no es idéntica a la de index.html.');
-    if (!/<a id="creditos-volver" href="index\.html">/.test(c)) error('creditos.html: #creditos-volver debe apuntar a index.html.');
-    if (/<script/i.test(c)) error('creditos.html: contiene <script>.');
-    if (/\sstyle\s*=/i.test(c)) error('creditos.html: contiene atributo style.');
-    for (const id of vistos.keys()) if (c.includes(id)) error(`creditos.html: contiene el id de imagen ${id}.`);
-    if (!c.endsWith('\n') || c.endsWith('\n\n') || c.includes('\r')) error('creditos.html: debe usar LF y terminar con un único salto de línea.');
+    for (const idioma of IDIOMAS) {
+      const nombre = ARCHIVOS_CREDITOS[idioma];
+      if (!existsSync(p(nombre))) continue;
+      const c = leer(nombre);
+      if (!c.includes(`<html lang="${idioma}">`)) error(`${nombre}: falta <html lang="${idioma}">.`);
+      if (!/<title>[^<]+<\/title>/.test(c)) error(`${nombre}: falta <title>.`);
+      if (!/<meta name="viewport"/.test(c)) error(`${nombre}: falta el viewport.`);
+      if (!cspIndex || !c.includes(cspIndex)) error(`${nombre}: la CSP no es idéntica a la de index.html.`);
+      if (!/<a id="creditos-volver" href="index\.html">/.test(c)) error(`${nombre}: #creditos-volver debe apuntar a index.html.`);
+      if (/<script/i.test(c)) error(`${nombre}: contiene <script>.`);
+      if (/\sstyle\s*=/i.test(c)) error(`${nombre}: contiene atributo style.`);
+      for (const id of vistos.keys()) if (c.includes(id)) error(`${nombre}: contiene el id de imagen ${id}.`);
+      if (!c.endsWith('\n') || c.endsWith('\n\n') || c.includes('\r')) error(`${nombre}: debe usar LF y terminar con un único salto de línea.`);
+    }
   }
 
   // ---------- Git e ignorados (no se lee entrada/) ----------
@@ -440,13 +469,6 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     }
   }
 
-  if (sinPromptPorDia.size > 0) {
-    const total = [...sinPromptPorDia.values()].reduce((a, b) => a + b, 0);
-    const lista = [...sinPromptPorDia.keys()].map(String);
-    const textoDias = lista.length === 1 ? `día ${lista[0]}` : `días ${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}`;
-    aviso(`${total} ${total === 1 ? 'prueba generada no tiene prompt' : 'pruebas generadas no tienen prompt'} (${textoDias}).`);
-  }
-
   const generadasPorDia = dias.map((d) => d.pruebas.reduce((s, _, i) => s + (generadaDe(d, i) ?? 0), 0));
   for (const a of avisosMezcla(generadasPorDia)) aviso(`Images: ${a.replace(/^AVISO: /, '')}`);
 
@@ -491,7 +513,7 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
           const e = porId.get(id);
           if (!e) return error(`Banco: falta el id ${id} (día ${d.n}).`);
           if (e.dia !== d.n) error(`Banco: ${id} tiene un día distinto al del calendario.`);
-          if (e.tema !== d.tema) error(`Banco: ${id} tiene el tema "${e.tema}" y el calendario "${d.tema}".`);
+          if (e.tema !== d.tema?.en) error(`Banco: ${id} tiene el tema "${e.tema}" y el calendario "${d.tema?.en}".`);
           const tipo = generadaDe(d, i) === 1 ? 'generada' : 'autentica';
           if (e.tipo !== tipo) error(`Banco: ${id} es "${e.tipo}" pero la clave del día ${d.n} dice "${tipo}".`);
           if (!FUENTES.some((f) => f.fuente === e.fuente && f.licencia === e.licencia && f.tipo === e.tipo)) {
@@ -519,8 +541,11 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
         );
       }
       for (const f of enCasos) if (!porId.has(f.replace(/\.webp$/, ''))) aviso(`casos/${f} no está en el banco.`);
-      if (existsSync(p('creditos.html')) && leer('creditos.html') !== creditosParaBanco(banco)) {
-        error('creditos.html no coincide con lo que generaría creditos.mjs con el banco actual (ejecuta npm run creditos).');
+      for (const idioma of IDIOMAS) {
+        const nombre = ARCHIVOS_CREDITOS[idioma];
+        if (existsSync(p(nombre)) && leer(nombre) !== creditosParaBanco(banco, idioma)) {
+          error(`${nombre} no coincide con lo que generaría creditos.mjs con el banco actual (ejecuta npm run creditos).`);
+        }
       }
     }
   }

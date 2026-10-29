@@ -1,8 +1,9 @@
-// Generador de creditos.html (spec 4.5 y 2.7).
+// Generador de creditos.html y creditos.es.html (spec 4.5, 2.7 y 4.23).
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { TEXTOS } from '../js/textos.js';
+import { IDIOMAS } from '../js/diario.js';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -10,6 +11,9 @@ export const TIPOGRAFIAS = [
   { familia: 'Oswald', licencia: 'SIL Open Font License 1.1', archivo: 'fonts/OFL-oswald.txt' },
   { familia: 'Special Elite', licencia: 'Apache License 2.0', archivo: 'fonts/LICENSE-special-elite.txt' }
 ];
+
+// Página de créditos de cada idioma [4.23].
+export const ARCHIVOS_CREDITOS = Object.freeze({ en: 'creditos.html', es: 'creditos.es.html' });
 
 export function escaparHtml(texto) {
   return String(texto)
@@ -32,7 +36,9 @@ export function parejasCreditos(banco) {
   );
 }
 
-export function generarCreditosHtml({ textos, tipografias, parejas }) {
+export function generarCreditosHtml({ parejas, idioma = 'en', textos = TEXTOS[idioma], tipografias = TIPOGRAFIAS }) {
+  if (!IDIOMAS.includes(idioma)) throw new TypeError(`Idioma no válido: ${String(idioma)}`);
+  const otro = IDIOMAS.find((i) => i !== idioma);
   const c = textos.creditos;
   const e = escaparHtml;
   const tipos = tipografias
@@ -47,7 +53,7 @@ ${parejas.map((p) => `      <li>${e(p.fuente)} · ${e(p.licencia)}</li>`).join('
       : `    <p>${e(c.sin_imagenes)}</p>`;
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${idioma}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -78,18 +84,22 @@ ${imagenes}
 </main>
 <footer id="creditos-pie">
   <a id="creditos-volver" href="index.html">${e(c.volver)}</a>
+  <a id="creditos-idioma" href="${ARCHIVOS_CREDITOS[otro]}" hreflang="${otro}" lang="${otro}">${e(c.otro_idioma)}</a>
 </footer>
 </body>
 </html>
 `;
 }
 
-export function creditosParaBanco(banco) {
-  return generarCreditosHtml({ textos: TEXTOS, tipografias: TIPOGRAFIAS, parejas: parejasCreditos(banco) });
+export function creditosParaBanco(banco, idioma = 'en') {
+  return generarCreditosHtml({ idioma, parejas: parejasCreditos(banco) });
 }
 
-export function escribirCreditos({ banco, ruta = resolve(RAIZ, 'creditos.html') }) {
-  writeFileSync(ruta, creditosParaBanco(banco), { encoding: 'utf8' });
+// Escribe las dos páginas (creditos.html y creditos.es.html). `raiz` permite probarlo en una carpeta temporal.
+export function escribirCreditos({ banco, raiz = RAIZ }) {
+  for (const idioma of IDIOMAS) {
+    writeFileSync(resolve(raiz, ARCHIVOS_CREDITOS[idioma]), creditosParaBanco(banco, idioma), { encoding: 'utf8' });
+  }
 }
 
 // ---------- CLI ----------
@@ -104,17 +114,17 @@ function principal() {
   if (!existsSync(rutaBanco)) {
     if (hayImagenes()) {
       console.error(
-        'No se encuentra herramientas/banco.json; no se regenera creditos.html para no borrar los créditos publicados.'
+        'No se encuentra herramientas/banco.json; no se regeneran creditos.html ni creditos.es.html para no borrar los créditos publicados.'
       );
       process.exit(1);
     }
     escribirCreditos({ banco: { version: 2, imagenes: [] } });
-    console.log('creditos.html generado sin imágenes.');
+    console.log('creditos.html y creditos.es.html generados sin imágenes.');
     return;
   }
   const banco = JSON.parse(readFileSync(rutaBanco, 'utf8'));
   escribirCreditos({ banco });
-  console.log(`creditos.html generado con ${parejasCreditos(banco).length} fuente(s).`);
+  console.log(`creditos.html y creditos.es.html generados con ${parejasCreditos(banco).length} fuente(s).`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) principal();

@@ -47,11 +47,17 @@ async function montar({ calendario, banco, carpetas = ['01-dogs'], sinImagenes =
     const d = join(raiz, 'entrada', 'temas', nombre);
     mkdirSync(join(d, 'ia'), { recursive: true });
     mkdirSync(join(d, 'real'));
-    for (let i = 0; i < 2; i++) await imagen(join(d, 'ia', `Gemini_Generated_Image_${i}.png`), k++);
+    for (let i = 0; i < 2; i++) {
+      await imagen(join(d, 'ia', `Gemini_Generated_Image_${i}.png`), k++);
+      // Los dos prompts son obligatorios (4.19).
+      writeFileSync(join(d, 'ia', `Gemini_Generated_Image_${i}.txt`), `Prompt en español ${i}`);
+      writeFileSync(join(d, 'ia', `Gemini_Generated_Image_${i}.en.txt`), `English prompt ${i}`);
+    }
     for (let i = 0; i < 3; i++) await imagen(join(d, 'real', `autor-${i}-unsplash.png`), k++);
     poner(d, 'datos.txt');
     poner(d, 'datos.original.txt');
     writeFileSync(join(d, 'facts.en.txt'), 'answer: fact\nclaim: x\n');
+    writeFileSync(join(d, 'tema.es.txt'), 'Perros\n');
   }
   for (const nombre of sinImagenes) {
     const d = join(raiz, 'entrada', 'temas', nombre);
@@ -89,16 +95,20 @@ test('239 importar --simular con notas no UTF-8: sin errores, sin mostrar su con
   }
 });
 
-test('68 importar real: calendario v4 sin fecha por día, banco v3 y notas intactas', async () => {
+test('68 importar real: calendario v5 bilingüe sin fecha por día, banco v3 y notas intactas', async () => {
   const { raiz, notas } = await montar({});
   try {
     const antes = huellas(notas);
     const r = correr(raiz);
     assert.equal(r.status, 0, r.stderr + r.stdout);
     const cal = JSON.parse(readFileSync(join(raiz, 'data', 'calendario.json'), 'utf8'));
-    assert.equal(cal.version, 4);
+    assert.equal(cal.version, 5);
     assert.equal(cal.lanzamiento, null);
     assert.equal(cal.dias.length, 1);
+    assert.deepEqual(cal.dias[0].tema, { en: 'Dogs', es: 'Perros' });
+    assert.deepEqual(Object.keys(cal.dias[0].fichas), ['en', 'es']);
+    assert.equal(cal.dias[0].fichas.en.length, 5);
+    assert.equal(cal.dias[0].fichas.es.length, 5);
     assert.deepEqual(Object.keys(cal.dias[0]), ['n', 'tema', 'pruebas', 'clave', 'fichas']);
     const banco = JSON.parse(readFileSync(join(raiz, 'herramientas', 'banco.json'), 'utf8'));
     assert.equal(banco.version, 3);

@@ -4,7 +4,7 @@ import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import sharp from 'sharp';
-import { ofuscar, sumarDias, fechaDelDia, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES } from '../js/diario.js';
+import { ofuscar, sumarDias, fechaDelDia, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES, IDIOMAS } from '../js/diario.js';
 import { TEXTOS } from '../js/textos.js';
 import {
   analizarCarpeta,
@@ -29,9 +29,11 @@ import {
   avisosMezcla,
   POSICIONES_RECORTE,
   EXT_IMAGEN,
-  EXT_FICHA
+  EXT_FICHA,
+  ARCHIVO_TEMA_ES
 } from './temas.mjs';
 import { escribirCreditos } from './creditos.mjs';
+import { leerAfirmacionesMensuales } from './afirmaciones.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RUTA_TEMAS = join(RAIZ, 'entrada', 'temas');
@@ -40,6 +42,7 @@ const RUTA_BANCO = join(RAIZ, 'herramientas', 'banco.json');
 const RUTA_BANCO_ANTERIOR = join(RAIZ, 'herramientas', 'banco.anterior.json');
 const RUTA_LOTE = join(RAIZ, 'herramientas', 'lote.json');
 const RUTA_CALENDARIO = join(RAIZ, 'data', 'calendario.json');
+const RUTA_FACTS = join(RAIZ, 'data', 'facts');
 
 const IGNORADOS = new Set(['thumbs.db', 'desktop.ini']);
 const aleatorio = () => randomInt(2 ** 32) / 2 ** 32;
@@ -83,6 +86,14 @@ function leerCarpetas() {
         }
       } else {
         c.sueltos.push(hijo.name);
+        // [4.19] tema.es.txt: se lee aquí (UTF-8 estricto); planificar lo valida.
+        if (hijo.name === ARCHIVO_TEMA_ES) {
+          try {
+            c.temaEs = new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(join(base, hijo.name)));
+          } catch {
+            c.temaEs = null;
+          }
+        }
       }
     }
     c.ia.sort();
@@ -148,7 +159,7 @@ async function main() {
   }
 
   // 3. Calendario
-  let calendario = { version: 4, lanzamiento: null, dias: [] };
+  let calendario = { version: 5, lanzamiento: null, dias: [] };
   if (existsSync(RUTA_CALENDARIO)) {
     const c = JSON.parse(readFileSync(RUTA_CALENDARIO, 'utf8'));
     if (reimportar) {
@@ -163,6 +174,8 @@ async function main() {
       );
     } else if (c?.version === 3) {
       salir('data/calendario.json es de la versión 3 (con fechas): conviértelo con npm run lanzamiento.');
+    } else if (c?.version === 4) {
+      salir('data/calendario.json es de la versión 4 (sin español): rehazlo con npm run importar -- --reimportar --confirmar.');
     } else if (!validarCalendario(c)) {
       salir(
         'data/calendario.json no es un calendario definitivo (¿datos de prueba de D-46?). Bórralo junto con las imágenes de casos/ antes de importar.'
@@ -220,10 +233,24 @@ async function main() {
   for (const n of plan.omitidos) {
     const dia = calendario.dias[n - 1];
     const del = banco.imagenes.filter((i) => i.dia === n);
-    if (!bancoNuevo && (del.length !== 5 || del.some((i) => i.tema !== dia.tema))) {
-      errores.push(`${nombreDe(n)}: ya está en el calendario, pero el banco no tiene sus 5 imágenes con el tema "${dia.tema}".`);
+    const temaEn = typeof dia.tema === 'string' ? dia.tema : dia.tema.en;
+    if (!bancoNuevo && (del.length !== 5 || del.some((i) => i.tema !== temaEn))) {
+      errores.push(`${nombreDe(n)}: ya está en el calendario, pero el banco no tiene sus 5 imágenes con el tema "${temaEn}".`);
     }
     console.log(`${nombreDe(n)}: ya importado, se omite`);
+  }
+
+  // 5 aux. Si el día ya existe en data/facts/ (v2), los dos temas deben coincidir [4.20]. Los archivos v1 o ilegibles se ignoran aquí.
+  const temasFacts = new Map();
+  for (const a of leerAfirmacionesMensuales(RUTA_FACTS)) {
+    if (a.contenido?.version !== 2 || !Array.isArray(a.contenido.dias)) continue;
+    for (const d of a.contenido.dias) if (Number.isInteger(d?.n) && d.tema) temasFacts.set(d.n, d.tema);
+  }
+  for (const d of plan.nuevos) {
+    const t = temasFacts.get(d.n);
+    if (t && (t.en !== d.tema || t.es !== d.temaEs)) {
+      errores.push(`${d.carpeta}: el tema (en inglés o en español) no coincide con el del día ${d.n} de Fact or Fake en data/facts/.`);
+    }
   }
 
   // 5 bis. Recortes manuales
@@ -241,62 +268,61 @@ async function main() {
     avisos.push(...a.avisos);
   }
 
-  // 5 ter. Fichas (solo en memoria: los prompts nunca se escriben ni se muestran)
-  const textosFicha = new Map();
+  // 5 ter. Fichas en los dos idiomas (solo en memoria: los prompts nunca se escriben ni se muestran)
+  const textosFicha = new Map(); // ruta -> {en, es}
   const resumenFichas = new Map();
   {
-    const { autentica, sin_prompt: sinPrompt } = TEXTOS?.fichas ?? {};
+    const autentica = Object.fromEntries(IDIOMAS.map((i) => [i, TEXTOS?.[i]?.fichas?.autentica]));
     const bytes = (t) => new TextEncoder().encode(t).length;
     const textoOk = (t) => typeof t === 'string' && t.trim() !== '' && bytes(t) <= FICHA_MAX_BYTES;
-    if (!textoOk(autentica) || !textoOk(sinPrompt) || autentica === sinPrompt) {
-      errores.push('TEXTOS.fichas (js/textos.js) no es válido: autentica y sin_prompt deben existir, no estar vacías, ser distintas y caber en 510 bytes.');
+    if (!IDIOMAS.every((i) => textoOk(autentica[i])) || autentica.en === autentica.es) {
+      errores.push('TEXTOS.{en,es}.fichas.autentica (js/textos.js) no es válido: debe existir en los dos idiomas, no estar vacío, ser distinto entre idiomas y caber en 510 bytes.');
     } else {
       const decodificador = new TextDecoder('utf-8', { fatal: true });
       for (const dia of plan.nuevos) {
-        const r = { con: 0, sin: 0, recortadas: 0, sinIngles: 0 };
+        const r = { con: 0, recortadas: 0 };
         for (const img of dia.imagenes) {
           if (img.tipo === 'autentica') {
-            textosFicha.set(img.ruta, autentica);
+            textosFicha.set(img.ruta, { en: autentica.en, es: autentica.es });
             continue;
           }
-          if (!img.ficha) {
-            textosFicha.set(img.ruta, sinPrompt);
-            r.sin++;
-            continue;
+          const textos = {};
+          for (const idioma of IDIOMAS) {
+            const archivo = img.fichas?.[idioma];
+            if (!archivo) continue; // planificar ya informó del error
+            let texto;
+            try {
+              texto = decodificador.decode(readFileSync(join(RUTA_TEMAS, archivo)));
+            } catch {
+              errores.push(`${archivo} no es UTF-8 válido; guárdalo como UTF-8.`);
+              continue;
+            }
+            const n = normalizarFicha(texto, FICHA_MAX_BYTES);
+            if (n.vacia) {
+              errores.push(`${archivo} está vacío; el prompt es obligatorio.`);
+              continue;
+            }
+            if (n.truncada) {
+              avisos.push(`${archivo} ocupa ${n.bytesOriginales} bytes; se recorta a ${FICHA_MAX_BYTES} (máximo de una ficha).`);
+              r.recortadas++;
+            }
+            if (n.texto === autentica[idioma]) {
+              errores.push(`${archivo} coincide exactamente con el texto reservado de las fotografías reales; cámbialo.`);
+              continue;
+            }
+            textos[idioma] = n.texto;
           }
-          let texto;
-          try {
-            texto = decodificador.decode(readFileSync(join(RUTA_TEMAS, img.ficha)));
-          } catch {
-            errores.push(`${img.ficha} no es UTF-8 válido; guárdalo como UTF-8.`);
-            continue;
+          if (textos.en !== undefined && textos.es !== undefined) {
+            textosFicha.set(img.ruta, textos);
+            r.con++;
           }
-          const n = normalizarFicha(texto, FICHA_MAX_BYTES);
-          if (n.vacia) {
-            avisos.push(`${img.ficha} está vacío; se usará la ficha «sin confesión».`);
-            textosFicha.set(img.ruta, sinPrompt);
-            r.sin++;
-            continue;
-          }
-          if (n.truncada) {
-            avisos.push(`${img.ficha} ocupa ${n.bytesOriginales} bytes; se recorta a ${FICHA_MAX_BYTES} (máximo de una ficha).`);
-            r.recortadas++;
-          }
-          if (n.texto === autentica || n.texto === sinPrompt) {
-            errores.push(`${img.ficha} coincide exactamente con un texto reservado de las fichas; cámbialo.`);
-            continue;
-          }
-          textosFicha.set(img.ruta, n.texto);
-          r.con++;
-          if (img.sinIngles) r.sinIngles++; // [D-93] se usó el .txt en español
         }
         resumenFichas.set(dia.n, r);
       }
     }
   }
   const sumaFichas = (campo) => [...resumenFichas.values()].reduce((s, r) => s + r[campo], 0);
-  const frase = (r) =>
-    `${r.con} con prompt, ${r.sin} sin prompt, ${r.sinIngles} sin versión en inglés, ${r.recortadas} recortada${r.recortadas === 1 ? '' : 's'}`;
+  const frase = (r) => `${r.con} con prompt en español e inglés, ${r.recortadas} recortada${r.recortadas === 1 ? '' : 's'}`;
 
   // 6. Imágenes nuevas
   const hashes = banco.imagenes.map((i) => ({ ruta: i.original, dhash: i.dhash }));
@@ -344,7 +370,7 @@ async function main() {
     for (const d of plan.nuevos) {
       const g = d.imagenes.filter((i) => i.tipo === 'generada').length;
       const fuentes = [...new Set(d.imagenes.map((i) => i.fuente))].join(', ');
-      console.log(`  ${dos(d.n)} · ${textoFecha(d.fecha)} · ${d.tema} · ia: ${g}, real: ${5 - g} · ${fuentes} · fichas: ${frase(resumenFichas.get(d.n))}`);
+      console.log(`  ${dos(d.n)} · ${textoFecha(d.fecha)} · ${d.tema} / ${d.temaEs} · ia: ${g}, real: ${5 - g} · ${fuentes} · fichas: ${frase(resumenFichas.get(d.n))}`);
     }
     if (manuales.length > 0) {
       console.log('  Recortes manuales (lote.json):');
@@ -384,8 +410,11 @@ async function main() {
     });
     const verdades = orden.map((i) => (i.tipo === 'generada' ? 1 : 0));
     const clave = ofuscar(verdades, d.n);
-    const fichas = orden.map((img, i) => ofuscarFicha(textosFicha.get(img.ruta), clave, d.n, i, aleatorio));
-    diasNuevos.push({ n: d.n, tema: d.tema, pruebas: ids, clave, fichas });
+    // Una sola clave para los dos idiomas; cada idioma con su semilla (4.17).
+    const fichas = Object.fromEntries(
+      IDIOMAS.map((idioma) => [idioma, orden.map((img, i) => ofuscarFicha(textosFicha.get(img.ruta)[idioma], clave, d.n, i, aleatorio, idioma))])
+    );
+    diasNuevos.push({ n: d.n, tema: { en: d.tema, es: d.temaEs }, pruebas: ids, clave, fichas });
     orden.forEach((img, i) => {
       const recorte = recortes[img.ruta] ?? 'atencion';
       trabajos.push({ id: ids[i], origen: join(RUTA_TEMAS, img.ruta), ruta: img.ruta, recorte });
@@ -430,7 +459,7 @@ async function main() {
   }
 
   const nuevoBanco = { version: 3, imagenes: [...banco.imagenes, ...entradasBanco] };
-  const nuevoCalendario = { version: 4, lanzamiento: calendario.lanzamiento, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
+  const nuevoCalendario = { version: 5, lanzamiento: calendario.lanzamiento, dias: reimportar ? diasNuevos : [...calendario.dias, ...diasNuevos] };
   if (!validarCalendario(nuevoCalendario)) salir('El calendario resultante no es válido; no se escribe.');
   writeFileSync(RUTA_BANCO, json(nuevoBanco), 'utf8');
   writeFileSync(RUTA_CALENDARIO, json(nuevoCalendario), 'utf8');
@@ -452,10 +481,10 @@ async function main() {
 
   // Informe
   console.log(reimportar ? 'Días reimportados:' : 'Días añadidos:');
-  for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${textoFecha(fechaDe(d.n))} · ${d.tema}`);
+  for (const d of diasNuevos) console.log(`  ${dos(d.n)} · ${textoFecha(fechaDe(d.n))} · ${d.tema.en} / ${d.tema.es}`);
   console.log(`Recortes manuales (lote.json): ${manuales.length}. El resto usa el recorte por atención.`);
   if (calidades.length > 0) console.log(`Calidad WebP usada: de ${Math.min(...calidades)} a ${Math.max(...calidades)} (franja ${PESO_MIN_KB}-${PESO_MAX_KB} KB).`);
-  console.log(`Fichas: ${frase({ con: sumaFichas('con'), sin: sumaFichas('sin'), recortadas: sumaFichas('recortadas'), sinIngles: sumaFichas('sinIngles') })}.`);
+  console.log(`Fichas: ${frase({ con: sumaFichas('con'), recortadas: sumaFichas('recortadas') })}.`);
   for (const a of [...avisos, ...avisosPeso]) console.log(`AVISO: ${a}`);
   const gen = nuevoCalendario.dias.map((d) => d.pruebas.reduce((s, _, i) => s + desofuscar(d.clave, d.n, i), 0));
   for (const a of avisosMezcla(gen)) console.log(a);

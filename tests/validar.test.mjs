@@ -6,11 +6,11 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import sharp from 'sharp';
 import { validar } from '../herramientas/validar.mjs';
-import { creditosParaBanco } from '../herramientas/creditos.mjs';
+import { creditosParaBanco, ARCHIVOS_CREDITOS } from '../herramientas/creditos.mjs';
 import { repartirPorMes } from '../herramientas/afirmaciones.mjs';
 import { FUENTES } from '../herramientas/temas.mjs';
 import { TEXTOS } from '../js/textos.js';
-import { ofuscar, ofuscarFicha, ofuscarAfirmacion, ofuscarAclaracion, ofuscarBloque, sumarDias } from '../js/diario.js';
+import { IDIOMAS, ofuscar, ofuscarFicha, ofuscarAfirmacion, ofuscarAclaracion, ofuscarBloque, sumarDias } from '../js/diario.js';
 
 // Todas las pruebas usan raíces temporales del SO; nunca el repositorio real.
 const HOY = '2026-10-27';
@@ -25,30 +25,41 @@ const idDe = (n, i) => Array.from({ length: 10 }, (_, k) => ALFA[(n * 7 + i * 13
 
 const WEBP = await sharp({ create: { width: 1080, height: 1350, channels: 3, background: '#445566' } }).webp({ quality: 80 }).toBuffer();
 
-function diaImagenes(n, { tema = `Tema ${n}`, gen = [1, 0, 0, 1, 0] } = {}) {
+// Un tema suelto (cadena) vale para los dos idiomas con un sufijo en el español; un objeto se usa tal cual.
+const temaDe = (x, n) => (x === undefined ? { en: `Topic ${n}`, es: `Tema ${n}` } : typeof x === 'string' ? { en: x, es: `${x} (es)` } : x);
+
+function diaImagenes(n, { tema, gen = [1, 0, 0, 1, 0] } = {}) {
   const clave = ofuscar(gen, n, CERO);
+  const texto = (g, i, idioma) => (g ? `Generated prompt ${n}-${i} (${idioma})` : TEXTOS[idioma].fichas.autentica);
   return {
     n,
-    tema,
+    tema: temaDe(tema, n),
     pruebas: gen.map((_, i) => idDe(n, i)),
     clave,
-    fichas: gen.map((g, i) => ofuscarFicha(g ? TEXTOS.fichas.sin_prompt : TEXTOS.fichas.autentica, clave, n, i, CERO))
+    fichas: Object.fromEntries(IDIOMAS.map((idioma) => [idioma, gen.map((g, i) => ofuscarFicha(texto(g, i, idioma), clave, n, i, CERO, idioma))]))
   };
 }
 
-function diaFacts(n, { tema = `Tema ${n}`, fakes = [1, 0, 0, 1, 0], claim = (i) => `Claim ${n} number ${i} says something.`, truth = (i) => `Truth ${n} number ${i}.` } = {}) {
+function diaFacts(n, { tema, fakes = [1, 0, 0, 1, 0], claim = (i) => `Claim ${n} number ${i} says something.`, truth = (i) => `Truth ${n} number ${i}.` } = {}) {
   const clave = ofuscar(fakes, n, CERO);
+  const es = (t) => `${t} ES`;
   return {
     n,
-    tema,
+    tema: temaDe(tema, n),
     clave,
-    textos: fakes.map((_, i) => ofuscarAfirmacion(claim(i), clave, n, i, CERO)),
-    fichas: fakes.map((_, i) => ofuscarAclaracion({ aclaracion: truth(i), detalles: ['A detail.'] }, clave, n, i, CERO))
+    textos: {
+      en: fakes.map((_, i) => ofuscarAfirmacion(claim(i), clave, n, i, CERO, 'en')),
+      es: fakes.map((_, i) => ofuscarAfirmacion(es(claim(i)), clave, n, i, CERO, 'es'))
+    },
+    fichas: {
+      en: fakes.map((_, i) => ofuscarAclaracion({ aclaracion: truth(i), detalles: ['A detail.'] }, clave, n, i, CERO, 'en')),
+      es: fakes.map((_, i) => ofuscarAclaracion({ aclaracion: es(truth(i)), detalles: ['Un detalle.'] }, clave, n, i, CERO, 'es'))
+    }
   };
 }
 
 // Un archivo mensual por entrada: [{mes, dias:[...]}].
-const mesFacts = (mes, dias) => ({ version: 1, mes, dias });
+const mesFacts = (mes, dias) => ({ version: 2, mes, dias });
 
 /**
  * Crea una raíz de proyecto mínima y válida y ejecuta fn({raiz, ruta, ejecutar}).
@@ -64,7 +75,7 @@ async function proyecto(fn, o = {}) {
     };
     const lanzamiento = o.lanzamiento ?? null;
     const imagenes = Array.from({ length: o.nImagenes ?? 2 }, (_, k) => diaImagenes(k + 1, o.imagenes?.(k + 1)));
-    const calendario = o.calendario ?? { version: 4, lanzamiento, dias: imagenes };
+    const calendario = o.calendario ?? { version: 5, lanzamiento, dias: imagenes };
     escribe('data/calendario.json', json(calendario));
     for (const d of calendario.dias ?? []) for (const id of d.pruebas ?? []) escribe(`casos/${id}.webp`, WEBP);
     const nFacts = o.nFacts ?? 2;
@@ -78,7 +89,7 @@ async function proyecto(fn, o = {}) {
     for (const f of ['variables', 'base', 'componentes']) escribe(`css/${f}.css`, '');
     escribe('fonts/OFL-oswald.txt', 'licencia');
     escribe('fonts/LICENSE-special-elite.txt', 'licencia');
-    escribe('creditos.html', creditosParaBanco(o.banco ?? { version: 3, imagenes: [] }));
+    for (const idioma of IDIOMAS) escribe(ARCHIVOS_CREDITOS[idioma], creditosParaBanco(o.banco ?? { version: 3, imagenes: [] }, idioma));
     if (o.banco) escribe('herramientas/banco.json', json(o.banco));
     o.extra?.({ raiz, ruta, escribe });
     return await fn({
@@ -123,17 +134,29 @@ test('66 calendario: versión 3 y 2 con su mensaje, otras versiones y lanzamient
     assert.ok(hay((await p.ejecutar()).errores, /es de la versión 2 \(sin fichas\)/));
   }, { calendario: cal(2) });
   await proyecto(async (p) => {
-    assert.ok(hay((await p.ejecutar()).errores, /version debe ser 4 \(es 7\)/));
+    assert.ok(hay((await p.ejecutar()).errores, /version debe ser 5 \(es 7\)/));
   }, { calendario: cal(7) });
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(r.errores.includes('data/calendario.json es de la versión 4: rehazlo con npm run importar -- --reimportar --confirmar.'));
+    assert.equal(r.codigo, 1);
+  }, { calendario: cal(4) });
   await proyecto(async (p) => {
     const r = await p.ejecutar();
     assert.equal(r.codigo, 1);
     assert.ok(hay(r.errores, /lanzamiento debe ser null o una fecha ISO válida/));
-  }, { calendario: cal(4, { lanzamiento: '2026-02-31' }) });
+  }, { calendario: cal(5, { lanzamiento: '2026-02-31' }) });
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /estructura de la versión 4/));
-  }, { calendario: { ...cal(4), dias: [{ ...diaImagenes(1), fecha: '2099-01-01' }] } });
+    assert.ok(hay(r.errores, /estructura de la versión 5/));
+  }, { calendario: { ...cal(5), dias: [{ ...diaImagenes(1), fecha: '2099-01-01' }] } });
+  // Un tema o unas fichas en un solo idioma no cumplen la estructura.
+  await proyecto(async (p) => {
+    assert.ok(hay((await p.ejecutar()).errores, /estructura de la versión 5/));
+  }, { calendario: { ...cal(5), dias: [{ ...diaImagenes(1), tema: 'Solo inglés' }] } });
+  await proyecto(async (p) => {
+    assert.ok(hay((await p.ejecutar()).errores, /estructura de la versión 5/));
+  }, { calendario: { ...cal(5), dias: [{ ...diaImagenes(1), fichas: { en: diaImagenes(1).fichas.en } }] } });
 });
 
 test('calendario sin archivo: error claro', async () => {
@@ -152,8 +175,15 @@ test('Images: una generada mal contada, ids repetidos y tema con palabra prohibi
   }, { imagenes: (n) => ({ gen: n === 1 ? [0, 0, 0, 0, 0] : [1, 1, 1, 1, 1] }) });
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /el tema "Real life" contiene la palabra prohibida "real"/));
+    assert.ok(hay(r.errores, /Día 1: el tema en inglés contiene la palabra prohibida "real"/));
+    assert.ok(!r.errores.some((e) => e.includes('Real life')), 'no repite el tema');
   }, { imagenes: (n) => (n === 1 ? { tema: 'Real life' } : {}), nFacts: 0 });
+  // Palabras españolas prohibidas en el tema en español.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /Día 1: el tema en español contiene la palabra prohibida "bulo"/));
+    assert.ok(!hay(r.errores, /el tema en inglés/));
+  }, { imagenes: (n) => (n === 1 ? { tema: { en: 'Hoaxes', es: 'Un bulo' } } : {}), nFacts: 0 });
 });
 
 test('imagen ausente, de otro tamaño o con metadatos', async () => {
@@ -274,7 +304,7 @@ test('216 data/titulares/ o data/titulares.json presentes, y otras entradas en d
 test('216 mes distinto del nombre, día en mes equivocado y huecos entre meses son errores', async () => {
   const dias = [diaFacts(1), diaFacts(2)];
   await proyecto(async (p) => {
-    assert.ok(hay((await p.ejecutar()).errores, /2000-01\.json: no tiene la estructura de la versión 1 o su mes no coincide/));
+    assert.ok(hay((await p.ejecutar()).errores, /2000-01\.json: no tiene la estructura de la versión 2 o su mes no coincide/));
   }, { nFacts: 0, extra: ({ escribe }) => escribe('data/facts/2000-01.json', json(mesFacts('2000-02', dias))) });
   await proyecto(async (p) => {
     // lanzamiento 2099-01-31: el día 2 corresponde a 2099-02 pero está en 2099-01.
@@ -289,14 +319,18 @@ test('216 mes distinto del nombre, día en mes equivocado y huecos entre meses s
 
 test('202 un bloque cambiado por otra cadena de la misma longitud no se descifra', async () => {
   const d = diaFacts(1);
-  const roto = { ...d, textos: [...d.textos], fichas: [...d.fichas] };
-  roto.textos[2] = 'B'.repeat(683) + '=';
-  roto.fichas[4] = ofuscarBloque(new Uint8Array([0xff, 0xfe, 0x0a, 0x0a]), 'otra|semilla', 512, CERO);
+  const roto = { ...d, textos: { en: [...d.textos.en], es: [...d.textos.es] }, fichas: { en: [...d.fichas.en], es: [...d.fichas.es] } };
+  roto.textos.en[2] = 'B'.repeat(683) + '=';
+  roto.fichas.es[4] = ofuscarBloque(new Uint8Array([0xff, 0xfe, 0x0a, 0x0a]), 'otra|semilla', 512, CERO);
+  // Un bloque español cifrado con la semilla del inglés tampoco se descifra (semillas por idioma).
+  roto.textos.es[0] = d.textos.en[0];
   await proyecto(async (p) => {
     const r = await p.ejecutar();
     assert.equal(r.codigo, 1);
-    assert.ok(hay(r.errores, /La afirmación 3 del día 1 de Fact or Fake no se puede descifrar\./));
-    assert.ok(hay(r.errores, /La aclaración 5 del día 1 de Fact or Fake no se puede descifrar\./));
+    assert.ok(hay(r.errores, /La afirmación 3 del día 1 de Fact or Fake \(inglés\) no se puede descifrar\./));
+    assert.ok(hay(r.errores, /La aclaración 5 del día 1 de Fact or Fake \(español\) no se puede descifrar\./));
+    assert.ok(hay(r.errores, /La afirmación 1 del día 1 de Fact or Fake \(español\) no se puede descifrar\./));
+    assert.ok(!hay(r.errores, /La afirmación 3 del día 1 de Fact or Fake \(español\)/));
   }, { facts: [mesFacts('2000-01', [roto, diaFacts(2)])] });
 });
 
@@ -304,13 +338,14 @@ test('202 afirmaciones repetidas, también entre dos meses, son errores que no m
   const igual = (i) => `Same claim for every day ${i}.`;
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /Afirmación repetida en Fact or Fake: la 1 del día 2 es igual a la 1 del día 1\./));
+    assert.ok(hay(r.errores, /Afirmación repetida en Fact or Fake \(inglés\): la 1 del día 2 es igual a la 1 del día 1\./));
+    assert.ok(hay(r.errores, /Afirmación repetida en Fact or Fake \(español\): la 1 del día 2 es igual a la 1 del día 1\./));
     assert.ok(!r.errores.some((e) => e.includes('Same claim')));
   }, { dia: () => ({ claim: igual }) });
   await proyecto(async (p) => {
     const r = await p.ejecutar();
     assert.ok(hay(r.errores, /la 3 del día 2 es igual a la 3 del día 1/));
-    assert.equal(r.errores.filter((e) => /repetida/.test(e)).length, 5);
+    assert.equal(r.errores.filter((e) => /repetida/.test(e)).length, 10, 'cinco por idioma');
   }, {
     lanzamiento: '2099-01-31',
     facts: [mesFacts('2099-01', [diaFacts(1, { claim: igual })]), mesFacts('2099-02', [diaFacts(2, { claim: igual })])]
@@ -318,20 +353,40 @@ test('202 afirmaciones repetidas, también entre dos meses, son errores que no m
   // Mayúsculas, espacios y punto final no evitan el repetido.
   await proyecto(async (p) => {
     const r = await p.ejecutar();
+    // El punto final cae antes del sufijo del español, así que solo el inglés se detecta como repetido.
     assert.equal(r.errores.filter((e) => /repetida/.test(e)).length, 5);
   }, { dia: (n) => ({ claim: (i) => (n === 1 ? `The sun is big ${i}.` : `  the  SUN is big ${i}`) }) });
+  // Los repetidos se miran por idioma: solo el español de dos días coincide, y solo se avisa del español.
+  const e1 = diaFacts(1);
+  const e2 = diaFacts(2);
+  e2.textos.es[0] = ofuscarAfirmacion('Claim 1 number 0 says something. ES', e2.clave, 2, 0, CERO, 'es');
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /Afirmación repetida en Fact or Fake \(español\): la 1 del día 2 es igual a la 1 del día 1\./));
+    assert.ok(!hay(r.errores, /repetida en Fact or Fake \(inglés\)/));
+  }, { facts: [mesFacts('2000-01', [e1, e2])] });
 });
 
 test('202 tema de Fact or Fake distinto del de Images, o con palabra prohibida, es error', async () => {
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(r.errores.includes('El tema del día 2 no coincide entre Images y Fact or Fake.'));
-    assert.equal(r.errores.filter((e) => /no coincide entre Images/.test(e)).length, 1);
+    assert.ok(r.errores.includes('El tema en inglés del día 2 no coincide entre Images y Fact or Fake.'));
+    assert.ok(r.errores.includes('El tema en español del día 2 no coincide entre Images y Fact or Fake.'));
+    assert.equal(r.errores.filter((e) => /no coincide entre Images/.test(e)).length, 2);
   }, { dia: (n) => (n === 2 ? { tema: 'Otro' } : {}) });
+  // Solo el español difiere.
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /Día 1 de Fact or Fake: el tema "Fake news" contiene la palabra prohibida "fake"/));
+    assert.deepEqual(r.errores, ['El tema en español del día 2 no coincide entre Images y Fact or Fake.']);
+  }, { dia: (n) => (n === 2 ? { tema: { en: 'Topic 2', es: 'Otro tema' } } : {}) });
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /Día 1 de Fact or Fake: el tema en inglés contiene la palabra prohibida "fake"/));
   }, { dia: (n) => (n === 1 ? { tema: 'Fake news' } : {}), imagenes: (n) => (n === 1 ? { tema: 'Fake news' } : {}) });
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /Día 1 de Fact or Fake: el tema en español contiene la palabra prohibida "dato"/));
+  }, { dia: (n) => (n === 1 ? { tema: { en: 'Facts', es: 'El dato' } } : {}), imagenes: (n) => (n === 1 ? { tema: { en: 'Facts', es: 'El dato' } } : {}) });
   // Palabra completa: "Airplanes", "Reality" y "Facts" no son palabras prohibidas.
   await proyecto(async (p) => {
     const r = await p.ejecutar();
@@ -351,15 +406,15 @@ test('Fact or Fake: afirmación de más de 140 caracteres y aclaración o detall
   const larga = (i) => `L${i} ` + 'x'.repeat(145);
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /La afirmación 1 del día 1 de Fact or Fake supera 140 caracteres/));
-    assert.ok(hay(r.errores, /La aclaración 1 del día 1 de Fact or Fake supera 160 caracteres/));
+    assert.ok(hay(r.errores, /La afirmación 1 del día 1 de Fact or Fake \(inglés\) supera 140 caracteres/));
+    assert.ok(hay(r.errores, /La aclaración 1 del día 1 de Fact or Fake \(inglés\) supera 160 caracteres/));
     assert.ok(!r.errores.some((e) => e.includes('xxxx')));
   }, { dia: (n) => (n === 1 ? { claim: larga, truth: (i) => `T${i} ` + 'y'.repeat(170) } : {}) });
   const d = diaFacts(1);
-  d.fichas[0] = ofuscarAclaracion({ aclaracion: 'Truth.', detalles: ['d'.repeat(85)] }, d.clave, 1, 0, CERO);
+  d.fichas.es[0] = ofuscarAclaracion({ aclaracion: 'Verdad.', detalles: ['d'.repeat(85)] }, d.clave, 1, 0, CERO, 'es');
   await proyecto(async (p) => {
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /La aclaración 1 del día 1 de Fact or Fake tiene un detalle de más de 80 caracteres/));
+    assert.ok(hay(r.errores, /La aclaración 1 del día 1 de Fact or Fake \(español\) tiene un detalle de más de 80 caracteres/));
   }, { facts: [mesFacts('2000-01', [d, diaFacts(2)])] });
 });
 
@@ -375,8 +430,10 @@ test('240 longitudes: aviso, nunca error, tampoco con --estricto', async () => {
   await proyecto(async (p) => {
     const r = await p.ejecutar();
     assert.equal(r.codigo, 0);
-    assert.ok(hay(r.avisos, /^día 1: las afirmaciones falsas miden de media un \d+ % más que las verdaderas/));
-    assert.ok(hay(r.avisos, /^en todo Fact or Fake, las afirmaciones falsas/));
+    assert.ok(hay(r.avisos, /^día 1 \(inglés\): las afirmaciones falsas miden de media un \d+ % más que las verdaderas/));
+    assert.ok(hay(r.avisos, /^día 1 \(español\): las afirmaciones falsas miden de media un \d+ % más que las verdaderas/));
+    assert.ok(hay(r.avisos, /^en todo Fact or Fake \(inglés\), las afirmaciones falsas/));
+    assert.ok(hay(r.avisos, /^en todo Fact or Fake \(español\), las afirmaciones falsas/));
     const e = await p.ejecutar({ estricto: true });
     assert.ok(!e.errores.some((x) => /miden de media/.test(x)));
     assert.deepEqual(e.errores, ['herramientas/banco.json no encontrado (modo --estricto).']);
@@ -421,7 +478,7 @@ test('banco: versión 2 con su mensaje, versión 3 válida pasa y sin comprobar 
         const gen = i === 0 || i === 3;
         const f = FUENTES.find((x) => x.tipo === (gen ? 'generada' : 'autentica'));
         return {
-          id, tipo: gen ? 'generada' : 'autentica', dia: d.n, tema: d.tema, fuente: f.fuente, licencia: f.licencia,
+          id, tipo: gen ? 'generada' : 'autentica', dia: d.n, tema: d.tema.en, fuente: f.fuente, licencia: f.licencia,
           original: `x/${id}`, dhash: (BigInt(d.n * 5 + i) * 0x9e3779b97f4a7c15n % (1n << 64n)).toString(16).padStart(16, '0'),
           recorte: 'atencion', alta: '2026-10-01'
         };
@@ -511,4 +568,101 @@ test('sin imágenes desproporcionadas no hay avisos de peso por imagen ni por d�
     assert.ok(!hay(r.avisos, /mediana de su día/));
     assert.ok(!hay(r.avisos, /el peso medio de las imágenes de un tipo difiere/));
   });
+});
+
+test('287 fichas de Images en cada idioma: las auténticas son exactamente la del idioma y las generadas no son ninguna', async () => {
+  const cambiar = (dia, idioma, i, texto) => ({
+    ...dia,
+    fichas: { ...dia.fichas, [idioma]: dia.fichas[idioma].map((f, k) => (k === i ? ofuscarFicha(texto, dia.clave, dia.n, i, CERO, idioma) : f)) }
+  });
+  const cal = (dias) => ({ version: 5, lanzamiento: null, dias });
+  const d1 = diaImagenes(1); // generadas: 0 y 3; auténticas: 1, 2 y 4
+  // Una auténtica con la ficha del otro idioma, y una generada con la ficha auténtica del otro idioma.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(r.errores.includes('El día 1 tiene fichas (español) que no cuadran con su clave.'), r.errores.join('\n'));
+    assert.ok(!hay(r.errores, /\(inglés\)/));
+  }, { calendario: cal([cambiar(d1, 'es', 1, TEXTOS.en.fichas.autentica), diaImagenes(2)]) });
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(r.errores.includes('El día 1 tiene fichas (inglés) que no cuadran con su clave.'), r.errores.join('\n'));
+  }, { calendario: cal([cambiar(d1, 'en', 0, TEXTOS.es.fichas.autentica), diaImagenes(2)]) });
+  // Una generada con la ficha de «Real photograph» en su propio idioma.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(r.errores.includes('El día 1 tiene fichas (inglés) que no cuadran con su clave.'));
+  }, { calendario: cal([cambiar(d1, 'en', 3, TEXTOS.en.fichas.autentica), diaImagenes(2)]) });
+  // Una ficha que no se descifra con su semilla (la del otro idioma): solo nombra día, número e idioma.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    const mala = { ...d1, fichas: { ...d1.fichas, es: [d1.fichas.en[0], ...d1.fichas.es.slice(1)] } };
+    assert.ok(mala.fichas.es[0] === d1.fichas.en[0]);
+    assert.ok(r.errores.includes('La ficha 1 del día 1 (español) no se puede descifrar.'), r.errores.join('\n'));
+    assert.ok(!r.errores.some((e) => e.includes('Generated prompt')));
+  }, { calendario: cal([{ ...d1, fichas: { ...d1.fichas, es: [d1.fichas.en[0], ...d1.fichas.es.slice(1)] } }, diaImagenes(2)]) });
+});
+
+test('287 creditos.html (lang en) y creditos.es.html (lang es) existen y se comprueban por separado', async () => {
+  await proyecto(async (p) => {
+    fs.rmSync(p.ruta('creditos.es.html'));
+    assert.ok(hay((await p.ejecutar()).errores, /Falta creditos\.es\.html en la raíz\./));
+  });
+  await proyecto(async (p) => {
+    const h = fs.readFileSync(p.ruta('creditos.es.html'), 'utf8').replace('<html lang="es">', '<html lang="en">');
+    fs.writeFileSync(p.ruta('creditos.es.html'), h);
+    assert.ok(hay((await p.ejecutar()).errores, /creditos\.es\.html: falta <html lang="es">\./));
+  });
+  await proyecto(async (p) => {
+    const h = fs.readFileSync(p.ruta('creditos.html'), 'utf8').replace('<html lang="en">', '<html lang="es">');
+    fs.writeFileSync(p.ruta('creditos.html'), h);
+    assert.ok(hay((await p.ejecutar()).errores, /creditos\.html: falta <html lang="en">\./));
+  });
+  // Con banco, cada página debe ser exactamente la que generaría creditos.mjs en su idioma.
+  const banco = { version: 3, imagenes: [] };
+  await proyecto(async (p) => {
+    p.escribe('creditos.es.html', creditosParaBanco(banco, 'en'));
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /creditos\.es\.html: falta <html lang="es">/));
+  });
+});
+
+test('4.22 index.html y los créditos: palabras españolas prohibidas y clases dato* son errores', async () => {
+  const pagina = (cuerpo) => `<!doctype html>\n<html lang="en"><head>${CSP}</head><body>${cuerpo}</body></html>\n`;
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /index\.html: class="dato-valor" contiene la palabra prohibida "dato"/));
+    assert.ok(hay(r.errores, /index\.html: class="dato-valor" contiene una clase que empieza por dato\./));
+    assert.ok(hay(r.errores, /index\.html: id="bulo-uno" contiene la palabra prohibida "bulo"/));
+    assert.ok(hay(r.errores, /index\.html: data-x="falso" contiene la palabra prohibida "falso"/));
+    assert.ok(hay(r.errores, /index\.html: alt="verdadera foto" contiene la palabra prohibida "verdadera"/));
+  }, {
+    extra: ({ escribe }) => escribe('index.html', pagina('<p class="dato-valor" id="bulo-uno" data-x="falso"></p><img alt="verdadera foto" src="creditos.html">'))
+  });
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+  }, { extra: ({ escribe }) => escribe('index.html', pagina('<p class="tabla-fuentes" id="bulos"></p>')) });
+  await proyecto(async (p) => {
+    const h = fs.readFileSync(p.ruta('creditos.es.html'), 'utf8').replace('id="creditos"', 'id="creditos-dato"');
+    fs.writeFileSync(p.ruta('creditos.es.html'), h);
+    assert.ok(hay((await p.ejecutar()).errores, /creditos\.es\.html: id="creditos-dato" contiene la palabra prohibida "dato"/));
+  });
+});
+
+test('4.22 distinto número de detalles entre idiomas es aviso; todo lo demás sigue igual', async () => {
+  const d = diaFacts(1);
+  d.fichas.es[2] = ofuscarAclaracion({ aclaracion: 'Verdad.', detalles: [] }, d.clave, 1, 2, CERO, 'es');
+  await proyecto(async (p) => {
+    const r = await p.ejecutar({ estricto: true });
+    assert.ok(r.avisos.includes('La prueba 3 del día 1 de Fact or Fake tiene distinto número de detalles en inglés y en español.'));
+    assert.ok(!hay(r.errores, /detalles/));
+  }, { facts: [mesFacts('2000-01', [d, diaFacts(2)])] });
+});
+
+test('4.22 archivos de Fact or Fake de la versión 1 son un error con el mensaje de rehacerlos', async () => {
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(r.errores.includes('data/facts/2000-01.json es de la versión 1 (solo inglés): rehazlo con npm run afirmaciones -- --reimportar --confirmar --revisado.'), r.errores.join('\n'));
+    assert.equal(r.codigo, 1);
+  }, { facts: [{ version: 1, mes: '2000-01', dias: [{ ...diaFacts(1), tema: 'Topic 1', textos: diaFacts(1).textos.en, fichas: diaFacts(1).fichas.en }] }] });
 });

@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   analizarAfirmaciones, planificarAfirmaciones, medias, avisosLongitud, analizarArgumentosAfirmaciones,
   unirMeses, repartirPorMes, leerAfirmacionesMensuales, escribirAfirmacionesMensuales,
-  elegirArchivo, normalizarParaDuplicados, contarFrases,
+  archivosDelDia, emparejarIdiomas, normalizarParaDuplicados, contarFrases,
   LISTA_REVISION, ARCHIVO_MES, ARCHIVOS_AFIRMACIONES, CAMPOS_AFIRMACION,
   AFIRMACION_MAX, ACLARACION_MAX, DETALLE_MAX, UMBRAL_LONGITUD
 } from '../herramientas/afirmaciones.mjs';
@@ -104,13 +104,59 @@ test('197 analizarAfirmaciones: los errores no muestran el texto de las afirmaci
 
 // ---------- elegirArchivo y normalizarParaDuplicados ----------
 
-test('elegirArchivo: facts.en.txt tiene preferencia; datos.txt y datos.original.txt se ignoran [D-139]', () => {
-  assert.deepEqual(ARCHIVOS_AFIRMACIONES, ['facts.en.txt', 'facts.txt']);
-  assert.equal(elegirArchivo(['facts.txt', 'facts.en.txt']), 'facts.en.txt');
-  assert.equal(elegirArchivo(['datos.txt', 'facts.txt']), 'facts.txt');
-  assert.equal(elegirArchivo(['datos.txt', 'datos.original.txt']), null);
-  assert.equal(elegirArchivo([]), null);
-  assert.equal(elegirArchivo(undefined), null);
+test('284 archivosDelDia: los dos archivos, ninguno o uno solo (error); facts.txt avisa; las notas se ignoran [D-139, D-159]', () => {
+  assert.deepEqual(ARCHIVOS_AFIRMACIONES, { en: 'facts.en.txt', es: 'facts.es.txt' });
+  assert.ok(Object.isFrozen(ARCHIVOS_AFIRMACIONES));
+  assert.deepEqual(archivosDelDia(['facts.es.txt', 'facts.en.txt', 'tema.es.txt', 'datos.txt']), { en: 'facts.en.txt', es: 'facts.es.txt', errores: [], avisos: [] });
+  assert.deepEqual(archivosDelDia(['datos.txt', 'datos.original.txt', 'tema.es.txt']), { en: null, es: null, errores: [], avisos: [] });
+  assert.deepEqual(archivosDelDia([]), { en: null, es: null, errores: [], avisos: [] });
+  assert.deepEqual(archivosDelDia(undefined), { en: null, es: null, errores: [], avisos: [] });
+  let r = archivosDelDia(['facts.en.txt'], '02-dogs');
+  assert.deepEqual([r.en, r.es], ['facts.en.txt', null]);
+  assert.deepEqual(r.errores, ['02-dogs tiene facts.en.txt pero falta facts.es.txt.']);
+  r = archivosDelDia(['facts.es.txt'], '02-dogs');
+  assert.deepEqual(r.errores, ['02-dogs tiene facts.es.txt pero falta facts.en.txt.']);
+  r = archivosDelDia(['facts.txt', 'facts.en.txt', 'facts.es.txt'], '01-fireworks');
+  assert.deepEqual(r.errores, []);
+  assert.deepEqual(r.avisos, ['01-fireworks/facts.txt ya no se usa: el inglés va en facts.en.txt y el español en facts.es.txt.']);
+  // facts.txt solo no cuenta como archivo del día.
+  assert.deepEqual(archivosDelDia(['facts.txt']).en, null);
+});
+
+const par = (tipo, nEn = 1, nEs = 1) => ({
+  tipo,
+  en: { afirmacion: 'Claim.', aclaracion: 'Truth.', detalles: Array(nEn).fill('Detail.') },
+  es: { afirmacion: 'Afirmación.', aclaracion: 'Verdad.', detalles: Array(nEs).fill('Detalle.') }
+});
+const resultado = (...tipos) => ({ afirmaciones: tipos.map((t, i) => ({ tipo: t, afirmacion: `A${i}.`, aclaracion: `B${i}.`, detalles: ['d.'] })), errores: [], avisos: [] });
+
+test('285 emparejarIdiomas: empareja por posición y avisa de distinto número de details', () => {
+  const en = resultado('autentica', 'generada', 'autentica', 'autentica', 'generada');
+  const es = resultado('autentica', 'generada', 'autentica', 'autentica', 'generada');
+  es.afirmaciones[2].detalles = [];
+  const r = emparejarIdiomas(en, es, '02-dogs');
+  assert.deepEqual(r.errores, []);
+  assert.equal(r.pares.length, 5);
+  assert.deepEqual(r.pares[1], { tipo: 'generada', en: { afirmacion: 'A1.', aclaracion: 'B1.', detalles: ['d.'] }, es: { afirmacion: 'A1.', aclaracion: 'B1.', detalles: ['d.'] } });
+  assert.deepEqual(r.avisos, ['AVISO: el bloque 3 de 02-dogs tiene 1 details en inglés y 0 en español.']);
+  assert.deepEqual(par('fact').es.detalles.length, 1);
+});
+
+test('285 emparejarIdiomas: distinto número de bloques o distinto answer es error; nunca lanza', () => {
+  const cinco = ['autentica', 'generada', 'autentica', 'autentica', 'generada'];
+  let r = emparejarIdiomas(resultado(...cinco), resultado(...cinco.slice(0, 4)), '02-dogs');
+  assert.equal(r.errores.length, 1);
+  assert.match(r.errores[0], /02-dogs.*facts\.en\.txt tiene 5 bloques y facts\.es\.txt tiene 4/);
+  assert.deepEqual(r.pares, []);
+  const otro = [...cinco];
+  otro[2] = 'generada';
+  r = emparejarIdiomas(resultado(...cinco), resultado(...otro), '02-dogs');
+  assert.deepEqual(r.errores, ['El bloque 3 de 02-dogs es fact en facts.en.txt y fake en facts.es.txt.']);
+  assert.deepEqual(r.pares, []);
+  // Si alguno de los dos ya tiene errores no se empareja ni se añaden más.
+  r = emparejarIdiomas({ afirmaciones: [], errores: ['x'], avisos: [] }, resultado(...cinco), '02-dogs');
+  assert.deepEqual(r, { pares: [], errores: [], avisos: [] });
+  for (const raro of [undefined, null, {}, { afirmaciones: null }]) assert.doesNotThrow(() => emparejarIdiomas(raro, raro, 'x'));
 });
 
 test('normalizarParaDuplicados: NFC, minúsculas, espacios y puntuación final', () => {
@@ -144,6 +190,25 @@ test('198 avisosLongitud: sentido contrario, medias y solo avisos', () => {
   assert.ok(avisosLongitud([dia(1, 100, 50)]).every((x) => typeof x === 'string' && x.startsWith('AVISO')));
 });
 
+test('286 avisosLongitud por idioma: cada idioma con su cálculo y sus mensajes lo dicen', () => {
+  const dosIdiomas = (n, en, es) => ({ n, afirmaciones: { en, es } });
+  const ok = [afi('autentica', 50), afi('generada', 52)];
+  const mal = [afi('autentica', 60), afi('generada', 81)];
+  // Solo el español se desvía.
+  let a = avisosLongitud([dosIdiomas(3, ok, mal)]);
+  assert.equal(a.length, 2);
+  assert.equal(a[0], 'AVISO: día 3 (español): las afirmaciones falsas miden de media un 35 % más que las verdaderas (81 frente a 60 caracteres).');
+  assert.match(a[1], /^AVISO: en todo Fact or Fake \(español\), las afirmaciones falsas/);
+  // Solo el inglés.
+  a = avisosLongitud([dosIdiomas(3, mal, ok)]);
+  assert.match(a[0], /^AVISO: día 3 \(inglés\): /);
+  // Los dos: avisos separados; sin desvío: ninguno.
+  assert.equal(avisosLongitud([dosIdiomas(3, mal, mal)]).length, 4);
+  assert.deepEqual(avisosLongitud([dosIdiomas(3, ok, ok)]), []);
+  // No mezcla los dos idiomas en una sola media.
+  assert.deepEqual(avisosLongitud([dosIdiomas(1, ok, ok), dosIdiomas(2, ok, ok)]), []);
+});
+
 test('198 avisosLongitud: aviso global aunque cada día cumpla', () => {
   assert.deepEqual(avisosLongitud([dia(1, 40, 47), dia(2, 40, 48)]), []);
   const peor = [dia(1, 40, 44), dia(2, 40, 51), dia(3, 40, 52)];
@@ -155,18 +220,37 @@ test('198 avisosLongitud: aviso global aunque cada día cumpla', () => {
 
 // ---------- 199 planificarAfirmaciones ----------
 
-const carpeta = (nombre, extra = {}) => ({ nombre, archivos: ['facts.en.txt'], ...extra });
+const carpeta = (nombre, extra = {}) => ({ nombre, archivos: ['facts.en.txt', 'facts.es.txt', 'tema.es.txt'], temaEs: 'Tema en español', ...extra });
 const base = { ultimoDia: 0, hoyISO: '2026-10-21', lanzamiento: '2026-11-01' };
 
-test('199 planificarAfirmaciones: numeración, tema, archivo y mes', () => {
-  const r = planificarAfirmaciones({ ...base, carpetas: [carpeta('02-food', { archivos: ['facts.txt'] }), carpeta('01-space'), carpeta('03-dogs-of-Madrid', { archivos: ['facts.txt', 'facts.en.txt'] })] });
+test('199 planificarAfirmaciones: numeración, tema en los dos idiomas, archivos y mes', () => {
+  const r = planificarAfirmaciones({
+    ...base,
+    carpetas: [carpeta('02-food', { temaEs: 'Comida' }), carpeta('01-space', { temaEs: 'Espacio' }), carpeta('03-dogs-of-Madrid', { temaEs: 'Perros de Madrid' })]
+  });
   assert.deepEqual(r.errores, []);
-  assert.deepEqual(r.nuevos.map((x) => [x.n, x.tema, x.fecha, x.mes, x.archivo, x.carpeta]), [
-    [1, 'Space', '2026-11-01', '2026-11', 'facts.en.txt', '01-space'],
-    [2, 'Food', '2026-11-02', '2026-11', 'facts.txt', '02-food'],
-    [3, 'Dogs of Madrid', '2026-11-03', '2026-11', 'facts.en.txt', '03-dogs-of-Madrid']
+  assert.deepEqual(r.nuevos.map((x) => [x.n, x.tema, x.temaEs, x.fecha, x.mes, x.archivos, x.carpeta]), [
+    [1, 'Space', 'Espacio', '2026-11-01', '2026-11', { en: 'facts.en.txt', es: 'facts.es.txt' }, '01-space'],
+    [2, 'Food', 'Comida', '2026-11-02', '2026-11', { en: 'facts.en.txt', es: 'facts.es.txt' }, '02-food'],
+    [3, 'Dogs of Madrid', 'Perros de Madrid', '2026-11-03', '2026-11', { en: 'facts.en.txt', es: 'facts.es.txt' }, '03-dogs-of-Madrid']
   ]);
   assert.deepEqual(r.pendientes, []);
+});
+
+test('284 planificarAfirmaciones: con un solo idioma es error; facts.txt avisa; tema.es.txt obligatorio y válido', () => {
+  let r = planificarAfirmaciones({ ...base, carpetas: [carpeta('02-dogs', { archivos: ['facts.en.txt', 'tema.es.txt'] })], ultimoDia: 1 });
+  assert.ok(r.errores.includes('02-dogs tiene facts.en.txt pero falta facts.es.txt.'));
+  r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space', { archivos: ['facts.es.txt', 'tema.es.txt'] })] });
+  assert.ok(r.errores.includes('01-space tiene facts.es.txt pero falta facts.en.txt.'));
+  r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space', { archivos: ['facts.txt', 'facts.en.txt', 'facts.es.txt', 'tema.es.txt'] })] });
+  assert.deepEqual(r.errores, []);
+  assert.deepEqual(r.avisos, ['01-space/facts.txt ya no se usa: el inglés va en facts.en.txt y el español en facts.es.txt.']);
+  r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space', { archivos: ['facts.en.txt', 'facts.es.txt'] })] });
+  assert.deepEqual(r.errores, ['01-space: falta tema.es.txt.']);
+  r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space', { temaEs: 'Un bulo' })] });
+  assert.ok(r.errores.some((e) => e.includes('01-space/tema.es.txt') && e.includes('bulo')));
+  r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space', { temaEs: null })] });
+  assert.ok(r.errores.some((e) => e.includes('01-space/tema.es.txt')));
 });
 
 test('199 planificarAfirmaciones: cruce de mes y sin lanzamiento', () => {
@@ -204,7 +288,7 @@ test('199 planificarAfirmaciones: carpetas sin archivo al final quedan pendiente
   assert.deepEqual(r.errores, []);
   assert.deepEqual(r.nuevos.map((x) => x.n), [1]);
   assert.deepEqual(r.pendientes, [2, 3]);
-  assert.ok(r.avisos.some((a) => a.includes('02-dogs y siguientes no tienen facts.txt') && a.includes('día 1')));
+  assert.ok(r.avisos.some((a) => a.includes('02-dogs y siguientes no tienen facts.en.txt ni facts.es.txt') && a.includes('día 1')));
   r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space'), sin('02-dogs'), carpeta('03-food')] });
   assert.ok(r.errores.some((e) => e.includes('hueco')));
   r = planificarAfirmaciones({ ...base, carpetas: [sin('01-space')] });
@@ -212,18 +296,20 @@ test('199 planificarAfirmaciones: carpetas sin archivo al final quedan pendiente
 });
 
 test('199 planificarAfirmaciones: datos.txt, datos.original.txt, ia/ y real/ no dan errores ni avisos [D-139]', () => {
-  const r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space', { archivos: ['facts.en.txt', 'datos.txt', 'datos.original.txt', '.DS_Store', 'otro.png'], subcarpetas: ['ia', 'real'] })] });
+  const r = planificarAfirmaciones({ ...base, carpetas: [carpeta('01-space', { archivos: ['facts.en.txt', 'facts.es.txt', 'tema.es.txt', 'datos.txt', 'datos.original.txt', '.DS_Store', 'otro.png'], subcarpetas: ['ia', 'real'] })] });
   assert.deepEqual(r.errores, []);
   assert.deepEqual(r.avisos, []);
-  assert.equal(r.nuevos[0].archivo, 'facts.en.txt');
+  assert.deepEqual(r.nuevos[0].archivos, { en: 'facts.en.txt', es: 'facts.es.txt' });
 });
 
-test('199 planificarAfirmaciones: tema igual al de Images', () => {
-  const temasImagenes = new Map([[1, 'Space'], [2, 'Cats']]);
+test('199 planificarAfirmaciones: tema igual al de Images en los dos idiomas', () => {
+  const temasImagenes = new Map([[1, { en: 'Space', es: 'Tema en español' }], [2, { en: 'Cats', es: 'Tema en español' }]]);
   const r = planificarAfirmaciones({ ...base, temasImagenes, carpetas: [carpeta('01-space'), carpeta('02-dogs'), carpeta('03-food')] });
   assert.equal(r.errores.length, 1);
   assert.match(r.errores[0], /El tema de 02-dogs no coincide con el del día 2 de Images\./);
   assert.deepEqual(planificarAfirmaciones({ ...base, temasImagenes, carpetas: [carpeta('01-space')] }).errores, []);
+  const es = planificarAfirmaciones({ ...base, temasImagenes, carpetas: [carpeta('01-space', { temaEs: 'Otro tema' })] });
+  assert.deepEqual(es.errores, ['El tema en español de 01-space no coincide con el del día 1 de Images.']);
 });
 
 test('199 planificarAfirmaciones: tema con palabra prohibida, nombre inválido y días pasados', () => {
@@ -255,8 +341,12 @@ test('analizarArgumentosAfirmaciones', () => {
   assert.equal(analizarArgumentosAfirmaciones(['--otro']).errores.length, 1);
 });
 
-test('LISTA_REVISION tiene los 8 puntos de 4.13 [D-136, D-137]', () => {
-  assert.equal(LISTA_REVISION.length, 8);
+test('LISTA_REVISION tiene los 8 puntos de 4.13 y el 9.º del español [D-136, D-137, D-159]', () => {
+  assert.equal(LISTA_REVISION.length, 9);
+  assert.equal(
+    LISTA_REVISION[8],
+    'La versión en español dice lo mismo que la inglesa (misma respuesta, mismas cifras con unidades equivalentes, mismo matiz en la `truth` y los detalles) y cumple igual la norma.'
+  );
   assert.match(LISTA_REVISION[0], /^Ninguna afirmación falsa daña la reputación/);
   assert.match(LISTA_REVISION[1], /salud, medicina, nutrición, fármacos ni remedios\.$/);
   assert.match(LISTA_REVISION[4], /política, elecciones, gobiernos, partidos ni conflictos\.$/);
@@ -271,7 +361,9 @@ test('LISTA_REVISION tiene los 8 puntos de 4.13 [D-136, D-137]', () => {
 
 const B = 'A'.repeat(683) + '=';
 const F = B;
-const diaDatos = (n) => ({ n, tema: 'Space', clave: 'Q7m1Xa0=', textos: Array(5).fill(B), fichas: Array(5).fill(F) });
+const temaSpace = { en: 'Space', es: 'Espacio' };
+const dosIdiomasBloques = () => ({ en: Array(5).fill(B), es: Array(5).fill(B) });
+const diaDatos = (n) => ({ n, tema: temaSpace, clave: 'Q7m1Xa0=', textos: dosIdiomasBloques(), fichas: dosIdiomasBloques() });
 const dias = (de, hasta) => Array.from({ length: hasta - de + 1 }, (_, i) => diaDatos(de + i));
 const resumen = (archivos) => archivos.map((a) => [a.mes, a.dias[0].n, a.dias.at(-1).n]);
 
@@ -279,7 +371,7 @@ test('213 repartirPorMes y unirMeses con lanzamiento null', () => {
   const todos = dias(1, 70);
   const archivos = repartirPorMes(todos, null);
   assert.deepEqual(resumen(archivos), [['2000-01', 1, 31], ['2000-02', 32, 60], ['2000-03', 61, 70]]);
-  assert.ok(archivos.every((a) => a.version === 1));
+  assert.ok(archivos.every((a) => a.version === 2));
   assert.equal(todos.length, 70);
   const u = unirMeses(archivos.map((a) => ({ nombre: `${a.mes}.json`, contenido: a })), { lanzamiento: null });
   assert.deepEqual(u.errores, []);
@@ -309,28 +401,34 @@ test('213 unirMeses: errores', () => {
   mal([{ nombre: 'afirmaciones.json', contenido: a }], 'el nombre debe ser AAAA-MM.json');
   mal([{ nombre: 'subcarpeta', contenido: null }], 'el nombre debe ser AAAA-MM.json');
   mal([{ nombre: '2000-01.json', contenido: null }], 'no es JSON válido');
-  mal([{ nombre: '2000-02.json', contenido: a }], 'estructura de la versión 1');
-  mal([{ nombre: '2000-01.json', contenido: { ...a, version: 2 } }], 'estructura de la versión 1');
+  mal([{ nombre: '2000-02.json', contenido: a }], 'estructura de la versión 2');
+  mal([{ nombre: '2000-01.json', contenido: { ...a, version: 3 } }], 'estructura de la versión 2');
+  // Un archivo v1 (solo inglés) tiene su mensaje propio [4.21].
+  const v1 = { version: 1, mes: '2000-01', dias: [{ n: 1, tema: 'Space', clave: 'Q7m1Xa0=', textos: Array(5).fill(B), fichas: Array(5).fill(B) }] };
+  const rv1 = mal([{ nombre: '2000-01.json', contenido: v1 }], 'data/facts/2000-01.json es de la versión 1 (solo inglés): rehazlo con npm run afirmaciones -- --reimportar --confirmar --revisado.');
+  assert.equal(rv1.errores.length, 1);
+  // Dos idiomas obligatorios en cada bloque.
+  mal([{ nombre: '2000-01.json', contenido: { ...a, dias: [{ ...diaDatos(1), textos: { en: Array(5).fill(B) } }] } }], 'estructura de la versión 2');
   mal([f(a), f(c)], 'Faltan días');
   mal([f(b)], 'deben empezar en 1');
-  const otro = { ...a, dias: [...a.dias.slice(0, -1), { ...a.dias.at(-1), tema: 'Food' }] };
+  const otro = { ...a, dias: [...a.dias.slice(0, -1), { ...a.dias.at(-1), tema: { en: 'Food', es: 'Comida' } }] };
   // Mismo n (31) en dos archivos con contenido distinto.
-  const solapado = { version: 1, mes: '2000-02', dias: [{ ...diaDatos(31), tema: 'Food' }, ...b.dias] };
+  const solapado = { version: 2, mes: '2000-02', dias: [{ ...diaDatos(31), tema: { en: 'Food', es: 'Comida' } }, ...b.dias] };
   mal([f(a), f(solapado)], 'repetido');
   assert.ok(otro.dias.length === 31);
-  mal([f({ version: 1, mes: '2000-01', dias: dias(1, 32) })], 'le corresponde 2000-02');
+  mal([f({ version: 2, mes: '2000-01', dias: dias(1, 32) })], 'le corresponde 2000-02');
   // Cualquier texto de error se limita a nombrar archivo y día.
-  const r = unirMeses([f({ version: 1, mes: '2000-01', dias: dias(1, 32) })], { lanzamiento: null });
+  const r = unirMeses([f({ version: 2, mes: '2000-01', dias: dias(1, 32) })], { lanzamiento: null });
   assert.match(r.errores[0], /El día 32 de Fact or Fake está en 2000-01\.json/);
 });
 
 test('213 unirMeses: comprobarMes false acepta un día repetido idéntico una vez', () => {
-  const a = { version: 1, mes: '2000-01', dias: dias(1, 31) };
-  const b = { version: 1, mes: '2000-02', dias: dias(31, 40) };
+  const a = { version: 2, mes: '2000-01', dias: dias(1, 31) };
+  const b = { version: 2, mes: '2000-02', dias: dias(31, 40) };
   const r = unirMeses([{ nombre: '2000-01.json', contenido: a }, { nombre: '2000-02.json', contenido: b }], { lanzamiento: null, comprobarMes: false });
   assert.deepEqual(r.errores, []);
   assert.equal(r.dias.length, 40);
-  const c = { ...b, dias: [{ ...diaDatos(31), tema: 'Food' }, ...dias(32, 40)] };
+  const c = { ...b, dias: [{ ...diaDatos(31), tema: { en: 'Food', es: 'Comida' } }, ...dias(32, 40)] };
   const mal = unirMeses([{ nombre: '2000-01.json', contenido: a }, { nombre: '2000-02.json', contenido: c }], { lanzamiento: null, comprobarMes: false });
   assert.ok(mal.errores.length > 0);
 });
@@ -395,7 +493,7 @@ test('213 escribirAfirmacionesMensuales: solo cambia lo que cambia y borra solo 
     assert.deepEqual(r.borrados, ['2000-03.json']);
     assert.ok(fs.existsSync(path.join(dir, 'notas.txt')));
     assert.ok(!fs.existsSync(path.join(dir, '2000-03.json')));
-    assert.throws(() => escribirAfirmacionesMensuales(dir, [{ version: 1, mes: '../x', dias: [] }]), RangeError);
+    assert.throws(() => escribirAfirmacionesMensuales(dir, [{ version: 2, mes: '../x', dias: [] }]), RangeError);
   });
 });
 
@@ -406,6 +504,11 @@ test('contarFrases: abreviaturas y decimales no cierran frase', () => {
     'Cats vs. dogs, etc. are common.', 'Pets, e.g. dogs, i.e. animals, rest.', 'It starts at 5 a.m. and ends at 9 p.m. today.',
     'It weighs 3.5 kg and costs 2.25 dollars.', 'It is about 3.5 times larger.'
   ]) assert.equal(contarFrases(t), 1, t);
+  for (const t of [
+    'Fue en EE. UU. el 4 de julio.', 'Hay relieves de hacia el año 3000 a. C. que muestran combates.',
+    'Lanzados en Washington D. C. el 4 de julio de 2026.', 'Pesa 2,5 kg y mide 1,11 m.', 'La Sra. Pérez y la Dra. Gil llegaron.'
+  ]) assert.equal(contarFrases(t), 1, t);
+  assert.equal(contarFrases('Duró 40 minutos. Fue en EE. UU. Nada más.'), 2); // «UU.» seguido de texto se trata como abreviatura
   assert.equal(contarFrases('One. Two!'), 2);
   assert.equal(contarFrases('Is it? Yes. Sure.'), 3);
   assert.equal(contarFrases('Dr. Who. Then another.'), 2);

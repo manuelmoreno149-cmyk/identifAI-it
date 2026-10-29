@@ -6,13 +6,15 @@ import {
   buscarCalidad, avisosPesoPorDia, avisosPesoMediana, PESO_MIN_KB, PESO_MAX_KB, CALIDAD_MIN, CALIDAD_MAX,
   POSICIONES_RECORTE, analizarLote, analizarArgumentos, comprobarReimportacion, mensajeReimportacion,
   analizarPruebasAbiertas, normalizarFicha, calendarioAnteriorValido,
-  analizarArgumentosLanzamiento, comprobarCambioLanzamiento, migrarCalendario, migrarBanco, borrarAntiguas
+  analizarArgumentosLanzamiento, comprobarCambioLanzamiento, migrarCalendario, migrarBanco, borrarAntiguas,
+  analizarTemaEs, PALABRAS_PROHIBIDAS, ARCHIVOS_IGNORADOS_RAIZ
 } from '../herramientas/temas.mjs';
 
 const nombres = ['01-fireworks', '02-dogs', '03-people-eating', '04-people-drinking', '05-table-with-food', '06-nightclub', '07-people-fighting'];
+// Cada imagen generada lleva sus dos prompts (.txt en español y .en.txt en inglés) y la carpeta su tema.es.txt [4.19].
 const carpeta = (nombre, ia = 2, real = 3) => ({
-  nombre, subcarpetas: ['ia', 'real'], sueltos: [],
-  ia: Array.from({ length: ia }, (_, i) => `Gemini_Generated_Image_${i}.jpg`),
+  nombre, subcarpetas: ['ia', 'real'], sueltos: ['tema.es.txt'], temaEs: 'Tema en español',
+  ia: Array.from({ length: ia }, (_, i) => [`Gemini_Generated_Image_${i}.jpg`, `Gemini_Generated_Image_${i}.txt`, `Gemini_Generated_Image_${i}.en.txt`]).flat(),
   real: Array.from({ length: real }, (_, i) => `autor-${i}-unsplash.jpg`)
 });
 const carpetas = () => nombres.map((n, i) => carpeta(n, (i % 4) + 1, 4 - (i % 4)));
@@ -35,6 +37,38 @@ test('84 contienePalabraProhibida', () => {
   assert.equal(contienePalabraProhibida('Arte IA'), 'ia');
   assert.equal(contienePalabraProhibida('fakeNews'), 'fake');
   assert.equal(contienePalabraProhibida('Retrato-AI'), 'ai');
+});
+
+test('160 palabras prohibidas ampliadas con el español', () => {
+  assert.deepEqual(PALABRAS_PROHIBIDAS, ['real', 'ia', 'ai', 'fake', 'dato', 'bulo', 'falso', 'falsa', 'verdadero', 'verdadera']);
+  for (const [texto, palabra] of [['Dato curioso', 'dato'], ['El bulo', 'bulo'], ['Billete falso', 'falso'], ['Moneda Falsa', 'falsa'], ['Cuento verdadero', 'verdadero'], ['Historia verdadera', 'verdadera']]) {
+    assert.equal(contienePalabraProhibida(texto), palabra, texto);
+  }
+  // Por palabra completa: no afecta a «datos», «bulos» ni a palabras que solo contienen la subcadena.
+  for (const ok of ['Datos', 'Bulos', 'Falsedad', 'Gente comiendo', 'Fuegos artificiales', 'Mesa con comida', 'Gente peleándose']) {
+    assert.equal(contienePalabraProhibida(ok), null, ok);
+  }
+});
+
+test('160 nuevoId descarta ids con las palabras españolas', () => {
+  // Con un aleatorio que produce primero «xxdatoxxxx» (d=3, a=0, t=19, o=14) y luego un id limpio.
+  const letras = (s) => [...s].map((c) => 'abcdefghijklmnopqrstuvwxyz0123456789'.indexOf(c));
+  const secuencia = [...letras('xxdatoxxxx'), ...letras('qwertyuiop')].map((n) => (n + 0.5) / 36);
+  let k = 0;
+  const id = nuevoId(() => secuencia[k++], new Set());
+  assert.equal(id, 'qwertyuiop');
+});
+
+test('159 analizarTemaEs: una línea no vacía, con o sin BOM y salto final', () => {
+  assert.deepEqual(analizarTemaEs('Perros'), { tema: 'Perros', error: null });
+  assert.deepEqual(analizarTemaEs('Perros\n'), { tema: 'Perros', error: null });
+  assert.deepEqual(analizarTemaEs('Perros\r\n'), { tema: 'Perros', error: null });
+  assert.deepEqual(analizarTemaEs('\ufeffGente peleándose\n'), { tema: 'Gente peleándose', error: null });
+  for (const mal of ['', '\n', 'Perros\nGatos', null, undefined, 5]) assert.ok(analizarTemaEs(mal).error, String(mal));
+  assert.match(analizarTemaEs('El bulo').error, /bulo/);
+  const exigente = (t) => t.length <= 6;
+  assert.ok(analizarTemaEs('Demasiado largo', exigente).error);
+  assert.equal(analizarTemaEs('Perros', exigente).tema, 'Perros');
 });
 
 test('85 fuenteDeArchivo', () => {
@@ -282,76 +316,75 @@ test('143 normalizarFicha: recorte a maxBytes', () => {
   for (const raro of [undefined, null, 5, {}]) assert.doesNotThrow(() => normalizarFicha(raro, 510));
 });
 
-test('144 planificar con fichas', () => {
+test('144 planificar con los dos prompts obligatorios (.txt y .en.txt)', () => {
   const conIa = (ia, real = ['a-unsplash.jpg', 'b-unsplash.jpg', 'c-unsplash.jpg', 'd-unsplash.jpg']) => {
     const c = carpetas();
-    c[0] = { nombre: '01-fireworks', subcarpetas: ['ia', 'real'], sueltos: [], ia, real: real.slice(0, 5 - ia.filter((f) => !/\.txt$/i.test(f)).length) };
+    c[0] = { nombre: '01-fireworks', subcarpetas: ['ia', 'real'], sueltos: ['tema.es.txt'], temaEs: 'Fuegos artificiales', ia, real: real.slice(0, 5 - ia.filter((f) => !/\.txt$/i.test(f)).length) };
     return planificar({ ...base, carpetas: c });
   };
-  let r = conIa(['Gemini_x.jpg', 'Gemini_x.txt']);
+  const avisos01 = (r) => r.avisos.filter((a) => a.startsWith('01-fireworks'));
+  let r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.en.txt']);
   assert.deepEqual(r.errores, []);
+  assert.deepEqual(avisos01(r), []);
   const g = r.nuevos[0].imagenes.find((i) => i.tipo === 'generada');
-  assert.equal(g.ficha, '01-fireworks/ia/Gemini_x.txt');
-  assert.equal(g.sinIngles, true);
-  assert.ok(r.avisos.some((a) => a.includes('Gemini_x.jpg') && a.includes('falta la versión en inglés')));
-  assert.ok(r.nuevos[0].imagenes.filter((i) => i.tipo === 'autentica').every((i) => i.ficha === null));
+  assert.deepEqual(g.fichas, { en: '01-fireworks/ia/Gemini_x.en.txt', es: '01-fireworks/ia/Gemini_x.txt' });
+  assert.ok(r.nuevos[0].imagenes.filter((i) => i.tipo === 'autentica').every((i) => i.fichas === null));
+  // X.en.txt no cuenta como imagen ni como prompt huérfano.
   assert.equal(r.nuevos[0].imagenes.length, 5);
+  assert.equal(r.nuevos[0].temaEs, 'Fuegos artificiales');
 
+  // Falta cualquiera de los dos: error (antes era un aviso), nombrando la imagen y el archivo.
+  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt']);
+  assert.ok(r.errores.some((e) => e.includes('01-fireworks/ia/Gemini_x.jpg') && e.includes('Gemini_x.en.txt') && /inglés/.test(e)));
+  r = conIa(['Gemini_x.jpg', 'Gemini_x.en.txt']);
+  assert.ok(r.errores.some((e) => e.includes('Gemini_x.jpg') && e.includes('Gemini_x.txt') && /español/.test(e)));
   r = conIa(['Gemini_x.jpg']);
-  assert.deepEqual(r.errores, []);
-  assert.equal(r.nuevos[0].imagenes.find((i) => i.tipo === 'generada').ficha, null);
-  assert.ok(r.avisos.some((a) => a.includes('01-fireworks/ia/Gemini_x.jpg') && a.includes('Gemini_x.en.txt')));
+  assert.equal(r.errores.filter((e) => e.includes('Gemini_x.jpg')).length, 2);
 
-  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_y.txt']);
+  // Huérfanos: aviso, sin error.
+  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.en.txt', 'Gemini_y.txt', 'Gemini_z.en.txt']);
   assert.deepEqual(r.errores, []);
-  assert.ok(r.avisos.some((a) => a.includes('Gemini_y.txt')));
+  assert.ok(r.avisos.some((a) => a.includes('Gemini_y.txt') && a.includes('no tiene imagen')));
+  assert.ok(r.avisos.some((a) => a.includes('Gemini_z.en.txt') && a.includes('no tiene imagen')));
 
-  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.png']);
+  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.en.txt', 'Gemini_x.png']);
   assert.ok(r.errores.some((e) => e.includes('mismo nombre base')));
 
-  r = conIa(['Gemini_X.TXT', 'Gemini_X.jpg']);
+  r = conIa(['Gemini_X.TXT', 'Gemini_X.EN.TXT', 'Gemini_X.jpg']);
   assert.deepEqual(r.errores, []);
-  assert.equal(r.nuevos[0].imagenes.find((i) => i.tipo === 'generada').ficha, '01-fireworks/ia/Gemini_X.TXT');
+  assert.equal(r.nuevos[0].imagenes.find((i) => i.tipo === 'generada').fichas.es, '01-fireworks/ia/Gemini_X.TXT');
 
-  r = conIa(['Gemini_x.jpg', 'notas.md']);
+  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.en.txt', 'notas.md']);
   assert.ok(r.errores.some((e) => e.includes('notas.md')));
 
   const c = carpetas();
-  c[0] = { nombre: '01-fireworks', subcarpetas: ['ia', 'real'], sueltos: [], ia: ['Gemini_x.jpg', 'Gemini_x.txt'], real: ['a-unsplash.jpg', 'b-unsplash.jpg', 'c-unsplash.jpg', 'd-unsplash.jpg', 'notas.txt'] };
+  c[0] = { ...carpeta('01-fireworks'), ia: ['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.en.txt'], real: ['a-unsplash.jpg', 'b-unsplash.jpg', 'c-unsplash.jpg', 'd-unsplash.jpg', 'notas.txt'] };
   r = planificar({ ...base, carpetas: c });
   assert.deepEqual(r.errores, []);
   assert.ok(r.avisos.some((a) => a.includes('real/notas.txt')));
   assert.ok(r.nuevos[0].imagenes.every((i) => !/\.txt$/.test(i.ruta)));
 });
 
-test('146 planificar con fichas en inglés (.en.txt)', () => {
-  const conIa = (ia) => {
+test('159 planificar exige tema.es.txt válido en toda carpeta con imágenes', () => {
+  const con = (cambio) => {
     const c = carpetas();
-    c[0] = { nombre: '01-fireworks', subcarpetas: ['ia', 'real'], sueltos: [], ia, real: ['a-unsplash.jpg', 'b-unsplash.jpg', 'c-unsplash.jpg', 'd-unsplash.jpg'].slice(0, 5 - ia.filter((f) => !/\.txt$/i.test(f)).length) };
+    c[0] = { ...c[0], ...cambio };
     return planificar({ ...base, carpetas: c });
   };
-  const avisos01 = (r) => r.avisos.filter((a) => a.startsWith('01-fireworks'));
-  // La inglesa tiene prioridad y no genera avisos.
-  let r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.en.txt']);
+  let r = con({ sueltos: [] });
+  assert.deepEqual(r.errores, ['01-fireworks: falta tema.es.txt.']);
+  r = con({ temaEs: null });
+  assert.ok(r.errores.some((e) => e.includes('01-fireworks/tema.es.txt')));
+  r = con({ temaEs: 'Primera\nSegunda' });
+  assert.ok(r.errores.some((e) => e.includes('una sola línea')));
+  r = con({ temaEs: 'Un bulo' });
+  assert.ok(r.errores.some((e) => e.includes('bulo')));
+  r = planificar({ ...base, carpetas: carpetas(), temaValido: (t) => t.length <= 10 });
+  assert.ok(r.errores.some((e) => e.includes('tema.es.txt')));
+  r = con({ temaEs: 'Fuegos artificiales\n' });
   assert.deepEqual(r.errores, []);
-  assert.deepEqual(avisos01(r), []);
-  let g = r.nuevos[0].imagenes.find((i) => i.tipo === 'generada');
-  assert.equal(g.ficha, '01-fireworks/ia/Gemini_x.en.txt');
-  assert.equal(g.sinIngles, false);
-  // X.en.txt no cuenta como imagen ni como ficha huérfana.
-  assert.equal(r.nuevos[0].imagenes.length, 5);
-  // Solo inglesa: vale, sin aviso.
-  r = conIa(['Gemini_x.jpg', 'Gemini_x.en.txt']);
-  assert.deepEqual(r.errores, []);
-  assert.deepEqual(avisos01(r), []);
-  assert.equal(r.nuevos[0].imagenes.find((i) => i.tipo === 'generada').ficha, '01-fireworks/ia/Gemini_x.en.txt');
-  // Inglesa huérfana: aviso.
-  r = conIa(['Gemini_x.jpg', 'Gemini_x.txt', 'Gemini_x.en.txt', 'Gemini_y.en.txt']);
-  assert.deepEqual(r.errores, []);
-  assert.ok(r.avisos.some((a) => a.includes('Gemini_y.en.txt') && a.includes('no tiene imagen')));
-  // Sin ninguna: aviso de falta total.
-  r = conIa(['Gemini_x.jpg']);
-  assert.equal(r.nuevos[0].imagenes.find((i) => i.tipo === 'generada').ficha, null);
+  assert.equal(r.nuevos[0].temaEs, 'Fuegos artificiales');
+  assert.equal(r.nuevos[0].tema, 'Fireworks');
 });
 
 test('145 calendarioAnteriorValido', () => {
@@ -368,7 +401,10 @@ test('145 calendarioAnteriorValido', () => {
   assert.equal(calendarioAnteriorValido({ ...cal(3), lanzamiento: null }), false); // null solo en la 4
   assert.equal(calendarioAnteriorValido({ ...cal(3), lanzamiento: '2099-01-01' }), true); // ya no hay fecha fija
   assert.equal(calendarioAnteriorValido(cal(1)), false);
-  assert.equal(calendarioAnteriorValido({ ...cal(5) }), false);
+  assert.equal(calendarioAnteriorValido({ version: 5, lanzamiento: null, dias: [dia4(1)] }), true); // la 5 también
+  assert.equal(calendarioAnteriorValido({ version: 5, lanzamiento: '2026-11-01', dias: [dia4(1)] }), true);
+  assert.equal(calendarioAnteriorValido({ ...cal(5), dias: [dia(1)] }), true);
+  assert.equal(calendarioAnteriorValido({ ...cal(6) }), false);
   assert.equal(calendarioAnteriorValido(null), false);
   assert.equal(calendarioAnteriorValido({}), false);
   assert.equal(calendarioAnteriorValido([]), false);
@@ -434,6 +470,8 @@ test('152 migrarCalendario y migrarBanco', () => {
     assert.deepEqual(d, resto);
   });
   assert.deepEqual(migrarCalendario(calendario), { calendario, errores: [] }); // idempotente
+  const v5 = { ...calendario, version: 5 };
+  assert.deepEqual(migrarCalendario(v5), { calendario: v5, errores: [] }); // la 5 se acepta sin cambiar su versión
   const mala = { ...v3, dias: [dia(1), { ...dia(2), fecha: '2099-01-09' }] };
   assert.equal(migrarCalendario(mala).errores.length, 1);
   assert.equal(migrarCalendario({ ...v3, version: 2 }).errores.length, 1);
@@ -455,19 +493,20 @@ test('152 migrarCalendario y migrarBanco', () => {
 
 const sinImgs = (nombre, sueltos = ['facts.txt']) => ({ nombre, subcarpetas: [], sueltos, ia: [], real: [] });
 
-test('224 planificar: facts.txt, facts.en.txt, datos.txt y datos.original.txt se ignoran sin errores ni avisos', () => {
-  const c = { ...carpeta('01-fireworks'), sueltos: ['facts.txt', 'facts.en.txt', 'datos.txt', 'datos.original.txt'] };
+test('224 planificar: facts.txt, facts.en.txt, facts.es.txt, datos.txt y datos.original.txt se ignoran sin errores ni avisos', () => {
+  assert.deepEqual(ARCHIVOS_IGNORADOS_RAIZ, ['facts.txt', 'facts.en.txt', 'facts.es.txt', 'datos.txt', 'datos.original.txt']);
+  const c = { ...carpeta('01-fireworks'), sueltos: ['tema.es.txt', 'facts.txt', 'facts.en.txt', 'facts.es.txt', 'datos.txt', 'datos.original.txt'] };
   const r = planificar({ ...base, carpetas: [c] });
   assert.deepEqual(r.errores, []);
-  // Los únicos avisos posibles son los de «sin ficha» de las generadas; ninguno menciona los archivos ignorados.
-  assert.ok(r.avisos.every((x) => /no tiene ficha/.test(x) && !/facts|datos/.test(x)));
+  // Con los dos prompts de cada generada no queda ningún aviso.
+  assert.deepEqual(r.avisos, []);
   assert.deepEqual(r.pendientes, []);
   assert.equal(r.nuevos.length, 1);
 });
 
 test('224 planificar: otros archivos sueltos siguen siendo error', () => {
-  for (const nombre of ['Datos.txt', 'notas.txt', 'FACTS.TXT']) {
-    const r = planificar({ ...base, carpetas: [{ ...carpeta('01-fireworks'), sueltos: ['datos.txt', nombre] }] });
+  for (const nombre of ['Datos.txt', 'notas.txt', 'FACTS.TXT', 'tema.en.txt']) {
+    const r = planificar({ ...base, carpetas: [{ ...carpeta('01-fireworks'), sueltos: ['tema.es.txt', 'datos.txt', nombre] }] });
     assert.ok(r.errores.some((e) => e.includes('no admitidos') && e.includes(nombre)), nombre);
   }
 });
@@ -490,6 +529,9 @@ test('224 planificar: carpeta sin imágenes seguida de otra con imágenes es un 
   assert.deepEqual(r.pendientes, []);
   r = planificar({ ...base, carpetas: [{ ...carpeta('01-dogs'), subcarpetas: ['ia'], real: [] }] });
   assert.ok(r.errores.length > 0);
+  // tema.es.txt en una carpeta aún sin imágenes es un archivo conocido (no es error).
+  r = planificar({ ...base, carpetas: [sinImgs('01-dogs', ['facts.en.txt', 'facts.es.txt', 'tema.es.txt'])] });
+  assert.deepEqual(r.errores, []);
   r = planificar({ ...base, carpetas: [sinImgs('01-dogs', ['facts.txt', 'notas.txt'])] });
   assert.ok(r.errores.some((e) => e.includes('notas.txt')));
 });

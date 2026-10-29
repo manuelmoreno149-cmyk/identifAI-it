@@ -61,16 +61,21 @@ import * as diario from '../js/diario.js';
 const clave = ofuscar([0, 1, 1, 0, 1], 1, () => 0);
 
 function fichasDe(n) {
-  return [0, 1, 2, 3, 4].map((i) => ofuscarFicha(i % 2 ? `Prompt ${i}` : 'Real photograph', clave, n, i, () => 0.5));
+  return {
+    en: [0, 1, 2, 3, 4].map((i) => ofuscarFicha(i % 2 ? `Prompt ${i}` : 'Real photograph', clave, n, i, () => 0.5, 'en')),
+    es: [0, 1, 2, 3, 4].map((i) => ofuscarFicha(i % 2 ? `Prompt ${i}` : 'Fotografía real', clave, n, i, () => 0.5, 'es'))
+  };
 }
 
+const TEMA = { en: 'Dogs', es: 'Perros' };
+
 function diaValido(n) {
-  return { n, tema: 'Perros', pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'], clave, fichas: fichasDe(n) };
+  return { n, tema: { ...TEMA }, pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'], clave, fichas: fichasDe(n) };
 }
 
 function calendarioValido(lanzamiento = '2026-11-01') {
   return {
-    version: 4,
+    version: 5,
     lanzamiento,
     dias: [diaValido(1), diaValido(2)]
   };
@@ -130,11 +135,13 @@ test('8. casoDelDia devuelve null fuera de calendario o con fecha distinta', () 
   assert.equal(caso.n, 2);
   assert.equal(caso.fecha, '2026-11-02');
   assert.equal(caso.clave, clave);
-  assert.equal(caso.tema, 'Perros');
+  assert.deepEqual(caso.tema, TEMA);
   assert.equal(caso.pruebas.length, 5);
   assert.deepEqual(Object.keys(caso).sort(), ['clave', 'fecha', 'fichas', 'n', 'pruebas', 'tema']);
-  caso.fichas.forEach((f, i) => assert.ok(f === cal.dias[1].fichas[i]));
-  assert.equal(desofuscarFicha(caso.fichas[0], clave, 2, 0), 'Real photograph');
+  assert.ok(caso.fichas === cal.dias[1].fichas);
+  assert.equal(desofuscarFicha(caso.fichas.en[0], clave, 2, 0), 'Real photograph');
+  assert.equal(desofuscarFicha(caso.fichas.es[0], clave, 2, 0, 'es'), 'Fotografía real');
+  assert.equal(desofuscarFicha(caso.fichas.es[0], clave, 2, 0, 'en'), null, 'semilla por idioma');
 });
 
 test('9. validarCalendario', () => {
@@ -174,7 +181,7 @@ test('9. validarCalendario', () => {
 
   assert.equal(validarCalendario(null), false);
 
-  for (const v of [1, 2, 3, 5]) {
+  for (const v of [1, 2, 3, 4, 6]) {
     c = calendarioValido();
     c.version = v;
     assert.equal(validarCalendario(c), false, `version ${v}`);
@@ -209,9 +216,11 @@ test('9. validarCalendario', () => {
     (f) => [7, ...f.slice(1)],
     () => 'no es un array'
   ]) {
-    c = calendarioValido();
-    c.dias[0].fichas = cambio(c.dias[0].fichas);
-    assert.equal(validarCalendario(c), false);
+    for (const idioma of ['en', 'es']) {
+      c = calendarioValido();
+      c.dias[0].fichas[idioma] = cambio(c.dias[0].fichas[idioma]);
+      assert.equal(validarCalendario(c), false, idioma);
+    }
   }
 
   c = calendarioValido();
@@ -219,10 +228,34 @@ test('9. validarCalendario', () => {
   assert.equal(validarCalendario(c), false);
 
   for (const malo of ['', 'A'.repeat(31), ' Perros', 'Perros ', 'Per'+String.fromCharCode(10)+'ros', 'Per{ros', 'Per}ros', 'perros', 5]) {
-    c = calendarioValido();
-    c.dias[1].tema = malo;
-    assert.equal(validarCalendario(c), false, String(malo));
+    for (const idioma of ['en', 'es']) {
+      c = calendarioValido();
+      c.dias[1].tema[idioma] = malo;
+      assert.equal(validarCalendario(c), false, `${idioma}: ${String(malo)}`);
+    }
   }
+
+  // v5: tema y fichas en los dos idiomas, y nada más.
+  c = calendarioValido();
+  c.version = 4;
+  assert.equal(validarCalendario(c), false);
+  for (const tema of ['Perros', { en: 'Dogs' }, { es: 'Perros' }, { en: 'Dogs', es: 'Perros', fr: 'Chiens' }]) {
+    c = calendarioValido();
+    c.dias[0].tema = tema;
+    assert.equal(validarCalendario(c), false, JSON.stringify(tema));
+  }
+  c = calendarioValido();
+  c.dias[0].fichas = c.dias[0].fichas.en;
+  assert.equal(validarCalendario(c), false);
+  c = calendarioValido();
+  delete c.dias[0].fichas.es;
+  assert.equal(validarCalendario(c), false);
+  c = calendarioValido();
+  c.dias[0].fichas.es.pop();
+  assert.equal(validarCalendario(c), false);
+  c = calendarioValido();
+  c.dias[0].fichas.fr = c.dias[0].fichas.en;
+  assert.equal(validarCalendario(c), false);
 });
 
 test('temaValido', () => {
@@ -326,15 +359,17 @@ function congelar(o) {
 function mesDeEjemplo(mes, n0, n1) {
   const dias = [];
   for (let n = n0; n <= n1; n++) {
-    const textos = [0, 1, 2, 3, 4].map((i) => ofuscarAfirmacion(`Claim ${i}.`, clave, n, i, () => 0.5));
-    const fichas = [0, 1, 2, 3, 4].map((i) => ofuscarAclaracion({ aclaracion: 'Truth.', detalles: ['One.', 'Two.', 'Three.'].slice(0, i % 4) }, clave, n, i, () => 0.5));
-    dias.push({ n, tema: `Tema${n}`, clave, textos, fichas });
+    const textos = Object.fromEntries(['en', 'es'].map((l) => [l, [0, 1, 2, 3, 4].map((i) => ofuscarAfirmacion(`Claim ${i}.`, clave, n, i, () => 0.5, l))]));
+    const fichas = Object.fromEntries(
+      ['en', 'es'].map((l) => [l, [0, 1, 2, 3, 4].map((i) => ofuscarAclaracion({ aclaracion: 'Truth.', detalles: ['One.', 'Two.', 'Three.'].slice(0, i % 4) }, clave, n, i, () => 0.5, l))])
+    );
+    dias.push({ n, tema: { en: `Topic${n}`, es: `Tema${n}` }, clave, textos, fichas });
   }
-  return { version: 1, mes, dias };
+  return { version: 2, mes, dias };
 }
 
 function calendarioDe(n, lanzamiento = null) {
-  return { version: 4, lanzamiento, dias: Array.from({ length: n }, (_, k) => diaValido(k + 1)) };
+  return { version: 5, lanzamiento, dias: Array.from({ length: n }, (_, k) => diaValido(k + 1)) };
 }
 
 test('115. diasDePrueba: unión de calendario y todos los meses, solo n y temas', () => {
@@ -347,12 +382,12 @@ test('115. diasDePrueba: unión de calendario y todos los meses, solo n y temas'
   r.forEach((d, k) => {
     assert.deepStrictEqual(Object.keys(d), ['n', 'temaImagenes', 'temaAfirmaciones']);
     assert.equal(d.n, k + 1);
-    assert.equal(d.temaImagenes, k < 35 ? 'Perros' : null);
-    assert.equal(d.temaAfirmaciones, `Tema${k + 1}`);
+    assert.deepEqual(d.temaImagenes, k < 35 ? TEMA : null);
+    assert.deepEqual(d.temaAfirmaciones, { en: `Topic${k + 1}`, es: `Tema${k + 1}` });
   });
   const soloCal = diasDePrueba(cal, null);
   assert.equal(soloCal.length, 35);
-  assert.ok(soloCal.every((d) => d.temaAfirmaciones === null && d.temaImagenes === 'Perros'));
+  assert.ok(soloCal.every((d) => d.temaAfirmaciones === null && d.temaImagenes.es === 'Perros'));
   for (const m of [undefined, {}, [], [afirmacionesVacias('2000-01')]]) {
     assert.deepStrictEqual(diasDePrueba(cal, m), soloCal);
     assert.deepStrictEqual(diasDePrueba(null, m), []);
@@ -403,7 +438,7 @@ test('150. casoDeNumero', () => {
   assert.deepEqual(Object.keys(c).sort(), ['clave', 'fecha', 'fichas', 'n', 'pruebas', 'tema']);
   const con = calendarioValido('2026-12-01');
   assert.equal(casoDeNumero(con, 2).fecha, fechaDelDia('2026-12-01', 2));
-  assert.ok(casoDeNumero(con, 2).fichas[0] === con.dias[1].fichas[0]);
+  assert.ok(casoDeNumero(con, 2).fichas === con.dias[1].fichas);
   for (const n of [0, 3, -1, 1.5, '1']) assert.equal(casoDeNumero(con, n), null, String(n));
 });
 
@@ -433,7 +468,8 @@ test('172. validarAfirmaciones', () => {
   assert.equal(validarAfirmaciones(ok(), '2000-02'), true);
   assert.equal(validarAfirmaciones(ok()), true);
   const malos = [
-    (o) => { o.version = 2; },
+    (o) => { o.version = 1; },
+    (o) => { o.version = 3; },
     (o) => { delete o.mes; },
     (o) => { o.mes = '2026-13'; },
     (o) => { o.dias = []; },
@@ -442,15 +478,20 @@ test('172. validarAfirmaciones', () => {
     (o) => { o.dias[1].extra = 1; },
     (o) => { o.dias[1].n = 40; },
     (o) => { o.dias[0].n = 0; },
-    (o) => { o.dias[0].textos.pop(); },
-    (o) => { o.dias[0].textos.push(o.dias[0].textos[0]); },
-    (o) => { o.dias[0].fichas.pop(); },
-    (o) => { o.dias[0].fichas.push(o.dias[0].fichas[0]); },
-    (o) => { o.dias[0].textos[0] = o.dias[0].textos[0].slice(0, 682) + '='; },
-    (o) => { o.dias[0].textos[0] = o.dias[0].textos[0].slice(0, 683) + 'A='; },
-    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 682) + '='; },
-    (o) => { o.dias[0].fichas[0] = o.dias[0].fichas[0].slice(0, 683) + 'A='; },
-    (o) => { o.dias[0].tema = 'perros'; },
+    (o) => { o.dias[0].textos.en.pop(); },
+    (o) => { o.dias[0].textos.es.push(o.dias[0].textos.es[0]); },
+    (o) => { o.dias[0].fichas.es.pop(); },
+    (o) => { o.dias[0].fichas.en.push(o.dias[0].fichas.en[0]); },
+    (o) => { o.dias[0].textos.en[0] = o.dias[0].textos.en[0].slice(0, 682) + '='; },
+    (o) => { o.dias[0].textos.es[0] = o.dias[0].textos.es[0].slice(0, 683) + 'A='; },
+    (o) => { o.dias[0].fichas.en[0] = o.dias[0].fichas.en[0].slice(0, 682) + '='; },
+    (o) => { o.dias[0].fichas.es[0] = o.dias[0].fichas.es[0].slice(0, 683) + 'A='; },
+    (o) => { o.dias[0].textos = o.dias[0].textos.en; },
+    (o) => { delete o.dias[0].fichas.es; },
+    (o) => { o.dias[0].textos.fr = o.dias[0].textos.en; },
+    (o) => { o.dias[0].tema = 'Perros'; },
+    (o) => { o.dias[0].tema = { en: 'perros', es: 'Perros' }; },
+    (o) => { o.dias[0].tema = { en: 'Dogs', es: 'perros' }; },
     (o) => { o.dias[0].clave = 'AAAA'; }
   ];
   malos.forEach((mal, k) => {
@@ -669,7 +710,7 @@ test('139. desofuscarFicha devuelve null sin lanzar', () => {
 test('el calendario de ejemplo no contiene textos de fichas en claro', () => {
   const texto = JSON.stringify(calendarioValido());
   assert.equal(/photograph|Prompt/i.test(texto), false);
-  assert.ok(calendarioValido().dias.every((d) => d.fichas.every((f) => f.length === 684)));
+  assert.ok(calendarioValido().dias.every((d) => ['en', 'es'].every((l) => d.fichas[l].every((f) => f.length === 684))));
 });
 
 test('formatearFecha: inglés americano, determinista', () => {
@@ -819,7 +860,30 @@ test('232. el módulo ya no exporta Headlines y el archivo de ejemplo no lleva t
   }
   const texto = JSON.stringify(mesDeEjemplo('2000-01', 1, 3));
   assert.equal(/claim|truth|one\.|two\./i.test(texto), false);
-  assert.ok(mesDeEjemplo('2000-01', 1, 1).dias[0].textos.every((t) => t.length === 684));
-  assert.ok(mesDeEjemplo('2000-01', 1, 1).dias[0].fichas.every((t) => t.length === 684));
+  for (const l of ['en', 'es']) {
+    assert.ok(mesDeEjemplo('2000-01', 1, 1).dias[0].textos[l].every((t) => t.length === 684));
+    assert.ok(mesDeEjemplo('2000-01', 1, 1).dias[0].fichas[l].every((t) => t.length === 684));
+  }
 });
 
+
+test('4.17 semillas por idioma: el español lleva el sufijo |es y no comparte flujo con el inglés', () => {
+  const alea = () => 0;
+  const k = 'Mpb9Ycc=';
+  // Mismo texto en los dos idiomas: bloques distintos (si compartieran flujo, el XOR de los dos daría el XOR de los textos).
+  assert.notEqual(ofuscarFicha('Igual', k, 1, 0, alea, 'en'), ofuscarFicha('Igual', k, 1, 0, alea, 'es'));
+  assert.equal(ofuscarFicha('Igual', k, 1, 0, alea), ofuscarFicha('Igual', k, 1, 0, alea, 'en'), 'el inglés es el idioma por defecto');
+  assert.equal(desofuscarFicha(ofuscarFicha('Fotografía real', k, 1, 0, alea, 'es'), k, 1, 0, 'es'), 'Fotografía real');
+  assert.equal(desofuscarFicha(ofuscarFicha('Fotografía real', k, 1, 0, alea, 'es'), k, 1, 0, 'en'), null);
+  assert.equal(desofuscarAfirmacion(ofuscarAfirmacion('Afirmación de prueba.', k, 1, 0, alea, 'es'), k, 1, 0, 'es'), 'Afirmación de prueba.');
+  assert.equal(desofuscarAfirmacion(ofuscarAfirmacion('Afirmación de prueba.', k, 1, 0, alea, 'es'), k, 1, 0), null);
+  const ac = { aclaracion: 'Verdad de prueba.', detalles: ['Uno.', 'Dos.'] };
+  assert.deepEqual(desofuscarAclaracion(ofuscarAclaracion(ac, k, 1, 0, alea, 'es'), k, 1, 0, 'es'), ac);
+  assert.equal(desofuscarAclaracion(ofuscarAclaracion(ac, k, 1, 0, alea, 'es'), k, 1, 0, 'en'), null);
+  // Las tres semillas del español coinciden con 4.17.
+  assert.deepEqual(flujoFicha(k, 1, 0, 'es'), flujoBytes(`${k}|1|0|es`, 512));
+  assert.deepEqual(flujoFicha(k, 1, 0), flujoBytes(`${k}|1|0`, 512));
+  assert.throws(() => ofuscarFicha('x', k, 1, 0, alea, 'fr'), TypeError);
+  assert.equal(desofuscarFicha(ofuscarFicha('x', k, 1, 0, alea), k, 1, 0, 'fr'), null, 'desofuscar nunca lanza');
+  assert.deepEqual(afirmacionesVacias('2000-01'), { version: 2, mes: '2000-01', dias: [] });
+});

@@ -4,6 +4,19 @@ const DIA_MS = 86400000;
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const RE_FICHA = /^[A-Za-z0-9+/]{683}=$/;
 
+// Idiomas del contenido [4.15 a 4.17]. El inglés no lleva sufijo en las semillas; el español lleva "|es".
+export const IDIOMAS = Object.freeze(['en', 'es']);
+export const IDIOMA_POR_DEFECTO = 'en';
+
+export function idiomaValido(idioma) {
+  return IDIOMAS.includes(idioma);
+}
+
+function sufijoIdioma(idioma) {
+  if (!idiomaValido(idioma)) throw new TypeError(`Idioma no válido: ${String(idioma)}`);
+  return idioma === 'es' ? '|es' : '';
+}
+
 export const FICHA_BLOQUE = 512;
 export const FICHA_MAX_BYTES = 510;
 
@@ -153,26 +166,29 @@ export function fechaDelDia(lanzamiento, n) {
   return sumarDias(lanzamiento, n - 1);
 }
 
+// Objeto con exactamente los idiomas en y es, cada uno validado por `valido` [4.16].
+function porIdiomaValido(x, valido) {
+  return esObjeto(x) && mismasClaves(x, IDIOMAS) && IDIOMAS.every((i) => valido(x[i]));
+}
+
+const cincoBloques = (lista) => Array.isArray(lista) && lista.length === 5 && lista.every((f) => typeof f === 'string' && RE_FICHA.test(f));
+
 export function validarCalendario(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
   if (!mismasClaves(obj, ['version', 'lanzamiento', 'dias'])) return false;
-  if (obj.version !== 4) return false;
+  if (obj.version !== 5) return false;
   if (obj.lanzamiento !== null && !fechaIsoValida(obj.lanzamiento)) return false;
   if (!Array.isArray(obj.dias)) return false;
   return obj.dias.every((dia, k) => {
     if (!dia || typeof dia !== 'object' || Array.isArray(dia)) return false;
     if (!mismasClaves(dia, ['n', 'tema', 'pruebas', 'clave', 'fichas'])) return false;
     if (dia.n !== k + 1) return false;
-    if (!temaValido(dia.tema)) return false;
+    if (!porIdiomaValido(dia.tema, temaValido)) return false;
     if (!Array.isArray(dia.pruebas) || dia.pruebas.length !== 5) return false;
     if (!dia.pruebas.every((id) => typeof id === 'string' && id.length > 0)) return false;
     if (new Set(dia.pruebas).size !== 5) return false;
     if (!claveValida(dia.clave)) return false;
-    return (
-      Array.isArray(dia.fichas) &&
-      dia.fichas.length === 5 &&
-      dia.fichas.every((f) => typeof f === 'string' && RE_FICHA.test(f))
-    );
+    return porIdiomaValido(dia.fichas, cincoBloques);
   });
 }
 
@@ -245,8 +261,8 @@ export function flujoBytes(semilla, largo) {
 }
 
 // Flujo de 512 bytes para cifrar la ficha de una prueba [D-86].
-export function flujoFicha(clave, n, indice) {
-  return flujoBytes(`${clave}|${n}|${indice}`, FICHA_BLOQUE);
+export function flujoFicha(clave, n, indice, idioma = IDIOMA_POR_DEFECTO) {
+  return flujoBytes(`${clave}|${n}|${indice}${sufijoIdioma(idioma)}`, FICHA_BLOQUE);
 }
 
 // 2 bytes de longitud + contenido + relleno aleatorio, XOR con el flujo, en base64.
@@ -287,19 +303,19 @@ export function desofuscarBloque(cadena, semilla, largoBloque) {
   }
 }
 
-export function ofuscarFicha(texto, clave, n, indice, aleatorio = Math.random) {
+export function ofuscarFicha(texto, clave, n, indice, aleatorio = Math.random, idioma = IDIOMA_POR_DEFECTO) {
   if (typeof texto !== 'string') throw new TypeError('La ficha debe ser una cadena');
   const bytes = new TextEncoder().encode(texto);
   if (bytes.length > FICHA_MAX_BYTES) {
     throw new RangeError(`La ficha ocupa ${bytes.length} bytes (máximo ${FICHA_MAX_BYTES})`);
   }
-  return ofuscarBloque(bytes, `${clave}|${n}|${indice}`, FICHA_BLOQUE, aleatorio);
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}${sufijoIdioma(idioma)}`, FICHA_BLOQUE, aleatorio);
 }
 
 // Nunca lanza: devuelve null si la ficha no se puede descifrar.
-export function desofuscarFicha(ficha, clave, n, indice) {
+export function desofuscarFicha(ficha, clave, n, indice, idioma = IDIOMA_POR_DEFECTO) {
   try {
-    const bytes = desofuscarBloque(ficha, `${clave}|${n}|${indice}`, FICHA_BLOQUE);
+    const bytes = desofuscarBloque(ficha, `${clave}|${n}|${indice}${sufijoIdioma(idioma)}`, FICHA_BLOQUE);
     if (bytes === null) return null;
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
@@ -318,7 +334,7 @@ function cadenaNoVacia(x) {
   return typeof x === 'string' && x.length > 0;
 }
 
-export function ofuscarAfirmacion(texto, clave, n, indice, aleatorio = Math.random) {
+export function ofuscarAfirmacion(texto, clave, n, indice, aleatorio = Math.random, idioma = IDIOMA_POR_DEFECTO) {
   if (!cadenaNoVacia(texto) || texto.includes('\n')) {
     throw new TypeError('La afirmación debe ser una cadena no vacía sin saltos de línea');
   }
@@ -326,13 +342,13 @@ export function ofuscarAfirmacion(texto, clave, n, indice, aleatorio = Math.rand
   if (bytes.length > AFIRMACION_MAX_BYTES) {
     throw new RangeError(`La afirmación ocupa ${bytes.length} bytes (máximo ${AFIRMACION_MAX_BYTES})`);
   }
-  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|afirmacion`, AFIRMACION_BLOQUE, aleatorio);
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|afirmacion${sufijoIdioma(idioma)}`, AFIRMACION_BLOQUE, aleatorio);
 }
 
 // Nunca lanza.
-export function desofuscarAfirmacion(cadena, clave, n, indice) {
+export function desofuscarAfirmacion(cadena, clave, n, indice, idioma = IDIOMA_POR_DEFECTO) {
   try {
-    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|afirmacion`, AFIRMACION_BLOQUE);
+    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|afirmacion${sufijoIdioma(idioma)}`, AFIRMACION_BLOQUE);
     if (bytes === null) return null;
     const texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     return texto === '' || texto.includes('\n') ? null : texto;
@@ -341,7 +357,7 @@ export function desofuscarAfirmacion(cadena, clave, n, indice) {
   }
 }
 
-export function ofuscarAclaracion({ aclaracion, detalles = [] } = {}, clave, n, indice, aleatorio = Math.random) {
+export function ofuscarAclaracion({ aclaracion, detalles = [] } = {}, clave, n, indice, aleatorio = Math.random, idioma = IDIOMA_POR_DEFECTO) {
   if (
     !cadenaNoVacia(aclaracion) ||
     !Array.isArray(detalles) ||
@@ -354,13 +370,13 @@ export function ofuscarAclaracion({ aclaracion, detalles = [] } = {}, clave, n, 
   if (bytes.length > ACLARACION_MAX_BYTES) {
     throw new RangeError(`La aclaración ocupa ${bytes.length} bytes (máximo ${ACLARACION_MAX_BYTES})`);
   }
-  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|aclaracion`, ACLARACION_BLOQUE, aleatorio);
+  return ofuscarBloque(bytes, `${clave}|${n}|${indice}|aclaracion${sufijoIdioma(idioma)}`, ACLARACION_BLOQUE, aleatorio);
 }
 
 // Nunca lanza.
-export function desofuscarAclaracion(cadena, clave, n, indice) {
+export function desofuscarAclaracion(cadena, clave, n, indice, idioma = IDIOMA_POR_DEFECTO) {
   try {
-    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|aclaracion`, ACLARACION_BLOQUE);
+    const bytes = desofuscarBloque(cadena, `${clave}|${n}|${indice}|aclaracion${sufijoIdioma(idioma)}`, ACLARACION_BLOQUE);
     if (bytes === null) return null;
     const partes = new TextDecoder('utf-8', { fatal: true }).decode(bytes).split('\n');
     if (partes.length > DETALLES_MAX + 1 || partes.some((p) => p === '')) return null;
@@ -390,7 +406,7 @@ export function rutaAfirmaciones(mes) {
 }
 
 export function afirmacionesVacias(mes) {
-  return { version: 1, mes, dias: [] };
+  return { version: 2, mes, dias: [] };
 }
 
 
@@ -401,7 +417,7 @@ function esObjeto(x) {
 export function validarAfirmaciones(obj, mes) {
   if (!esObjeto(obj)) return false;
   if (!mismasClaves(obj, ['version', 'mes', 'dias'])) return false;
-  if (obj.version !== 1) return false;
+  if (obj.version !== 2) return false;
   if (typeof obj.mes !== 'string' || !MES_PATRON.test(obj.mes)) return false;
   if (mes !== undefined && obj.mes !== mes) return false;
   if (!Array.isArray(obj.dias) || obj.dias.length < 1) return false;
@@ -410,15 +426,8 @@ export function validarAfirmaciones(obj, mes) {
     if (!esObjeto(dia)) return false;
     if (!mismasClaves(dia, ['n', 'tema', 'clave', 'textos', 'fichas'])) return false;
     if (!Number.isInteger(dia.n) || dia.n < 1 || dia.n !== primero + k) return false;
-    if (!temaValido(dia.tema) || !claveValida(dia.clave)) return false;
-    return (
-      Array.isArray(dia.textos) &&
-      dia.textos.length === 5 &&
-      dia.textos.every((t) => typeof t === 'string' && RE_FICHA.test(t)) &&
-      Array.isArray(dia.fichas) &&
-      dia.fichas.length === 5 &&
-      dia.fichas.every((f) => typeof f === 'string' && RE_FICHA.test(f))
-    );
+    if (!porIdiomaValido(dia.tema, temaValido) || !claveValida(dia.clave)) return false;
+    return porIdiomaValido(dia.textos, cincoBloques) && porIdiomaValido(dia.fichas, cincoBloques);
   });
 }
 
