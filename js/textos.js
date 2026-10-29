@@ -1,246 +1,493 @@
-// Textos del juego. Voz de novela negra, inglés americano (en-US), tuteo al jugador (you).
-// Las claves que llevan {x} son plantillas: las rellena el código que las usa.
+// Textos del juego, en dos idiomas con el mismo árbol de claves [D-155].
+// en: inglés americano (en-US), voz de novela negra, tuteo (you).
+// es: español de España, mismo tono, tuteo.
+// Las claves con {x} son plantillas: las rellena el código que las usa.
+// Los valores marcados como exactos en docs/especificacion/3-modulos.md no se cambian sin permiso.
 
 export const TEXTOS = {
-  portada: {
-    titulo: 'identifAI-it',
-    lema: 'Two cases a day. Spot the fake.',
-    elige_reto: 'Choose your case file',
-    reto_imagenes: 'Images',
-    reto_afirmaciones: 'Fact or Fake',
-    estado_pendiente: 'Open case',
-    estado_jugado: 'Filed · {aciertos}/5',
-    estado_en_curso: 'In another tab',
-    estado_sin_caso: 'No case today',
-    boton_ver_informe: 'View report',
-    regla_afirmaciones: 'No timer. Leave for more than a few seconds and it\'s a miss.',
-    elige_modo: 'Choose your investigation mode',
-    modo_investigador: 'Investigator',
-    modo_normal: 'Normal',
-    modo_perro: 'Bloodhound',
-    desc_investigador: 'No time limit',
-    desc_normal: '3 seconds to examine',
-    desc_perro: '1 second to examine',
-    boton_empezar: 'Start',
-    etiqueta_caso: 'Case #{n}',
-    tema: 'Case of the day: {tema}',
-    racha: 'Streak: {racha}',
-    enlace_creditos: 'Credits',
-    expediente_imagenes: 'CASE FILE · 01/02',
-    expediente_afirmaciones: 'CASE FILE · 02/02',
-    desc_reto_imagenes: 'Five photos. Spot the AI ones.',
-    desc_reto_afirmaciones: 'Five claims. Spot the fakes.',
-    empezar_imagenes: 'Start · Images',
-    empezar_afirmaciones: 'Start · Fact or Fake',
-    informe_imagenes: 'View report · Images',
-    informe_afirmaciones: 'View report · Fact or Fake',
-    tiempo_investigador: 'No limit',
-    tiempo_normal: '3 s',
-    tiempo_perro: '1 s'
-  },
+  en: {
+    portada: {
+      titulo: 'identifAI-it',
+      lema: 'Two cases a day. Spot the fake.',
+      idioma: 'Language',
+      abrir: 'Open file →',
+      pie: 'New cases every day at midnight.',
+      sello_ilustracion: 'AI?',
+      etiqueta_caso: 'Case #{n}',
+      elige_reto: 'Choose your case file',
+      reto_imagenes: 'Images',
+      reto_afirmaciones: 'Fact or Fake',
+      estado_pendiente: 'Open case',
+      estado_jugado: 'Filed · {aciertos}/5',
+      estado_en_curso: 'In another tab',
+      estado_sin_caso: 'No case today',
+      modo_investigador: 'Investigator',
+      modo_normal: 'Normal',
+      modo_perro: 'Bloodhound',
+      desc_investigador: 'No time limit',
+      desc_normal: '3 seconds to examine',
+      desc_perro: '1 second to examine',
+      expediente_imagenes: 'CASE FILE · 01/02',
+      expediente_afirmaciones: 'CASE FILE · 02/02',
+      desc_reto_imagenes: 'Five photos. Spot the AI ones.',
+      desc_reto_afirmaciones: 'Five claims. Spot the fakes.',
+      enlace_creditos: 'Credits'
+    },
 
-  como_jugar: {
-    titulo: 'How to play',
-    pasos: [
-      'Each day brings one case: five pieces of evidence, same for everyone.',
-      'Study each image and call it: REAL or AI.',
-      'Time runs out? The evidence gets sealed. Answer at your leisure.',
-      'One attempt a day, whatever the mode. Choose wisely.'
-    ],
-    pasos_afirmaciones: [
-      'Two challenges a day, one try each. This one is Fact or Fake.',
-      'Read the claim, then call it: FACT or FAKE. No timer.',
-      'Leave the page for more than a few seconds and it counts as a miss.',
-      'After you answer, you get the truth and the details.'
-    ]
-  },
+    instrucciones: {
+      volver: 'All case files',
+      membrete: 'Briefing · Case #{n} · {tema}',
+      frase_imagenes: 'Five photos. One call each: real or AI.',
+      frase_afirmaciones: 'Five claims. One call each: fact or fake.',
+      pasos_imagenes: [
+        'Each day brings one case: five pieces of evidence, same for everyone.',
+        'Study each image and call it: REAL or AI.',
+        'Time runs out? The evidence gets sealed. Answer at your leisure.',
+        'One attempt a day, whatever the mode. Choose wisely.'
+      ],
+      pasos_afirmaciones: [
+        'Two challenges a day, one try each. This one is Fact or Fake.',
+        'Read the claim, then call it: FACT or FAKE. No timer.',
+        'Leave the page for more than a few seconds and it counts as a miss.',
+        'After you answer, you get the truth and the details.'
+      ],
+      firma: 'One try per day. — The Chief',
+      metodo: 'METHOD OF INVESTIGATION',
+      reglas: 'HOUSE RULES',
+      ejemplo_etiqueta: 'Example',
+      ejemplo: 'Bronze is an alloy of copper and tin.',
+      boton_empezar: 'Open the case'
+    },
 
-  cargando: {
-    texto: 'Preparing the case evidence...'
-  },
+    cargando: {
+      texto: 'Preparing the case evidence...'
+    },
 
-  cuenta_atras: {
-    aviso: 'Steady your eyes. The first piece of evidence arrives in:'
-  },
+    cuenta_atras: {
+      aviso: 'Steady your eyes. The first piece of evidence arrives in:'
+    },
 
-  partida: {
-    caso_del_dia: 'Case of the day: {tema}',
-    marca: 'identifAI-it · Real or AI?',
-    etiqueta_prueba: 'Evidence {i}/5',
-    marcador: 'Correct: {aciertos}',
-    alt_prueba: 'Evidence {i} of 5',
-    boton_autentica: 'REAL',
-    boton_generada: 'AI',
-    sello_autentica: 'REAL',
-    sello_generada: 'AI',
-    quedan: '{s} s left',
-    boton_siguiente: 'Next evidence',
-    modo_etiqueta: '{modo} mode',
-    voto_autentica: 'Real',
-    voto_generada: 'AI',
-    boton_ver_resultado: 'See result',
-    sobre_texto: 'SEALED EVIDENCE',
-    sobre_anuncio: 'Observation time is up. The evidence is sealed: answer whenever you like.'
-  },
+    partida: {
+      caso_del_dia: 'Case of the day: {tema}',
+      marca: 'identifAI-it · Real or AI?',
+      etiqueta_prueba: 'Evidence {i}/5',
+      marcador: 'Correct: {aciertos}',
+      alt_prueba: 'Evidence {i} of 5',
+      boton_autentica: 'REAL',
+      boton_generada: 'AI',
+      sello_autentica: 'REAL',
+      sello_generada: 'AI',
+      quedan: '{s} s left',
+      boton_siguiente: 'Next evidence',
+      modo_etiqueta: '{modo} mode',
+      voto_autentica: 'Real',
+      voto_generada: 'AI',
+      boton_ver_resultado: 'See result',
+      sobre_texto: 'SEALED EVIDENCE',
+      sobre_anuncio: 'Observation time is up. The evidence is sealed: answer whenever you like.'
+    },
 
-  afirmaciones: {
-    etiqueta_prueba: 'Claim {i}/5',
-    boton_autentica: 'FACT',
-    boton_generada: 'FAKE',
-    sello_autentica: 'FACT',
-    sello_generada: 'FAKE',
-    marca: 'identifAI-it · Fact or Fake?',
-    oculta: [
-      'You were away from the file for more than a few seconds. That\'s a miss.',
-      'The suspect slipped out while you were gone. More than a few seconds: miss.',
-      'Too long off the case. Gone more than a few seconds means a miss.'
-    ],
-    aviso_oculta: 'Leaving the page for more than a few seconds counts as a miss.',
-    no_disponible: 'This file can\'t be read. Try reloading the page.',
-    aclaracion_no_disponible: 'The record on this claim got lost in the paperwork.',
-    estado_prueba: 'Claim {i}: {estado}',
-    voto_autentica: 'Fact',
-    voto_generada: 'Fake',
-    boton_siguiente: 'Next claim'
-  },
+    afirmaciones: {
+      etiqueta_prueba: 'Claim {i}/5',
+      boton_autentica: 'FACT',
+      boton_generada: 'FAKE',
+      sello_autentica: 'FACT',
+      sello_generada: 'FAKE',
+      marca: 'identifAI-it · Fact or Fake?',
+      oculta: [
+        'You were away from the file for more than a few seconds. That\'s a miss.',
+        'The suspect slipped out while you were gone. More than a few seconds: miss.',
+        'Too long off the case. Gone more than a few seconds means a miss.'
+      ],
+      aviso_oculta: 'Leaving the page for more than a few seconds counts as a miss.',
+      no_disponible: 'This file can\'t be read. Try reloading the page.',
+      aclaracion_no_disponible: 'The record on this claim got lost in the paperwork.',
+      estado_prueba: 'Claim {i}: {estado}',
+      voto_autentica: 'Fact',
+      voto_generada: 'Fake',
+      boton_siguiente: 'Next claim'
+    },
 
-  revelacion: {
-    titulo_afirmacion: 'The claim',
-    titulo_imagenes: 'The verdict',
-    titulo_afirmaciones: 'The truth',
-    resumen_autentica: 'This is a real photograph.',
-    resumen_generada: 'This photo was generated by AI.',
-    etiqueta_prueba: 'Exhibit {i}/5',
-    banda_acierto: 'Right call · you said {voto}',
-    banda_fallo: 'Wrong call · you said {voto}',
-    banda_oculta: 'Missed call · you left the page'
-  },
+    revelacion: {
+      titulo_afirmacion: 'The claim',
+      titulo_imagenes: 'The verdict',
+      titulo_afirmaciones: 'The truth',
+      resumen_autentica: 'This is a real photograph.',
+      resumen_generada: 'This photo was generated by AI.',
+      etiqueta_prueba: 'Exhibit {i}/5',
+      banda_acierto: 'Right call · you said {voto}',
+      banda_fallo: 'Wrong call · you said {voto}',
+      banda_oculta: 'Missed call · you left the page'
+    },
 
-  veredictos: {
-    acierto: [
-      'Good eye, detective. This one goes in the file.',
-      'Right. The evidence didn\'t fool you.',
-      'Dead on. Log it in the case file.',
-      'Nailed it. Nothing gets past you.'
-    ],
-    fallo: [
-      'Bad call. The evidence played you.',
-      'Wrong. Log it in the file and keep moving.',
-      'Rookie mistake. Time to check the alibi again.',
-      'It wasn\'t what it seemed. Keep going.'
-    ]
-  },
+    veredictos: {
+      acierto: [
+        'Good eye, detective. This one goes in the file.',
+        'Right. The evidence didn\'t fool you.',
+        'Dead on. Log it in the case file.',
+        'Nailed it. Nothing gets past you.'
+      ],
+      fallo: [
+        'Bad call. The evidence played you.',
+        'Wrong. Log it in the file and keep moving.',
+        'Rookie mistake. Time to check the alibi again.',
+        'It wasn\'t what it seemed. Keep going.'
+      ]
+    },
 
-  confesion: {
-    titulo: 'The suspect\'s confession',
-    nota: 'The prompt used to create this image.',
-    leer_entera: 'Read full confession',
-    no_disponible: 'The confession got lost in the paperwork. Convenient.'
-  },
+    confesion: {
+      titulo: 'The suspect\'s confession',
+      nota: 'The prompt used to create this image.',
+      leer_entera: 'Read full confession',
+      no_disponible: 'The confession got lost in the paperwork. Convenient.'
+    },
 
-  ficha: {
-    cerrar: 'Close'
-  },
+    ficha: {
+      cerrar: 'Close'
+    },
 
-  fichas: {
-    autentica: 'Real photograph',
-    sin_prompt: 'The suspect refuses to confess. Make of that what you will.'
-  },
+    fichas: {
+      autentica: 'Real photograph'
+    },
 
-  final: {
-    alt_prueba: 'Evidence {n}',
-    reto: '{reto} · Case #{n}',
-    boton_volver: 'Back',
-    mensajes: [
-      'The AI has you beat. Zero hits. The case goes cold in the archive.',
-      'One hit. Too many shadows for one detective. Come back tomorrow with sharper eyes.',
-      'Two hits. You fumbled through the fog. Sharpen your eye for the next case.',
-      'Three hits. Good work, though the suspect still has a secret or two.',
-      'Four hits. Almost clean: one piece of evidence slipped through your fingers.',
-      'Five for five. Not even the AI fooled you. Case closed, file spotless.'
-    ],
-    mensajes_afirmaciones: [
-      'The paperwork beat you. Not one call survived. The file goes in the drawer, face down.',
-      'One call held up. The other lies were sharper than you. Check the sources.',
-      'Two right calls. A fake in a good suit got past you. Check the source before you sign.',
-      'Three right calls. Solid instincts, but two lies still slipped past your desk.',
-      'Four right calls. One lie got away. Read every claim like a suspect\'s alibi.',
-      'Every fact confirmed, every fake exposed. No loose ends in this file.'
-    ],
-    aciertos: '{aciertos}/5',
-    racha: 'Streak: {racha}',
-    mejor_racha: 'Best streak: {racha}',
-    era: 'It was: {sello}',
-    cuadros_etiqueta: '{aciertos} out of 5 correct',
-    estado_prueba: 'Evidence {i}: {estado}',
-    estados: {
-      acierto: 'correct',
-      fallo: 'wrong'
+    final: {
+      alt_prueba: 'Evidence {n}',
+      reto: '{reto} · Case #{n}',
+      boton_volver: 'Back',
+      mensajes: [
+        'The AI has you beat. Zero hits. The case goes cold in the archive.',
+        'One hit. Too many shadows for one detective. Come back tomorrow with sharper eyes.',
+        'Two hits. You fumbled through the fog. Sharpen your eye for the next case.',
+        'Three hits. Good work, though the suspect still has a secret or two.',
+        'Four hits. Almost clean: one piece of evidence slipped through your fingers.',
+        'Five for five. Not even the AI fooled you. Case closed, file spotless.'
+      ],
+      mensajes_afirmaciones: [
+        'The paperwork beat you. Not one call survived. The file goes in the drawer, face down.',
+        'One call held up. The other lies were sharper than you. Check the sources.',
+        'Two right calls. A fake in a good suit got past you. Check the source before you sign.',
+        'Three right calls. Solid instincts, but two lies still slipped past your desk.',
+        'Four right calls. One lie got away. Read every claim like a suspect\'s alibi.',
+        'Every fact confirmed, every fake exposed. No loose ends in this file.'
+      ],
+      aciertos: '{aciertos}/5',
+      racha: 'Streak: {racha}',
+      mejor_racha: 'Best streak: {racha}',
+      era: 'It was: {sello}',
+      cuadros_etiqueta: '{aciertos} out of 5 correct',
+      estado_prueba: 'Evidence {i}: {estado}',
+      estados: {
+        acierto: 'correct',
+        fallo: 'wrong'
+      }
+    },
+
+    resultado: {
+      sello_cerrado: 'CASE CLOSED',
+      nota_imagenes: 'Tap a photo to see its file',
+      nota_afirmaciones: 'Tap a claim to read the truth again',
+      etiqueta_racha: 'Streak',
+      etiqueta_mejor_racha: 'Best streak',
+      siguiente_caso: 'Next case in',
+      nuevo_caso: 'New case available',
+      boton_nuevo_caso: 'Play',
+      dijiste: 'You said {voto}'
+    },
+
+    ya_jugado: {
+      titulo: 'Case closed',
+      texto: 'You\'ve already filed today\'s case. Come back tomorrow. Crime never sleeps.',
+      proximo: 'Next case in {tiempo}',
+      modo: 'Mode: {modo}'
+    },
+
+    sin_casos: {
+      texto: 'No case today. Come back when the file has evidence.',
+      sin_lanzamiento: 'The precinct opens soon. No cases on file yet.'
+    },
+
+    errores: {
+      calendario: 'The case calendar wouldn\'t load. Check your connection.',
+      imagenes: 'The evidence wouldn\'t load. Try again.',
+      boton_reintentar: 'Retry'
+    },
+
+    avisos: {
+      sin_guardar: 'This device\'s file is sealed. Today\'s attempt won\'t be recorded.',
+      otra_pestana: 'This case is open in another tab. Finish the examination there.',
+      previsualizacion: 'Preview of {fecha}: nothing gets saved.',
+      prueba: 'Test mode · Day {n}: nothing gets saved.'
+    },
+
+    prueba: {
+      etiqueta: 'Test day',
+      opcion: 'Day {n}: {tema}'
+    },
+
+    compartir: {
+      boton: 'Share result',
+      copiado: 'Copied to clipboard',
+      manual: 'Copy this text:',
+      plantilla: 'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}',
+      plantilla_afirmaciones: 'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
+    },
+
+    creditos: {
+      titulo_pagina: 'Credits · identifAI-it',
+      titulo: 'Credits',
+      intro: 'Free fonts and the sources cited below.',
+      tipografias: 'Fonts',
+      imagenes: 'Images',
+      imagenes_intro: 'The evidence comes from these sources. The list doesn\'t say which image came from where.',
+      sin_imagenes: 'No images published yet.',
+      afirmaciones: 'Fact or Fake',
+      afirmaciones_texto: 'Claims are written for this game from public sources. The fakes are invented and always debunked after you answer.',
+      ver_licencia: 'license',
+      volver: 'Back to the front page',
+      otro_idioma: 'Español'
     }
   },
 
-  resultado: {
-    sello_cerrado: 'CASE CLOSED',
-    nota_imagenes: 'Tap a photo to see its file',
-    nota_afirmaciones: 'Tap a claim to read the truth again',
-    etiqueta_racha: 'Streak',
-    etiqueta_mejor_racha: 'Best streak',
-    siguiente_caso: 'Next case in',
-    nuevo_caso: 'New case available',
-    boton_nuevo_caso: 'Play',
-    dijiste: 'You said {voto}'
-  },
+  es: {
+    portada: {
+      titulo: 'identifAI-it',
+      lema: 'Dos casos al día. Caza el bulo.',
+      idioma: 'Idioma',
+      abrir: 'Abrir expediente →',
+      pie: 'Casos nuevos cada día a medianoche.',
+      sello_ilustracion: '¿IA?',
+      etiqueta_caso: 'Caso n.º {n}',
+      elige_reto: 'Elige tu expediente',
+      reto_imagenes: 'Imágenes',
+      reto_afirmaciones: '¿Dato o Bulo?',
+      estado_pendiente: 'Abrir caso',
+      estado_jugado: 'Archivado · {aciertos}/5',
+      estado_en_curso: 'En otra pestaña',
+      estado_sin_caso: 'Sin caso hoy',
+      modo_investigador: 'Investigador',
+      modo_normal: 'Normal',
+      modo_perro: 'Sabueso',
+      desc_investigador: 'Sin límite de tiempo',
+      desc_normal: '3 segundos para examinar',
+      desc_perro: '1 segundo para examinar',
+      expediente_imagenes: 'EXPEDIENTE · 01/02',
+      expediente_afirmaciones: 'EXPEDIENTE · 02/02',
+      desc_reto_imagenes: 'Cinco fotos. Separa las reales de las generadas.',
+      desc_reto_afirmaciones: 'Cinco afirmaciones. Separa el dato del bulo.',
+      enlace_creditos: 'Créditos'
+    },
 
-  ya_jugado: {
-    titulo: 'Case closed',
-    texto: 'You\'ve already filed today\'s case. Come back tomorrow. Crime never sleeps.',
-    proximo: 'Next case in {tiempo}',
-    modo: 'Mode: {modo}'
-  },
+    instrucciones: {
+      volver: 'Todos los expedientes',
+      membrete: 'Informe · Caso n.º {n} · {tema}',
+      frase_imagenes: 'Cinco fotos. Decide cuáles son reales y cuáles hizo una máquina.',
+      frase_afirmaciones: 'Cinco afirmaciones. Una decisión por cada una: dato o bulo.',
+      pasos_imagenes: [
+        'Cada día, un caso: cinco pruebas, las mismas para todo el mundo.',
+        'Estudia cada imagen y decide si es REAL o hecha por una máquina.',
+        '¿Se acaba el tiempo? La prueba se sella. Responde cuando quieras.',
+        'Un intento al día, sea cual sea el modo. Elige con cuidado.'
+      ],
+      pasos_afirmaciones: [
+        'Dos expedientes al día, un intento cada uno. Este es ¿Dato o Bulo?',
+        'Lee la afirmación y decide: DATO o BULO. Sin cronómetro.',
+        'Salir de la página más de unos segundos cuenta como fallo.',
+        'Al responder, ves la verdad y sus detalles.'
+      ],
+      firma: 'Un intento al día. — El Jefe',
+      metodo: 'MÉTODO DE INVESTIGACIÓN',
+      reglas: 'NORMAS DE LA CASA',
+      ejemplo_etiqueta: 'Ejemplo',
+      ejemplo: 'El bronce es una aleación de cobre y estaño.',
+      boton_empezar: 'Abrir el caso'
+    },
 
-  sin_casos: {
-    texto: 'No case today. Come back when the file has evidence.',
-    sin_lanzamiento: 'The precinct opens soon. No cases on file yet.'
-  },
+    cargando: {
+      texto: 'Preparando las pruebas del caso...'
+    },
 
-  errores: {
-    calendario: 'The case calendar wouldn\'t load. Check your connection.',
-    imagenes: 'The evidence wouldn\'t load. Try again.',
-    boton_reintentar: 'Retry'
-  },
+    cuenta_atras: {
+      aviso: 'Aclara la vista. La primera prueba llega en:'
+    },
 
-  avisos: {
-    sin_guardar: 'This device\'s file is sealed. Today\'s attempt won\'t be recorded.',
-    otra_pestana: 'This case is open in another tab. Finish the examination there.',
-    previsualizacion: 'Preview of {fecha}: nothing gets saved.',
-    prueba: 'Test mode · Day {n}: nothing gets saved.'
-  },
+    partida: {
+      caso_del_dia: 'Caso del día: {tema}',
+      marca: 'identifAI-it · ¿Real o IA?',
+      etiqueta_prueba: 'Prueba {i}/5',
+      marcador: 'Aciertos: {aciertos}',
+      alt_prueba: 'Prueba {i} de 5',
+      boton_autentica: 'REAL',
+      boton_generada: 'IA',
+      sello_autentica: 'REAL',
+      sello_generada: 'IA',
+      quedan: 'Quedan {s} s',
+      boton_siguiente: 'Siguiente prueba',
+      modo_etiqueta: 'Modo {modo}',
+      voto_autentica: 'Real',
+      voto_generada: 'IA',
+      boton_ver_resultado: 'Ver resultado',
+      sobre_texto: 'PRUEBA SELLADA',
+      sobre_anuncio: 'Se acabó el tiempo de observación. La prueba queda sellada: responde cuando quieras.'
+    },
 
-  prueba: {
-    etiqueta: 'Test day',
-    opcion: 'Day {n}: {tema}',
-    boton: 'Open this day'
-  },
+    afirmaciones: {
+      etiqueta_prueba: 'Afirmación {i}/5',
+      boton_autentica: 'DATO',
+      boton_generada: 'BULO',
+      sello_autentica: 'DATO',
+      sello_generada: 'BULO',
+      marca: 'identifAI-it · ¿Dato o Bulo?',
+      oculta: [
+        'Estuviste fuera del expediente más de unos segundos. Eso es un fallo.',
+        'El sospechoso se escabulló mientras no mirabas. Más de unos segundos: fallo.',
+        'Demasiado tiempo fuera del caso. Más de unos segundos se cuenta como fallo.'
+      ],
+      aviso_oculta: 'Salir de la página más de unos segundos cuenta como fallo.',
+      no_disponible: 'Este expediente no se puede leer. Prueba a recargar la página.',
+      aclaracion_no_disponible: 'El registro de esta afirmación se perdió entre papeles.',
+      estado_prueba: 'Afirmación {i}: {estado}',
+      voto_autentica: 'Dato',
+      voto_generada: 'Bulo',
+      boton_siguiente: 'Siguiente afirmación'
+    },
 
-  compartir: {
-    boton: 'Share result',
-    copiado: 'Copied to clipboard',
-    manual: 'Copy this text:',
-    plantilla: 'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}',
-    plantilla_afirmaciones: 'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
-  },
+    revelacion: {
+      titulo_afirmacion: 'La afirmación',
+      titulo_imagenes: 'El veredicto',
+      titulo_afirmaciones: 'La verdad',
+      resumen_autentica: 'Esta es una fotografía real.',
+      resumen_generada: 'Esta foto la generó una IA.',
+      etiqueta_prueba: 'Pieza {i}/5',
+      banda_acierto: 'Acierto · dijiste {voto}',
+      banda_fallo: 'Fallo · dijiste {voto}',
+      banda_oculta: 'Fallo · saliste de la página'
+    },
 
-  creditos: {
-    titulo_pagina: 'Credits · identifAI-it',
-    titulo: 'Credits',
-    intro: 'Free fonts and the sources cited below.',
-    tipografias: 'Fonts',
-    imagenes: 'Images',
-    imagenes_intro: 'The evidence comes from these sources. The list doesn\'t say which image came from where.',
-    sin_imagenes: 'No images published yet.',
-    afirmaciones: 'Fact or Fake',
-    afirmaciones_texto: 'Claims are written for this game from public sources. The fakes are invented and always debunked after you answer.',
-    ver_licencia: 'license',
-    volver: 'Back to the front page'
+    veredictos: {
+      acierto: [
+        'Buen ojo, detective. Este caso va al archivo.',
+        'Acertaste. La prueba no te engañó.',
+        'En el blanco. Anótalo en el expediente.',
+        'Clavado. Aquí no se te escapa nada.'
+      ],
+      fallo: [
+        'Mal juicio. La prueba te la jugó.',
+        'Fallaste. Anótalo y sigue con el caso.',
+        'Error de novato. Repasa la coartada otra vez.',
+        'No era lo que parecía. Sigue adelante.'
+      ]
+    },
+
+    confesion: {
+      titulo: 'La confesión del sospechoso',
+      nota: 'La instrucción con la que se creó esta imagen.',
+      leer_entera: 'Leer la confesión completa',
+      no_disponible: 'La confesión se perdió entre papeles. Qué oportuno.'
+    },
+
+    ficha: {
+      cerrar: 'Cerrar'
+    },
+
+    fichas: {
+      autentica: 'Fotografía real'
+    },
+
+    final: {
+      alt_prueba: 'Prueba {n}',
+      reto: '{reto} · Caso n.º {n}',
+      boton_volver: 'Volver',
+      mensajes: [
+        'La IA te ha dado una paliza. Cero aciertos. El caso se enfría en el archivo.',
+        'Un acierto. Demasiadas sombras para un solo detective. Vuelve mañana con mejor vista.',
+        'Dos aciertos. Te perdiste en la niebla. Afila la vista para el próximo caso.',
+        'Tres aciertos. Buen trabajo, aunque el sospechoso aún guarda un secreto o dos.',
+        'Cuatro aciertos. Casi limpio: una prueba se te escurrió entre los dedos.',
+        'Cinco de cinco. Ni la IA te engañó. Caso cerrado, expediente impecable.'
+      ],
+      mensajes_afirmaciones: [
+        'El papeleo te ganó. Ni una respuesta sobrevivió. La carpeta, boca abajo en el cajón.',
+        'Una se sostuvo. Las otras mentiras fueron más listas que tú. Revisa las fuentes.',
+        'Dos aciertos. Un bulo con buen traje se te coló. Revisa la fuente antes de firmar.',
+        'Tres aciertos. Buen instinto, pero dos mentiras aún se colaron en tu mesa.',
+        'Cuatro aciertos. Una mentira se escapó. Lee cada afirmación como una coartada.',
+        'Todo dato confirmado, todo bulo al descubierto. Ningún cabo suelto en el expediente.'
+      ],
+      aciertos: '{aciertos}/5',
+      racha: 'Racha: {racha}',
+      mejor_racha: 'Mejor racha: {racha}',
+      era: 'Era: {sello}',
+      cuadros_etiqueta: '{aciertos} de 5 acertados',
+      estado_prueba: 'Prueba {i}: {estado}',
+      estados: {
+        acierto: 'acertada',
+        fallo: 'fallida'
+      }
+    },
+
+    resultado: {
+      sello_cerrado: 'EXPEDIENTE CERRADO',
+      nota_imagenes: 'Toca una foto para ver su ficha',
+      nota_afirmaciones: 'Toca una afirmación para releer la verdad',
+      etiqueta_racha: 'Racha',
+      etiqueta_mejor_racha: 'Mejor racha',
+      siguiente_caso: 'Próximo caso en',
+      nuevo_caso: 'Nuevo caso disponible',
+      boton_nuevo_caso: 'Jugar',
+      dijiste: 'Dijiste {voto}'
+    },
+
+    ya_jugado: {
+      titulo: 'Caso cerrado',
+      texto: 'Ya archivaste el caso de hoy. Vuelve mañana. El crimen nunca duerme.',
+      proximo: 'Próximo caso en {tiempo}',
+      modo: 'Modo: {modo}'
+    },
+
+    sin_casos: {
+      texto: 'Hoy no hay caso. Vuelve cuando el expediente tenga pruebas.',
+      sin_lanzamiento: 'La comisaría abre pronto. Aún no hay casos archivados.'
+    },
+
+    errores: {
+      calendario: 'No se pudo cargar el calendario de casos. Revisa tu conexión.',
+      imagenes: 'Las pruebas no se han cargado. Inténtalo de nuevo.',
+      boton_reintentar: 'Reintentar'
+    },
+
+    avisos: {
+      sin_guardar: 'Expediente sellado en este equipo. El intento de hoy no se registrará.',
+      otra_pestana: 'Este caso está abierto en otra pestaña. Termina el examen allí.',
+      previsualizacion: 'Vista previa del {fecha}: no se guarda nada.',
+      prueba: 'Modo prueba · Día {n}: no se guarda nada.'
+    },
+
+    prueba: {
+      etiqueta: 'Día de prueba',
+      opcion: 'Día {n}: {tema}'
+    },
+
+    compartir: {
+      boton: 'Compartir resultado',
+      copiado: 'Copiado al portapapeles',
+      manual: 'Copia este texto:',
+      plantilla: 'identifAI-it Imágenes #{caso}\nModo: {modo}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}',
+      plantilla_afirmaciones: 'identifAI-it ¿Dato o Bulo? #{caso}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
+    },
+
+    creditos: {
+      titulo_pagina: 'Créditos · identifAI-it',
+      titulo: 'Créditos',
+      intro: 'Tipografías libres y las fuentes citadas abajo.',
+      tipografias: 'Tipografías',
+      imagenes: 'Imágenes',
+      imagenes_intro: 'Las pruebas proceden de estas fuentes. La lista no dice qué imagen viene de dónde.',
+      sin_imagenes: 'Todavía no hay imágenes publicadas.',
+      afirmaciones: '¿Dato o Bulo?',
+      afirmaciones_texto: 'Afirmaciones escritas para este juego con fuentes públicas. Los bulos son inventados y se desmienten tras responder.',
+      ver_licencia: 'licencia',
+      volver: 'Volver a la portada',
+      otro_idioma: 'English'
+    }
   }
 };
