@@ -415,21 +415,21 @@
 }
 
 .ficha-muestra {
-  --dx: -26cqmin;
+  --dx: -23cqmin;
   --giro: -5deg;
   --sello-giro: -9deg;
   position: absolute;
   top: 50%;
   left: calc(50% + var(--dx));
-  width: 50cqmin;
-  height: 64cqmin;
+  width: 44cqmin;
+  height: 60cqmin;
   background: var(--color-papel-claro);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
   transform: translate(-50%, -50%) rotate(var(--giro));
 }
 
 .ficha-muestra:nth-child(2) {
-  --dx: 26cqmin;
+  --dx: 23cqmin;
   --giro: 6deg;
   --sello-giro: 7deg;
 }
@@ -463,12 +463,17 @@
 }
 
 .polaroid ~ .ilustracion-sello {
-  left: calc(50% + 2cqmin);
+  left: auto;
+  right: 4%;
   bottom: 10%;
 }
 
 .ficha-muestra .ilustracion-sello {
-  right: -14%;
+  right: 0;
+  font-size: clamp(0.625rem, 10.5cqmin, 1.25rem);
+  letter-spacing: 0.02em;
+  padding: 0 0.2em;
+  bottom: 6%;
   bottom: 9%;
   transform: rotate(var(--sello-giro));
 }
@@ -1152,6 +1157,36 @@
   #instrucciones-modos legend,
   #instrucciones-reglas h3 {
     margin-bottom: 2px;
+  }
+}
+
+/* Vertical bajo (360 x 640, 375 x 667): R19 con los textos en ingles y en espanol. Sin cambiar el tamano de
+   letra (los pasos siguen en 14 px), se aprieta el interlineado, los huecos y la ficha de ejemplo */
+@media (max-width: 599px) and (max-height: 700px) {
+  #instrucciones-pasos,
+  #instrucciones-frase {
+    line-height: 1.2;
+  }
+
+  #instrucciones-aviso {
+    padding-block: 4px;
+    line-height: 1.15;
+  }
+
+  #instrucciones-ejemplo {
+    padding: 4px 10px 6px;
+    gap: 2px var(--espacio-2);
+  }
+
+  .ejemplo-texto {
+    padding-block: 0;
+    font-size: 1rem;
+    line-height: 1.1;
+  }
+
+  .pagina {
+    gap: 3px;
+    padding-block: 6px;
   }
 }
 
@@ -2838,6 +2873,47 @@
   }
 }
 
+/* Horizontal bajo (640 x 360): Safari no resuelve el aspect-ratio con container-type: size dentro de la celda
+   (las fichas se salian del tablon y tapaban los botones), asi que el li se estira con la celda y la tarjeta
+   se coloca en absoluto, como en el movil vertical */
+@media (orientation: landscape) and (max-height: 420px) {
+  /* Espanol: la cuenta atras y el boton de compartir no se pisan en 640 x 360 */
+  #resultado-pie .acciones {
+    grid-template-columns: repeat(2, minmax(6rem, 8.5rem));
+  }
+
+  #resultado-pie .cifra-valor {
+    font-size: 0.9375rem;
+    letter-spacing: 0;
+  }
+
+  .mini-voto {
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  #resultado-revision li,
+  #app[data-reto="afirmaciones"] #resultado-revision li {
+    align-self: stretch;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .miniatura {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
 /* Movil vertical (hasta 600 px): la pantalla es una columna cerrada (franja | tablon | pie) y cada
    prueba se ajusta a su celda. Safari iOS no resuelve bien alturas en % ni aspect-ratio dentro de celdas
    con container-type: size, asi que el li se estira con la celda y la tarjeta se coloca en absoluto. */
@@ -3297,7 +3373,13 @@
 
 @media (orientation: landscape) {
   #ficha-img {
-    max-height: 55dvh;
+    max-height: min(55dvh, 24rem);
+  }
+
+  /* Con foto, el dialogo se ensancha: a 1920 x 1080 la foto (55 dvh) dejaba solo 30 px al texto */
+  #ficha:has(#ficha-img:not([hidden])) {
+    width: min(48rem, calc(100vw - 2rem));
+    max-width: min(48rem, calc(100vw - 2rem));
   }
 
   #ficha[open]:has(#ficha-img:not([hidden])) {
