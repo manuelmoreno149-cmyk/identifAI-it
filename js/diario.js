@@ -8,8 +8,39 @@ const RE_FICHA = /^[A-Za-z0-9+/]{683}=$/;
 export const IDIOMAS = Object.freeze(['en', 'es']);
 export const IDIOMA_POR_DEFECTO = 'en';
 
+export const LOCALES = Object.freeze({ en: 'en-US', es: 'es-ES' });
+
 export function idiomaValido(idioma) {
   return IDIOMAS.includes(idioma);
+}
+
+// Parámetro ?lang= en minúsculas si es válido; si no, null.
+export function idiomaDeUrl(search) {
+  try {
+    const valor = new URLSearchParams(typeof search === 'string' ? search : '').get('lang');
+    if (valor === null) return null;
+    const minusculas = valor.toLowerCase();
+    return idiomaValido(minusculas) ? minusculas : null;
+  } catch {
+    return null;
+  }
+}
+
+// Mira solo el primer elemento que sea una cadena: 'es' o 'es-*' da español; todo lo demás, inglés.
+export function idiomaDelNavegador(lenguas) {
+  if (!Array.isArray(lenguas)) return IDIOMA_POR_DEFECTO;
+  const primera = lenguas.find((l) => typeof l === 'string');
+  if (primera === undefined) return IDIOMA_POR_DEFECTO;
+  const l = primera.toLowerCase();
+  return l === 'es' || l.startsWith('es-') ? 'es' : IDIOMA_POR_DEFECTO;
+}
+
+// Orden: ?lang= > preferencia guardada > idioma del navegador.
+export function elegirIdioma({ search, guardado, lenguas } = {}) {
+  const deUrl = idiomaDeUrl(search);
+  if (deUrl !== null) return { idioma: deUrl, origen: 'url' };
+  if (idiomaValido(guardado)) return { idioma: guardado, origen: 'guardado' };
+  return { idioma: idiomaDelNavegador(lenguas), origen: 'navegador' };
 }
 
 function sufijoIdioma(idioma) {
@@ -97,14 +128,31 @@ export function diasEntre(desdeISO, hastaISO) {
   return Math.round((utcDe(hastaISO) - utcDe(desdeISO)) / DIA_MS);
 }
 
-const MESES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MESES = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+};
 
-// '2026-11-03' -> 'Nov 3, 2026'. Pura y determinista: no usa el locale del navegador.
-export function formatearFecha(fechaISO) {
+// '2026-11-03' -> 'Nov 3, 2026' (en) o '3 nov 2026' (es). Pura y determinista: no usa el locale del navegador.
+// Un idioma no válido se trata como en.
+export function formatearFecha(fechaISO, idioma = IDIOMA_POR_DEFECTO) {
   if (typeof fechaISO !== 'string' || !RE_FECHA.test(fechaISO)) return String(fechaISO);
   const [a, m, d] = fechaISO.split('-').map(Number);
   if (m < 1 || m > 12) return fechaISO;
-  return `${MESES[m - 1]} ${d}, ${a}`;
+  if (idioma === 'es') return `${d} ${MESES.es[m - 1]} ${a}`;
+  return `${MESES.en[m - 1]} ${d}, ${a}`;
+}
+
+// Tema de un elemento de diasDePrueba en el idioma; si los dos retos difieren, unidos por " / ".
+export function temaDelDia(dia, idioma = IDIOMA_POR_DEFECTO) {
+  const lang = idiomaValido(idioma) ? idioma : IDIOMA_POR_DEFECTO;
+  const a = dia?.temaImagenes?.[lang];
+  const b = dia?.temaAfirmaciones?.[lang];
+  const sirve = (x) => typeof x === 'string' && x !== '';
+  if (sirve(a) && sirve(b) && a !== b) return `${a} / ${b}`;
+  if (sirve(a)) return a;
+  if (sirve(b)) return b;
+  return '';
 }
 
 export function numeroCaso(fechaISO, lanzamientoISO) {

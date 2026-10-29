@@ -1,18 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TEXTOS } from '../js/textos.js';
+import { IDIOMAS } from '../js/diario.js';
 
 const CLAVES = {
   portada: [
-    'titulo', 'lema', 'elige_reto', 'reto_imagenes', 'reto_afirmaciones', 'estado_pendiente', 'estado_jugado',
-    'estado_en_curso', 'estado_sin_caso', 'boton_ver_informe', 'regla_afirmaciones', 'elige_modo',
+    'titulo', 'lema', 'idioma', 'abrir', 'pie', 'sello_ilustracion', 'etiqueta_caso', 'elige_reto',
+    'reto_imagenes', 'reto_afirmaciones', 'estado_pendiente', 'estado_jugado', 'estado_en_curso', 'estado_sin_caso',
     'modo_investigador', 'modo_normal', 'modo_perro', 'desc_investigador', 'desc_normal', 'desc_perro',
-    'boton_empezar', 'etiqueta_caso', 'tema', 'racha', 'enlace_creditos',
-    'expediente_imagenes', 'expediente_afirmaciones', 'desc_reto_imagenes', 'desc_reto_afirmaciones',
-    'empezar_imagenes', 'empezar_afirmaciones', 'informe_imagenes', 'informe_afirmaciones',
-    'tiempo_investigador', 'tiempo_normal', 'tiempo_perro'
+    'expediente_imagenes', 'expediente_afirmaciones', 'desc_reto_imagenes', 'desc_reto_afirmaciones', 'enlace_creditos'
   ],
-  como_jugar: ['titulo', 'pasos', 'pasos_afirmaciones'],
+  instrucciones: [
+    'volver', 'membrete', 'frase_imagenes', 'frase_afirmaciones', 'pasos_imagenes', 'pasos_afirmaciones', 'firma',
+    'metodo', 'reglas', 'ejemplo_etiqueta', 'ejemplo', 'boton_empezar'
+  ],
   cargando: ['texto'],
   cuenta_atras: ['aviso'],
   partida: [
@@ -32,7 +33,7 @@ const CLAVES = {
   veredictos: ['acierto', 'fallo'],
   confesion: ['titulo', 'nota', 'leer_entera', 'no_disponible'],
   ficha: ['cerrar'],
-  fichas: ['autentica', 'sin_prompt'],
+  fichas: ['autentica'],
   final: [
     'alt_prueba', 'reto', 'boton_volver', 'mensajes', 'mensajes_afirmaciones', 'aciertos', 'racha', 'mejor_racha', 'era', 'cuadros_etiqueta',
     'estado_prueba', 'estados'
@@ -45,12 +46,22 @@ const CLAVES = {
   sin_casos: ['texto', 'sin_lanzamiento'],
   errores: ['calendario', 'imagenes', 'boton_reintentar'],
   avisos: ['sin_guardar', 'otra_pestana', 'previsualizacion', 'prueba'],
-  prueba: ['etiqueta', 'opcion', 'boton'],
+  prueba: ['etiqueta', 'opcion'],
   compartir: ['boton', 'copiado', 'manual', 'plantilla', 'plantilla_afirmaciones'],
   creditos: [
     'titulo_pagina', 'titulo', 'intro', 'tipografias', 'imagenes', 'imagenes_intro', 'sin_imagenes',
-    'afirmaciones', 'afirmaciones_texto', 'ver_licencia', 'volver'
+    'afirmaciones', 'afirmaciones_texto', 'ver_licencia', 'volver', 'otro_idioma'
   ]
+};
+
+// Claves que se retiraron en la 3.0 (no deben existir en ningún idioma).
+const RETIRADAS = {
+  portada: [
+    'boton_empezar', 'boton_ver_informe', 'regla_afirmaciones', 'elige_modo', 'tema', 'racha', 'empezar_imagenes',
+    'empezar_afirmaciones', 'informe_imagenes', 'informe_afirmaciones', 'tiempo_investigador', 'tiempo_normal', 'tiempo_perro'
+  ],
+  fichas: ['sin_prompt'],
+  prueba: ['boton']
 };
 
 function cadenas(valor, ruta = '') {
@@ -59,220 +70,314 @@ function cadenas(valor, ruta = '') {
   return Object.entries(valor).flatMap(([k, v]) => cadenas(v, ruta ? `${ruta}.${k}` : k));
 }
 
-// Valores de relleno de 3.1 (D-118): el valor típico más largo de cada marcador.
-const masLargo = (lista) => lista.reduce((m, c) => ([...c].length > [...m].length ? c : m));
-const RELLENO = {
-  aciertos: '5',
-  voto: 'Fake',
-  i: '5',
-  n: '999',
-  caso: '999',
-  racha: '999',
-  s: '9',
-  tiempo: '00:00:00',
-  tema: 'x'.repeat(30),
-  fecha: 'Nov 30, 2026',
-  modo: masLargo(['modo_investigador', 'modo_normal', 'modo_perro'].map((k) => TEXTOS.portada[k])),
-  reto: masLargo(['reto_imagenes', 'reto_afirmaciones'].map((k) => TEXTOS.portada[k])),
-  estado: masLargo(Object.values(TEXTOS.final.estados)),
-  sello: masLargo([
-    TEXTOS.partida.sello_autentica,
-    TEXTOS.partida.sello_generada,
-    TEXTOS.afirmaciones.sello_autentica,
-    TEXTOS.afirmaciones.sello_generada
-  ])
-};
+// Esqueleto de un árbol: claves, longitud de los arrays y marcadores {x} de cada cadena.
+function esqueleto(valor) {
+  if (typeof valor === 'string') return (valor.match(/\{\w+\}/g) ?? []).sort();
+  if (Array.isArray(valor)) return valor.map(esqueleto);
+  return Object.fromEntries(Object.keys(valor).sort().map((k) => [k, esqueleto(valor[k])]));
+}
 
-function rellena(ruta, valor) {
+// Valores de relleno de 3.1 (D-118), por idioma.
+const masLargo = (lista) => lista.reduce((m, c) => ([...c].length > [...m].length ? c : m));
+function rellenoDe(idioma) {
+  const T = TEXTOS[idioma];
+  return {
+    aciertos: '5',
+    i: '5',
+    n: '999',
+    caso: '999',
+    racha: '999',
+    s: '9',
+    tiempo: '00:00:00',
+    tema: 'x'.repeat(30),
+    fecha: idioma === 'es' ? '30 nov 2026' : 'Nov 30, 2026',
+    modo: masLargo(['modo_investigador', 'modo_normal', 'modo_perro'].map((k) => T.portada[k])),
+    reto: masLargo(['reto_imagenes', 'reto_afirmaciones'].map((k) => T.portada[k])),
+    estado: masLargo(Object.values(T.final.estados)),
+    sello: masLargo([T.partida.sello_autentica, T.partida.sello_generada, T.afirmaciones.sello_autentica, T.afirmaciones.sello_generada]),
+    voto: masLargo([T.partida.voto_autentica, T.partida.voto_generada, T.afirmaciones.voto_autentica, T.afirmaciones.voto_generada])
+  };
+}
+
+function rellena(idioma, ruta, valor) {
+  const relleno = rellenoDe(idioma);
   return valor.replace(/\{(\w+)\}/g, (marca, k) => {
-    assert.ok(Object.hasOwn(RELLENO, k), `${ruta}: marcador ${marca} sin valor de relleno`);
-    return RELLENO[k];
+    assert.ok(Object.hasOwn(relleno, k), `${idioma}.${ruta}: marcador ${marca} sin valor de relleno`);
+    return relleno[k];
   });
 }
 
 const esPlantillaCompartir = (ruta) => ruta.startsWith('compartir.plantilla');
 
-const rellenadas = () =>
-  cadenas(TEXTOS).map(([ruta, valor]) => [ruta, esPlantillaCompartir(ruta) ? valor : rellena(ruta, valor)]);
+const rellenadas = (idioma) =>
+  cadenas(TEXTOS[idioma]).map(([ruta, valor]) => [ruta, esPlantillaCompartir(ruta) ? valor : rellena(idioma, ruta, valor)]);
 
-const medida = (ruta) => {
-  const par = rellenadas().find(([r]) => r === ruta);
-  assert.ok(par, `no existe ${ruta}`);
+const medida = (idioma, ruta) => {
+  const par = rellenadas(idioma).find(([r]) => r === ruta);
+  assert.ok(par, `no existe ${idioma}.${ruta}`);
   return [...par[1]].length;
 };
 
-test('38. están todas las claves de 3.1 y los valores exactos', () => {
-  assert.deepEqual(Object.keys(TEXTOS).sort(), Object.keys(CLAVES).sort());
-  for (const [grupo, claves] of Object.entries(CLAVES)) {
-    assert.deepEqual(Object.keys(TEXTOS[grupo]).sort(), [...claves].sort(), grupo);
+test('38. TEXTOS tiene exactamente los idiomas en y es', () => {
+  assert.deepEqual(Object.keys(TEXTOS).sort(), [...IDIOMAS].sort());
+});
+
+test('38. están todas las claves de 3.1 en los dos idiomas y no quedan las retiradas', () => {
+  for (const idioma of IDIOMAS) {
+    const T = TEXTOS[idioma];
+    assert.deepEqual(Object.keys(T).sort(), Object.keys(CLAVES).sort(), idioma);
+    for (const [grupo, claves] of Object.entries(CLAVES)) {
+      assert.deepEqual(Object.keys(T[grupo]).sort(), [...claves].sort(), `${idioma}.${grupo}`);
+    }
+    for (const [grupo, claves] of Object.entries(RETIRADAS)) {
+      for (const k of claves) assert.equal(k in T[grupo], false, `${idioma}.${grupo}.${k}`);
+    }
+    assert.equal('como_jugar' in T, false, `${idioma}.como_jugar`);
   }
-  assert.equal(TEXTOS.portada.enlace_creditos, 'Credits');
-  assert.equal(TEXTOS.portada.reto_imagenes, 'Images');
-  assert.equal(TEXTOS.portada.reto_afirmaciones, 'Fact or Fake');
-  assert.equal(TEXTOS.portada.lema, 'Two cases a day. Spot the fake.');
-  assert.equal(TEXTOS.portada.estado_en_curso, 'In another tab');
-  assert.equal(TEXTOS.portada.regla_afirmaciones, "No timer. Leave for more than a few seconds and it's a miss.");
-  assert.equal(TEXTOS.portada.modo_investigador, 'Investigator');
-  assert.equal(TEXTOS.portada.modo_normal, 'Normal');
-  assert.equal(TEXTOS.portada.modo_perro, 'Bloodhound');
-  assert.equal(TEXTOS.portada.desc_investigador, 'No time limit');
-  assert.equal(TEXTOS.portada.desc_normal, '3 seconds to examine');
-  assert.equal(TEXTOS.portada.desc_perro, '1 second to examine');
-  assert.equal(TEXTOS.confesion.titulo, "The suspect's confession");
-  assert.equal(TEXTOS.fichas.autentica, 'Real photograph');
-  assert.equal(TEXTOS.afirmaciones.boton_autentica, 'FACT');
-  assert.equal(TEXTOS.afirmaciones.boton_generada, 'FAKE');
-  assert.equal(TEXTOS.afirmaciones.sello_autentica, 'FACT');
-  assert.equal(TEXTOS.afirmaciones.sello_generada, 'FAKE');
-  assert.equal(TEXTOS.afirmaciones.marca, 'identifAI-it · Fact or Fake?');
-  assert.equal(TEXTOS.afirmaciones.aviso_oculta, 'Leaving the page for more than a few seconds counts as a miss.');
-  assert.ok(Array.isArray(TEXTOS.afirmaciones.oculta) && TEXTOS.afirmaciones.oculta.length >= 2);
+});
+
+test('38. los dos árboles son paralelos: mismas claves, mismos arrays y mismos marcadores', () => {
+  assert.deepEqual(esqueleto(TEXTOS.es), esqueleto(TEXTOS.en));
+  // Todas las cadenas son no vacías y sin espacios sobrantes en los extremos.
+  for (const idioma of IDIOMAS) {
+    for (const [ruta, valor] of cadenas(TEXTOS[idioma])) {
+      assert.ok(valor.length > 0, `${idioma}.${ruta} vacío`);
+      assert.equal(valor, valor.trim(), `${idioma}.${ruta} con espacios en los extremos`);
+    }
+  }
+});
+
+test('38. valores exactos en inglés', () => {
+  const T = TEXTOS.en;
+  assert.equal(T.portada.abrir, 'Open file →');
+  assert.equal(T.portada.pie, 'New cases every day at midnight.');
+  assert.equal(T.portada.elige_reto, 'Choose your case file');
+  assert.equal(T.portada.lema, 'Two cases a day. Spot the fake.');
+  assert.equal(T.portada.enlace_creditos, 'Credits');
+  assert.equal(T.portada.reto_imagenes, 'Images');
+  assert.equal(T.portada.reto_afirmaciones, 'Fact or Fake');
+  assert.equal(T.portada.estado_en_curso, 'In another tab');
+  assert.equal(T.portada.modo_investigador, 'Investigator');
+  assert.equal(T.portada.modo_normal, 'Normal');
+  assert.equal(T.portada.modo_perro, 'Bloodhound');
+  assert.equal(T.portada.desc_investigador, 'No time limit');
+  assert.equal(T.portada.desc_normal, '3 seconds to examine');
+  assert.equal(T.portada.desc_perro, '1 second to examine');
+  assert.equal(T.portada.etiqueta_caso, 'Case #{n}');
+  assert.equal(T.instrucciones.volver, 'All case files');
+  assert.equal(T.instrucciones.membrete, 'Briefing · Case #{n} · {tema}');
+  assert.equal(T.instrucciones.firma, 'One try per day. — The Chief');
+  assert.equal(T.instrucciones.metodo, 'METHOD OF INVESTIGATION');
+  assert.equal(T.instrucciones.reglas, 'HOUSE RULES');
+  assert.equal(T.instrucciones.boton_empezar, 'Open the case');
+  assert.equal(T.confesion.titulo, "The suspect's confession");
+  assert.equal(T.fichas.autentica, 'Real photograph');
+  assert.equal(T.partida.boton_autentica, 'REAL');
+  assert.equal(T.partida.boton_generada, 'AI');
+  assert.equal(T.afirmaciones.boton_autentica, 'FACT');
+  assert.equal(T.afirmaciones.boton_generada, 'FAKE');
+  assert.equal(T.afirmaciones.sello_autentica, 'FACT');
+  assert.equal(T.afirmaciones.sello_generada, 'FAKE');
+  assert.equal(T.afirmaciones.marca, 'identifAI-it · Fact or Fake?');
+  assert.equal(T.afirmaciones.aviso_oculta, 'Leaving the page for more than a few seconds counts as a miss.');
+  assert.ok(Array.isArray(T.afirmaciones.oculta) && T.afirmaciones.oculta.length >= 2);
   assert.equal(
-    TEXTOS.creditos.afirmaciones_texto,
+    T.creditos.afirmaciones_texto,
     'Claims are written for this game from public sources. The fakes are invented and always debunked after you answer.'
   );
-  assert.equal(TEXTOS.creditos.afirmaciones, 'Fact or Fake');
-  assert.equal(TEXTOS.sin_casos.sin_lanzamiento, 'The precinct opens soon. No cases on file yet.');
-  assert.equal(TEXTOS.final.reto, '{reto} · Case #{n}');
-  assert.equal(TEXTOS.avisos.prueba, 'Test mode · Day {n}: nothing gets saved.');
-  assert.equal(TEXTOS.creditos.volver, 'Back to the front page');
-  assert.equal(TEXTOS.creditos.titulo, 'Credits');
-  assert.equal(TEXTOS.creditos.sin_imagenes, 'No images published yet.');
-  assert.equal(TEXTOS.final.mensajes.length, 6);
-  assert.equal(TEXTOS.como_jugar.pasos.length, 4);
-  assert.equal(TEXTOS.como_jugar.pasos_afirmaciones.length, 4);
-  assert.deepEqual(TEXTOS.final.mensajes_afirmaciones, [
-    'The paperwork beat you. Not one call survived. The file goes in the drawer, face down.',
-    'One call held up. The other lies were sharper than you. Check the sources.',
-    'Two right calls. A fake in a good suit got past you. Check the source before you sign.',
-    'Three right calls. Solid instincts, but two lies still slipped past your desk.',
-    "Four right calls. One lie got away. Read every claim like a suspect's alibi.",
-    'Every fact confirmed, every fake exposed. No loose ends in this file.'
-  ]);
-  TEXTOS.final.mensajes_afirmaciones.forEach((m, i) => {
-    assert.notEqual(m, TEXTOS.final.mensajes[i]);
-    assert.equal(/(AI|images?|photos?|pictures?)/i.test(m), false, m);
-  });
-  assert.equal(TEXTOS.final.estado_prueba, 'Evidence {i}: {estado}');
-  assert.deepEqual(TEXTOS.final.estados, { acierto: 'correct', fallo: 'wrong' });
-  assert.ok(TEXTOS.veredictos.acierto.length >= 4);
-  assert.ok(TEXTOS.veredictos.fallo.length >= 4);
-  assert.equal(TEXTOS.portada.etiqueta_caso, 'Case #{n}');
-  assert.equal(TEXTOS.portada.tema, 'Case of the day: {tema}');
-  assert.equal(TEXTOS.partida.caso_del_dia, 'Case of the day: {tema}');
-  assert.equal(TEXTOS.final.cuadros_etiqueta, '{aciertos} out of 5 correct');
-  assert.equal(TEXTOS.compartir.boton, 'Share result');
-  assert.equal(TEXTOS.resultado.sello_cerrado, 'CASE CLOSED');
-  assert.equal(TEXTOS.resultado.nota_imagenes, 'Tap a photo to see its file');
-  assert.equal(TEXTOS.resultado.nota_afirmaciones, 'Tap a claim to read the truth again');
-  assert.equal(TEXTOS.resultado.etiqueta_racha, 'Streak');
-  assert.equal(TEXTOS.resultado.etiqueta_mejor_racha, 'Best streak');
-  assert.equal(TEXTOS.resultado.siguiente_caso, 'Next case in');
-  assert.equal(TEXTOS.resultado.nuevo_caso, 'New case available');
-  assert.equal(TEXTOS.resultado.boton_nuevo_caso, 'Play');
-  assert.equal(TEXTOS.resultado.dijiste, 'You said {voto}');
+  assert.equal(T.creditos.afirmaciones, 'Fact or Fake');
+  assert.equal(T.creditos.otro_idioma, 'Español');
+  assert.equal(T.creditos.volver, 'Back to the front page');
+  assert.equal(T.sin_casos.sin_lanzamiento, 'The precinct opens soon. No cases on file yet.');
+  assert.equal(T.final.reto, '{reto} · Case #{n}');
+  assert.equal(T.avisos.prueba, 'Test mode · Day {n}: nothing gets saved.');
+  assert.equal(T.avisos.previsualizacion, 'Preview of {fecha}: nothing gets saved.');
+  assert.equal(T.final.mensajes.length, 6);
+  assert.equal(T.final.mensajes_afirmaciones.length, 6);
+  assert.equal(T.instrucciones.pasos_imagenes.length, 4);
+  assert.equal(T.instrucciones.pasos_afirmaciones.length, 4);
+  assert.deepEqual(T.final.estados, { acierto: 'correct', fallo: 'wrong' });
+  assert.equal(T.partida.caso_del_dia, 'Case of the day: {tema}');
+  assert.equal(T.final.cuadros_etiqueta, '{aciertos} out of 5 correct');
+  assert.equal(T.compartir.boton, 'Share result');
+  assert.equal(T.resultado.sello_cerrado, 'CASE CLOSED');
+  assert.equal(T.prueba.opcion, 'Day {n}: {tema}');
 });
 
-test('38. las claves eliminadas en la 1.3 no existen', () => {
-  for (const k of ['modo_facil', 'modo_medio', 'modo_dificil', 'desc_facil', 'desc_medio', 'desc_dificil', 'boton_como_jugar', 'nueva_pestana']) {
-    assert.equal(k in TEXTOS.portada, false, k);
-  }
-  assert.equal('boton_entendido' in TEXTOS.como_jugar, false);
-  assert.equal('tiempo' in TEXTOS.veredictos, false);
-  assert.equal('oculta' in TEXTOS.veredictos, false);
+test('38. valores exactos en español', () => {
+  const T = TEXTOS.es;
+  assert.equal(T.portada.reto_imagenes, 'Imágenes');
+  assert.equal(T.portada.reto_afirmaciones, '¿Dato o Bulo?');
+  assert.equal(T.partida.boton_autentica, 'REAL');
+  assert.equal(T.partida.boton_generada, 'IA');
+  assert.equal(T.partida.sello_autentica, 'REAL');
+  assert.equal(T.partida.sello_generada, 'IA');
+  assert.equal(T.afirmaciones.boton_autentica, 'DATO');
+  assert.equal(T.afirmaciones.boton_generada, 'BULO');
+  assert.equal(T.afirmaciones.sello_autentica, 'DATO');
+  assert.equal(T.afirmaciones.sello_generada, 'BULO');
+  assert.equal(T.portada.modo_investigador, 'Investigador');
+  assert.equal(T.portada.modo_normal, 'Normal');
+  assert.equal(T.portada.modo_perro, 'Sabueso');
+  assert.equal(T.afirmaciones.marca, 'identifAI-it · ¿Dato o Bulo?');
+  assert.equal(T.fichas.autentica, 'Fotografía real');
+  assert.equal(T.creditos.otro_idioma, 'English');
+  assert.equal(T.final.mensajes.length, 6);
+  assert.equal(T.final.mensajes_afirmaciones.length, 6);
+  assert.equal(T.instrucciones.pasos_imagenes.length, 4);
+  assert.equal(T.instrucciones.pasos_afirmaciones.length, 4);
+  assert.ok(T.veredictos.acierto.length >= 4 && T.veredictos.fallo.length >= 4);
 });
 
-test('39. límites de longitud de 3.1, medidos con el texto rellenado', () => {
-  for (const [ruta, valor] of rellenadas()) {
-    if (ruta.startsWith('fichas.') || esPlantillaCompartir(ruta)) continue;
-    const largo = [...valor].length;
-    if (ruta.startsWith('como_jugar.pasos')) assert.ok(largo <= 80, `${ruta} mide ${largo}`);
-    else if (ruta === 'creditos.afirmaciones_texto') {
-      assert.equal(largo, 114); // la spec dice 113, pero el texto exacto mide 114
-      assert.ok(largo <= 120);
-    } else assert.ok(largo <= 90, `${ruta} mide ${largo}`);
+test('38. el inglés y el español no se mezclan en lo que ve el jugador', () => {
+  // Las etiquetas de cada idioma son distintas (salvo nombres que coinciden en los dos: Normal, REAL, el título).
+  const iguales = new Set(['portada.titulo', 'portada.modo_normal', 'partida.boton_autentica', 'partida.sello_autentica',
+    'partida.voto_autentica', 'final.aciertos', 'partida.voto_autentica']);
+  for (const [ruta, valor] of cadenas(TEXTOS.en)) {
+    const otra = cadenas(TEXTOS.es).find(([r]) => r === ruta)[1];
+    if (valor === otra) assert.ok(iguales.has(ruta) || /^[^a-z]*$/.test(valor), `${ruta} idéntica en en y es: ${valor}`);
   }
+});
+
+test('39. límites de longitud de 3.1, medidos con el texto rellenado, en cada idioma', () => {
   const max = {
     'portada.modo_investigador': 14, 'portada.modo_normal': 14, 'portada.modo_perro': 14,
     'portada.desc_investigador': 26, 'portada.desc_normal': 26, 'portada.desc_perro': 26,
     'partida.sobre_texto': 16, 'confesion.titulo': 30, 'confesion.leer_entera': 24, 'ficha.cerrar': 16,
     'prueba.opcion': 50,
-    'portada.reto_imagenes': 12, 'portada.reto_afirmaciones': 12,
-    'portada.estado_pendiente': 18, 'portada.estado_jugado': 18, 'portada.estado_en_curso': 18,
-    'portada.estado_sin_caso': 18, 'portada.regla_afirmaciones': 70, 'portada.boton_ver_informe': 16,
+    'portada.reto_imagenes': 14, 'portada.reto_afirmaciones': 14,
+    'portada.abrir': 24, 'portada.pie': 48, 'portada.idioma': 20,
+    'portada.estado_pendiente': 18, 'portada.estado_jugado': 18, 'portada.estado_en_curso': 18, 'portada.estado_sin_caso': 18,
+    'instrucciones.volver': 24, 'instrucciones.membrete': 70, 'instrucciones.frase_imagenes': 70,
+    'instrucciones.frase_afirmaciones': 70, 'instrucciones.firma': 40, 'instrucciones.metodo': 30,
+    'instrucciones.reglas': 30, 'instrucciones.boton_empezar': 20, 'instrucciones.ejemplo': 100,
     'final.boton_volver': 16, 'afirmaciones.etiqueta_prueba': 16,
     'afirmaciones.boton_autentica': 12, 'afirmaciones.boton_generada': 12,
     'afirmaciones.sello_autentica': 12, 'afirmaciones.sello_generada': 12,
-    'afirmaciones.marca': 40, 'avisos.prueba': 70
+    'afirmaciones.marca': 40, 'avisos.prueba': 70, 'afirmaciones.aviso_oculta': 70
   };
-  for (const [ruta, limite] of Object.entries(max)) {
-    assert.ok(medida(ruta) <= limite, `${ruta} mide ${medida(ruta)} (máx. ${limite})`);
+  for (const idioma of IDIOMAS) {
+    for (const [ruta, valor] of rellenadas(idioma)) {
+      if (ruta.startsWith('fichas.') || esPlantillaCompartir(ruta)) continue;
+      const largo = [...valor].length;
+      if (ruta.startsWith('instrucciones.pasos_')) assert.ok(largo <= 80, `${idioma}.${ruta} mide ${largo}`);
+      else if (ruta === 'creditos.afirmaciones_texto') assert.ok(largo <= 120, `${idioma}.${ruta} mide ${largo}`);
+      else if (ruta === 'instrucciones.ejemplo') assert.ok(largo <= 100, `${idioma}.${ruta} mide ${largo}`);
+      else assert.ok(largo <= 90, `${idioma}.${ruta} mide ${largo}`);
+    }
+    for (const [ruta, limite] of Object.entries(max)) {
+      assert.ok(medida(idioma, ruta) <= limite, `${idioma}.${ruta} mide ${medida(idioma, ruta)} (máx. ${limite})`);
+    }
+    TEXTOS[idioma].afirmaciones.oculta.forEach((t, i) => assert.ok([...t].length <= 90, `${idioma}.oculta[${i}]`));
+    // Las fichas fijas caben en un bloque de ficha (510 bytes) y no tienen espacios sobrantes.
+    const autentica = TEXTOS[idioma].fichas.autentica;
+    assert.ok(autentica.length > 0);
+    assert.equal(autentica, autentica.trim());
+    assert.ok(new TextEncoder().encode(autentica).length <= 510);
   }
-  TEXTOS.afirmaciones.oculta.forEach((t, i) => assert.ok([...t].length <= 90, `oculta[${i}]`));
-  assert.equal(medida('portada.estado_jugado'), [...'Filed · 5/5'].length);
-  assert.equal(rellena('x', TEXTOS.avisos.prueba), 'Test mode · Day 999: nothing gets saved.');
-  for (const k of ['autentica', 'sin_prompt']) {
-    const t = TEXTOS.fichas[k];
-    assert.ok(t.length > 0);
-    assert.equal(t, t.trim());
-    assert.ok(new TextEncoder().encode(t).length <= 510);
-  }
-  assert.notEqual(TEXTOS.fichas.autentica, TEXTOS.fichas.sin_prompt);
+  assert.equal(medida('en', 'portada.estado_jugado'), [...'Filed · 5/5'].length);
+  assert.equal(medida('es', 'portada.estado_jugado'), [...'Archivado · 5/5'].length);
+  assert.notEqual(TEXTOS.en.fichas.autentica, TEXTOS.es.fichas.autentica);
 });
 
-test('39. un marcador sin valor de relleno hace fallar el test', () => {
-  assert.throws(() => rellena('x.y', 'hola {desconocido}'), /x\.y: marcador \{desconocido\} sin valor/);
-  // el relleno no deja ningún marcador en ninguna cadena medida
-  for (const [ruta, valor] of rellenadas()) {
-    if (!esPlantillaCompartir(ruta)) assert.equal(/\{\w+\}/.test(valor), false, ruta);
+test('39. un marcador sin valor de relleno hace fallar el test, y el relleno no deja marcadores', () => {
+  assert.throws(() => rellena('en', 'x.y', 'hola {desconocido}'), /en\.x\.y: marcador \{desconocido\} sin valor/);
+  for (const idioma of IDIOMAS) {
+    for (const [ruta, valor] of rellenadas(idioma)) {
+      if (!esPlantillaCompartir(ruta)) assert.equal(/\{\w+\}/.test(valor), false, `${idioma}.${ruta}`);
+    }
+  }
+  assert.equal(rellena('en', 'x', TEXTOS.en.avisos.prueba), 'Test mode · Day 999: nothing gets saved.');
+  assert.equal(rellena('es', 'x', TEXTOS.es.avisos.previsualizacion).includes('30 nov 2026'), true);
+});
+
+test('39. ningún texto inglés menciona los modos antiguos ni los de otro tiempo', () => {
+  for (const [ruta, valor] of cadenas(TEXTOS.en)) {
+    assert.equal(/time.?s up|hidden tab|\beasy\b|\bhard\b|\bmedium\b/i.test(valor.replace(TEXTOS.en.partida.sobre_anuncio, '')), false, ruta);
   }
 });
 
-test('39. ningún texto menciona los modos antiguos, time-out or hidden-tab wording', () => {
-  for (const [ruta, valor] of cadenas(TEXTOS)) {
-    assert.equal(/time.?s up|hidden tab|\beasy\b|\bhard\b|\bmedium\b/i.test(valor.replace(TEXTOS.partida.sobre_anuncio, '')), false, ruta);
-  }
-});
-
-test('40. las plantillas de compartir son exactamente las de la sección 7', () => {
+test('40. las plantillas de compartir son exactamente las de la sección 7, por idioma', () => {
   assert.equal(
-    TEXTOS.compartir.plantilla,
+    TEXTOS.en.compartir.plantilla,
     'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
   );
   assert.equal(
-    TEXTOS.compartir.plantilla_afirmaciones,
+    TEXTOS.en.compartir.plantilla_afirmaciones,
     'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
+  );
+  assert.equal(
+    TEXTOS.es.compartir.plantilla,
+    'identifAI-it Imágenes #{caso}\nModo: {modo}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
+  );
+  assert.equal(
+    TEXTOS.es.compartir.plantilla_afirmaciones,
+    'identifAI-it ¿Dato o Bulo? #{caso}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
   );
 });
 
-test('180. Fact or Fake dice "more than a few seconds"; Images no habla de salir de la página', () => {
-  const frase = /more than a few seconds/i;
-  assert.ok(TEXTOS.como_jugar.pasos_afirmaciones.some((t) => frase.test(t)));
-  assert.ok(frase.test(TEXTOS.portada.regla_afirmaciones));
-  for (const t of TEXTOS.afirmaciones.oculta) assert.ok(frase.test(t), t);
-  assert.ok(frase.test(TEXTOS.afirmaciones.aviso_oculta));
-  const images = [
-    ...TEXTOS.como_jugar.pasos, TEXTOS.portada.desc_investigador, TEXTOS.portada.desc_normal,
-    TEXTOS.portada.desc_perro, TEXTOS.partida.sobre_anuncio
+test('180. Fact or Fake dice "more than a few seconds" / "más de unos segundos"; Images no habla de salir de la página', () => {
+  const frases = { en: /more than a few seconds/i, es: /más de unos segundos/i };
+  const salir = { en: /\b(leave|leaving|away|tab|page)\b/i, es: /\b(salir|saliste|fuera|pestaña|página)\b/i };
+  for (const idioma of IDIOMAS) {
+    const T = TEXTOS[idioma];
+    assert.ok(T.instrucciones.pasos_afirmaciones.some((t) => frases[idioma].test(t)), `${idioma} pasos`);
+    for (const t of T.afirmaciones.oculta) assert.ok(frases[idioma].test(t), t);
+    assert.ok(frases[idioma].test(T.afirmaciones.aviso_oculta), `${idioma} aviso`);
+    const images = [
+      ...T.instrucciones.pasos_imagenes, T.portada.desc_investigador, T.portada.desc_normal,
+      T.portada.desc_perro, T.partida.sobre_anuncio
+    ];
+    for (const t of images) assert.equal(salir[idioma].test(t), false, t);
+  }
+});
+
+test('final.mensajes_afirmaciones no habla de IA, imágenes ni fotos, y difiere de los de Images (los dos idiomas)', () => {
+  const prohibido = { en: /\b(AI|images?|photos?|pictures?)\b/i, es: /\b(IA|im[aá]genes?|fotos?|fotograf[ií]as?)\b/i };
+  for (const idioma of IDIOMAS) {
+    TEXTOS[idioma].final.mensajes_afirmaciones.forEach((m, i) => {
+      assert.notEqual(m, TEXTOS[idioma].final.mensajes[i]);
+      assert.equal(prohibido[idioma].test(m), false, `${idioma}[${i}]: ${m}`);
+    });
+  }
+});
+
+test('"IA" solo aparece como palabra suelta en los sitios permitidos del español', () => {
+  const permitidas = [
+    /^partida\./, /^portada\.sello_ilustracion$/, /^revelacion\.resumen_generada$/, /^confesion\./,
+    /^final\.mensajes\[/, /^portada\.desc_reto_imagenes$/, /^instrucciones\.(frase|pasos)_imagenes/
   ];
-  for (const t of images) assert.equal(/\b(leave|leaving|away|tab|page)\b/i.test(t), false, t);
+  for (const [ruta, valor] of cadenas(TEXTOS.es)) {
+    if (/\bIA\b/.test(valor)) assert.ok(permitidas.some((re) => re.test(ruta)), `${ruta}: ${valor}`);
+  }
 });
 
-test('avisos.previsualizacion: valor exacto, un marcador y longitud', () => {
-  const t = TEXTOS.avisos.previsualizacion;
-  assert.equal(t, 'Preview of {fecha}: nothing gets saved.');
-  assert.deepEqual(t.match(/\{[^}]+\}/g), ['{fecha}']);
-  assert.ok(t.replace('{fecha}', 'Nov 3, 2026').length <= 90);
+test('palabras prohibidas: las claves de texto no son rutas ni ids, pero los textos de portada no llevan la respuesta', () => {
+  // El tema de ejemplo de las instrucciones no es ninguna afirmación del juego: es una frase de muestra fija.
+  for (const idioma of IDIOMAS) {
+    const ejemplo = TEXTOS[idioma].instrucciones.ejemplo;
+    assert.ok(ejemplo.endsWith('.'), `${idioma}: el ejemplo es una frase`);
+    assert.equal(ejemplo.includes('\n'), false);
+  }
 });
 
-test('prueba.*: valores, marcadores, longitud y palabras prohibidas', async () => {
+test('avisos.previsualizacion: un marcador y longitud en los dos idiomas', () => {
+  for (const idioma of IDIOMAS) {
+    const t = TEXTOS[idioma].avisos.previsualizacion;
+    assert.deepEqual(t.match(/\{[^}]+\}/g), ['{fecha}']);
+    assert.ok(rellena(idioma, 'avisos.previsualizacion', t).length <= 90);
+  }
+});
+
+test('prueba.*: marcadores, longitud y palabras prohibidas (los dos idiomas)', async () => {
   const { contienePalabraProhibida } = await import('../herramientas/temas.mjs');
-  const t = TEXTOS.prueba;
-  assert.equal(t.opcion, 'Day {n}: {tema}');
-  assert.deepEqual(t.opcion.match(/\{[^}]+\}/g), ['{n}', '{tema}']);
-  assert.ok(t.opcion.replace('{n}', '99').replace('{tema}', 'x'.repeat(30)).length <= 50);
-  for (const k of ['etiqueta', 'opcion', 'boton']) {
-    assert.ok(t[k].length <= 90);
-    assert.equal(contienePalabraProhibida(t[k]), null, k);
+  for (const idioma of IDIOMAS) {
+    const t = TEXTOS[idioma].prueba;
+    assert.deepEqual(t.opcion.match(/\{[^}]+\}/g), ['{n}', '{tema}']);
+    assert.ok(t.opcion.replace('{n}', '99').replace('{tema}', 'x'.repeat(30)).length <= 50);
+    for (const k of ['etiqueta', 'opcion']) {
+      assert.ok(t[k].length <= 90);
+      assert.equal(contienePalabraProhibida(t[k]), null, `${idioma}.${k}`);
+    }
   }
 });

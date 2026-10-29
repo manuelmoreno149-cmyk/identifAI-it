@@ -3,6 +3,8 @@ import { TEXTOS } from './textos.js';
 import {
   fechaLocal,
   formatearFecha,
+  elegirIdioma,
+  temaDelDia,
   msHastaMedianoche,
   formatearCuentaAtras,
   casoDelDia,
@@ -31,7 +33,6 @@ import {
 import {
   MODOS,
   RETOS,
-  RETO_POR_DEFECTO,
   estadoInicial,
   transicion,
   contarAciertos,
@@ -41,13 +42,14 @@ import {
   elegirVariante,
   mensajeFinal,
   mensajesDelReto,
-  retoDePrueba,
   votoDeTecla,
   teclaDeVoto,
   medirOculta
 } from './juego.js';
 import {
   CLAVE,
+  leerIdioma,
+  guardarIdioma,
   crearAlmacenMemoria,
   leer,
   leerConRespaldo,
@@ -104,14 +106,35 @@ let avisoCopiado = null;
 let testigoPrueba = 0;
 let botonDeFicha = null; // botón que abrió el diálogo, para devolverle el foco
 let ausencia = null; // Fact or Fake [D-115]: {perf, fecha, indice} desde que se oculta la pestaña
-let abridorAyuda = null; // botón que abrió la ayuda, para devolverle el foco
-let pasosDe = null; // reto cuyos pasos de Cómo jugar están pintados
+let diasPrueba = null; // días del desplegable del modo prueba
+let diaPrueba = null; // día abierto en el modo prueba
 
 // Para el foco al cambiar de pantalla, fase o prueba.
 let ultima = { pantalla: null, fase: null, indice: -1 };
 
+// Árbol de textos del idioma activo [D-155]. Todo lo que ve el jugador sale de aquí.
+function t() {
+  return TEXTOS[estado.idioma];
+}
+
 function texto(ruta) {
-  return ruta.split('.').reduce((o, k) => o?.[k], TEXTOS);
+  return ruta.split('.').reduce((o, k) => o?.[k], t());
+}
+
+// La preferencia de idioma vive siempre en el localStorage real, también en previsualización y prueba [D-154].
+function almacenIdioma() {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+// Pone el texto de un elemento si existe (el marcado de la 3.0 lo crea otro agente).
+function poner(id, valor) {
+  const el = $(id);
+  if (el) el.textContent = valor;
+  return el;
 }
 
 function sesionAleatoria() {
@@ -133,11 +156,11 @@ function aplicar(cambio) {
 }
 
 function nombreReto(reto) {
-  return TEXTOS.portada[`reto_${reto}`];
+  return t().portada[`reto_${reto}`];
 }
 
 function selloDe(reto, verdad) {
-  const grupo = reto === 'afirmaciones' ? TEXTOS.afirmaciones : TEXTOS.partida;
+  const grupo = reto === 'afirmaciones' ? t().afirmaciones : t().partida;
   return verdad === 1 ? grupo.sello_generada : grupo.sello_autentica;
 }
 
@@ -149,7 +172,6 @@ function despachar(evento) {
   estado = nuevo;
   antesDeRender(previo, nuevo, evento);
   // Si cambia el contexto con la ficha abierta (p. ej. OTRA_PESTANA), se cierra antes de pintar.
-  if (nuevo.pantalla !== previo.pantalla) cerrarAyuda(false);
   if (fichaAbierta() && !(nuevo.pantalla === previo.pantalla && nuevo.fase === previo.fase)) {
     cerrarFicha(false);
   }
@@ -164,16 +186,22 @@ function antesDeRender(previo, nuevo, evento) {
   if (evento.tipo === 'ELEGIR_MODO') {
     aplicar((d) => conAjustes(d, { modo: nuevo.modo }));
   }
-  if (evento.tipo === 'ELEGIR_RETO') {
+  if (evento.tipo === 'ABRIR_RETO') {
     aplicar((d) => conAjustes(d, { reto: nuevo.reto }));
+  }
+  if (evento.tipo === 'CAMBIAR_IDIOMA') {
+    // Solo cambia lo que se muestra: no toca el progreso ni las partidas [D-154].
+    guardarIdioma(almacenIdioma(), nuevo.idioma);
+    ponerIdiomaEnUrl(nuevo.idioma);
+    aplicarIdioma();
   }
   if (previo.fase !== 'veredicto' && nuevo.fase === 'veredicto') {
     const codigo = nuevo.resultados[nuevo.indice];
     aplicar((d) => registrarPrueba(d, nuevo.reto, nuevo.fecha, nuevo.indice, codigo, sesion));
     textoVeredicto =
       nuevo.motivo === 'oculta'
-        ? elegirVariante(TEXTOS.afirmaciones.oculta)
-        : elegirVariante(TEXTOS.veredictos[estadoDeCodigo(codigo)]);
+        ? elegirVariante(t().afirmaciones.oculta)
+        : elegirVariante(t().veredictos[estadoDeCodigo(codigo)]);
   }
   if (previo.pantalla === 'caso' && nuevo.pantalla === 'resultado') {
     // La partida cuenta para el día en que empezó, aunque acabe pasada la medianoche.
@@ -270,45 +298,52 @@ async function cargarDia() {
   }
 }
 
-// ---- Modo prueba [D-70, D-110] ----
+// ---- Modo prueba [D-70, D-110, D-152] ----
 function prepararModoPrueba(dias, elegido) {
-  const aviso = $('aviso-previsualizacion');
-  aviso.textContent = rellenar(TEXTOS.avisos.prueba, { n: elegido?.n ?? '-' });
-  aviso.hidden = false;
-  $('selector-prueba')?.remove();
+  diasPrueba = dias;
+  diaPrueba = elegido;
+  $('selector-prueba-dia')?.remove();
   if (elegido) crearSelectorPrueba(dias, elegido);
+  pintarAvisosFecha();
 }
 
-// Un solo tema por día; si los dos retos difieren por error, se muestran los dos.
-function temaDeDia(d) {
-  const { temaImagenes: a, temaAfirmaciones: b } = d;
-  if (a && b && a !== b) return `${a} / ${b}`;
-  return a ?? b ?? '';
-}
-
+// Desplegable de día, justo después de #portada-tema. Al cambiar, recarga el día elegido (DP-68).
 function crearSelectorPrueba(dias, elegido) {
-  const caja = document.createElement('div');
-  caja.id = 'selector-prueba';
-  const etiqueta = document.createElement('label');
-  etiqueta.htmlFor = 'selector-prueba-dia';
-  etiqueta.textContent = TEXTOS.prueba.etiqueta;
   const select = document.createElement('select');
   select.id = 'selector-prueba-dia';
   for (const d of dias) {
     const opcion = document.createElement('option');
     opcion.value = String(d.n);
-    opcion.textContent = rellenar(TEXTOS.prueba.opcion, { n: d.n, tema: temaDeDia(d) });
     if (d.n === elegido.n) opcion.selected = true;
     select.append(opcion);
   }
-  const boton = document.createElement('button');
-  boton.type = 'button';
-  boton.className = 'boton';
-  boton.dataset.accion = 'abrir-prueba';
-  boton.textContent = TEXTOS.prueba.boton;
-  caja.append(etiqueta, select, boton);
-  // Dentro de .portada-cabecera, justo después de #portada-caso.
-  $('portada-caso').after(caja);
+  const tema = $('portada-tema');
+  if (tema) tema.after(select);
+  pintarSelectorPrueba();
+}
+
+// Etiqueta y texto de las opciones en el idioma activo.
+function pintarSelectorPrueba() {
+  const select = $('selector-prueba-dia');
+  if (!select || !diasPrueba) return;
+  select.setAttribute('aria-label', t().prueba.etiqueta);
+  for (const opcion of select.options) {
+    const d = diasPrueba.find((x) => String(x.n) === opcion.value);
+    opcion.textContent = rellenar(t().prueba.opcion, { n: opcion.value, tema: d ? temaDelDia(d, estado.idioma) : '' });
+  }
+}
+
+// Avisos de previsualización o de modo prueba, en el idioma activo.
+function pintarAvisosFecha() {
+  const aviso = $('aviso-previsualizacion');
+  if (!aviso) return;
+  if (fechaFija) {
+    aviso.textContent = rellenar(t().avisos.previsualizacion, { fecha: formatearFecha(fechaFija, estado.idioma) });
+    aviso.hidden = false;
+  } else if (modoPrueba && diasPrueba) {
+    aviso.textContent = rellenar(t().avisos.prueba, { n: diaPrueba?.n ?? '-' });
+    aviso.hidden = false;
+  }
 }
 
 // ---- Precarga (solo Images) ----
@@ -365,9 +400,9 @@ function finCuenta() {
   despachar({ tipo: 'FIN_CUENTA', fecha });
 }
 
-// ---- Start ----
+// ---- Empezar (solo desde instrucciones) ----
 function empezar() {
-  if (estado.pantalla !== 'portada') return;
+  if (estado.pantalla !== 'instrucciones') return;
   const { caso, jugado } = estado.retos[estado.reto];
   if (!caso) return;
   if (estado.reto === 'afirmaciones' && !jugado) {
@@ -397,7 +432,7 @@ async function iniciarPrueba() {
 
   const img = imagenes[indice];
   img.className = 'prueba-img';
-  img.alt = rellenar(TEXTOS.partida.alt_prueba, { i: indice + 1 });
+  img.alt = rellenar(t().partida.alt_prueba, { i: indice + 1 });
   img.width = 1080;
   img.height = 1350;
   img.hidden = false;
@@ -427,7 +462,7 @@ async function iniciarPrueba() {
         const s = segundosRestantes(restante);
         if (s !== ultimoSegundo && s > 0) {
           ultimoSegundo = s;
-          $('temporizador-anuncio').textContent = rellenar(TEXTOS.partida.quedan, { s });
+          $('temporizador-anuncio').textContent = rellenar(t().partida.quedan, { s });
         }
       }
     },
@@ -435,7 +470,7 @@ async function iniciarPrueba() {
       despachar({ tipo: 'AGOTADO' });
       // Sellado: se anuncia en normal y perro (en investigador no hay temporizador).
       if (estado.tapada && estado.pantalla === 'caso' && estado.indice === indice) {
-        $('temporizador-anuncio').textContent = TEXTOS.partida.sobre_anuncio;
+        $('temporizador-anuncio').textContent = t().partida.sobre_anuncio;
       }
     }
   });
@@ -456,7 +491,7 @@ async function iniciarAfirmacion() {
 
   despachar({ tipo: 'PINTADA' });
   if (indice === 0 && estado.activo) {
-    $('temporizador-anuncio').textContent = TEXTOS.afirmaciones.aviso_oculta;
+    $('temporizador-anuncio').textContent = t().afirmaciones.aviso_oculta;
   }
 }
 
@@ -485,20 +520,21 @@ function focoDeSeccion(nombre) {
 }
 
 function nombreModo(modo) {
-  return TEXTOS.portada[`modo_${modo}`];
+  return t().portada[`modo_${modo}`];
 }
 
 function renderCuadros(elemento, resultados, aciertos) {
   elemento.textContent = cuadros(resultados);
-  elemento.setAttribute('aria-label', rellenar(TEXTOS.final.cuadros_etiqueta, { aciertos }));
+  elemento.setAttribute('aria-label', rellenar(t().final.cuadros_etiqueta, { aciertos }));
 }
 
+// Pasos del briefing: un li sin atributos por paso, en el idioma activo.
 function ponerPasos(reto) {
-  if (pasosDe === reto) return;
-  pasosDe = reto;
-  const lista = reto === 'afirmaciones' ? TEXTOS.como_jugar.pasos_afirmaciones : TEXTOS.como_jugar.pasos;
-  $('como-jugar-pasos').replaceChildren(
-    ...lista.map((paso) => {
+  const lista = $('instrucciones-pasos');
+  if (!lista) return;
+  const pasos = reto === 'afirmaciones' ? t().instrucciones.pasos_afirmaciones : t().instrucciones.pasos_imagenes;
+  lista.replaceChildren(
+    ...pasos.map((paso) => {
       const li = document.createElement('li');
       li.textContent = paso;
       return li;
@@ -509,43 +545,50 @@ function ponerPasos(reto) {
 // Estado de un reto en la portada [D-98].
 function estadoDeReto(e, reto) {
   const { caso, jugado } = e.retos[reto];
-  if (!caso) return TEXTOS.portada.estado_sin_caso;
+  if (!caso) return t().portada.estado_sin_caso;
   const partida = partidaDe(datos, reto, caso.fecha);
   if (partida?.estado === 'terminada') {
-    return rellenar(TEXTOS.portada.estado_jugado, { aciertos: contarAciertos(partida.resultados) });
+    return rellenar(t().portada.estado_jugado, { aciertos: contarAciertos(partida.resultados) });
   }
-  if (partida?.estado === 'en_curso' || jugado) return TEXTOS.portada.estado_en_curso;
-  return TEXTOS.portada.estado_pendiente;
+  if (partida?.estado === 'en_curso' || jugado) return t().portada.estado_en_curso;
+  return t().portada.estado_pendiente;
+}
+
+// Tema del caso elegido en el idioma activo ('' sin caso).
+function temaActual(e) {
+  return e.tema?.[e.idioma] ?? '';
 }
 
 function renderPortada(e) {
-  const caso = $('portada-caso');
-  caso.textContent = e.n ? rellenar(TEXTOS.portada.etiqueta_caso, { n: e.n }) : '';
-  caso.hidden = !e.n;
-  $('portada-tema').textContent = e.tema ? rellenar(TEXTOS.portada.tema, { tema: e.tema }) : '';
-  for (const radio of app.querySelectorAll('input[name="modo"]')) radio.checked = radio.value === e.modo;
-  for (const radio of app.querySelectorAll('input[name="reto"]')) radio.checked = radio.value === e.reto;
-  for (const reto of RETOS) $(`reto-${reto}-estado`).textContent = estadoDeReto(e, reto);
-  ponerPasos(e.reto);
-
-  const racha = calcularRacha(datos.retos[e.reto].partidas, fechaCarga ?? hoy());
-  const elRacha = $('portada-racha');
-  elRacha.hidden = racha === 0;
-  elRacha.textContent = racha === 0 ? '' : rellenar(TEXTOS.portada.racha, { racha });
-
+  const caso = poner('portada-caso', e.n ? rellenar(t().portada.etiqueta_caso, { n: e.n }) : '');
+  if (caso) caso.hidden = !e.n;
+  const tema = poner('portada-tema', temaActual(e));
+  if (tema) tema.hidden = modoPrueba || !e.n;
   for (const reto of RETOS) {
-    const { caso: casoReto, jugado } = e.retos[reto];
-    $(`portada-empezar-${reto}-texto`).textContent = jugado
-      ? TEXTOS.portada[`informe_${reto}`]
-      : TEXTOS.portada[`empezar_${reto}`];
-    app.querySelector(`#pantalla-portada [data-reto-boton="${reto}"]`).disabled = !casoReto;
+    poner(`reto-${reto}-estado`, estadoDeReto(e, reto));
+    const tarjeta = app.querySelector(`#pantalla-portada [data-reto-boton="${reto}"]`);
+    if (tarjeta) tarjeta.disabled = !e.retos[reto].caso;
   }
+  const creditos = $('portada-creditos');
+  if (creditos) creditos.setAttribute('href', e.idioma === 'es' ? 'creditos.es.html' : 'creditos.html');
+  pintarSelectorPrueba();
+}
+
+function renderInstrucciones(e) {
+  const imagenes = e.reto === 'imagenes';
+  poner('instrucciones-membrete', rellenar(t().instrucciones.membrete, { n: e.n ?? '', tema: temaActual(e) }));
+  ponerPasos(e.reto);
+  const modos = $('instrucciones-modos');
+  if (modos) modos.hidden = !imagenes;
+  const reglas = $('instrucciones-reglas');
+  if (reglas) reglas.hidden = imagenes;
+  for (const radio of app.querySelectorAll('input[name="modo"]')) radio.checked = radio.value === e.modo;
 }
 
 // Detalles de una aclaración como <li> sin atributos; sin detalles, la lista queda vacía y oculta.
 function pintarAclaracion(contenedor, elTexto, lista, ficha) {
   const valida = ficha !== null && typeof ficha === 'object';
-  elTexto.textContent = valida ? ficha.aclaracion : TEXTOS.afirmaciones.aclaracion_no_disponible;
+  elTexto.textContent = valida ? ficha.aclaracion : t().afirmaciones.aclaracion_no_disponible;
   const detalles = valida ? ficha.detalles : [];
   lista.replaceChildren(
     ...detalles.map((d) => {
@@ -579,7 +622,7 @@ function renderCaso(e) {
   $('prueba-sobre').hidden = !sellada;
   $('afirmacion').hidden = !afirmaciones;
   if (afirmaciones) {
-    const valor = typeof e.texto === 'string' ? e.texto : TEXTOS.afirmaciones.no_disponible;
+    const valor = typeof e.texto === 'string' ? e.texto : t().afirmaciones.no_disponible;
     const el = $('afirmacion-texto');
     if (el.textContent !== valor) el.textContent = valor;
   } else {
@@ -590,9 +633,9 @@ function renderCaso(e) {
   $('caso-aviso').hidden = !(afirmaciones && e.fase === 'pregunta' && e.indice === 0);
 
   // Votos: texto y tecla según el reto [D-122].
-  const grupo = afirmaciones ? TEXTOS.afirmaciones : TEXTOS.partida;
+  const grupo = afirmaciones ? t().afirmaciones : t().partida;
   for (const voto of ['autentica', 'generada']) {
-    const tecla = teclaDeVoto(e.reto, voto);
+    const tecla = teclaDeVoto(e.reto, voto, e.idioma);
     $(`voto-${voto}-texto`).textContent = grupo[`boton_${voto}`];
     $(`voto-${voto}-tecla`).textContent = tecla ?? '';
     const boton = app.querySelector(`#caso-botones [data-voto="${voto}"]`);
@@ -606,20 +649,20 @@ function renderCaso(e) {
   }
   $('caso-modo').textContent = afirmaciones
     ? ''
-    : rellenar(TEXTOS.partida.modo_etiqueta, { modo: nombreModo(e.modo) });
-  $('caso-tema').textContent = e.tema ? rellenar(TEXTOS.partida.caso_del_dia, { tema: e.tema }) : '';
+    : rellenar(t().partida.modo_etiqueta, { modo: nombreModo(e.modo) });
+  $('caso-tema').textContent = temaActual(e) ? rellenar(t().partida.caso_del_dia, { tema: temaActual(e) }) : '';
   $('caso-etiqueta').textContent = rellenar(grupo.etiqueta_prueba, { i: e.indice + 1 });
-  $('caso-marcador').textContent = rellenar(TEXTOS.partida.marcador, {
+  $('caso-marcador').textContent = rellenar(t().partida.marcador, {
     aciertos: contarAciertos(e.resultados)
   });
   const veredicto = $('veredicto');
   const textoBoton = app.querySelector('[data-accion="siguiente"] .boton-texto');
   textoBoton.textContent =
     e.indice === 4
-      ? TEXTOS.partida.boton_ver_resultado
+      ? t().partida.boton_ver_resultado
       : afirmaciones
-        ? TEXTOS.afirmaciones.boton_siguiente
-        : TEXTOS.partida.boton_siguiente;
+        ? t().afirmaciones.boton_siguiente
+        : t().partida.boton_siguiente;
   const confesion = $('veredicto-confesion-texto');
   $('veredicto-confesion').hidden = afirmaciones;
   const aclaracion = $('veredicto-aclaracion');
@@ -635,7 +678,7 @@ function renderCaso(e) {
     const acierto = estadoDeCodigo(e.resultados[e.indice]) === 'acierto';
     const dijo = acierto ? e.revelada : 1 - e.revelada;
     const claveBanda = e.motivo === 'oculta' ? 'banda_oculta' : acierto ? 'banda_acierto' : 'banda_fallo';
-    $('veredicto-banda-texto').textContent = rellenar(TEXTOS.revelacion[claveBanda], {
+    $('veredicto-banda-texto').textContent = rellenar(t().revelacion[claveBanda], {
       voto: grupo[dijo === 1 ? 'voto_generada' : 'voto_autentica']
     });
     if (afirmaciones) {
@@ -644,8 +687,8 @@ function renderCaso(e) {
       $('prueba-sello').textContent = '';
     } else {
       $('veredicto-resumen').textContent =
-        TEXTOS.revelacion[`resumen_${e.revelada === 1 ? 'generada' : 'autentica'}`];
-      $('prueba-etiqueta').textContent = rellenar(TEXTOS.revelacion.etiqueta_prueba, { i: e.indice + 1 });
+        t().revelacion[`resumen_${e.revelada === 1 ? 'generada' : 'autentica'}`];
+      $('prueba-etiqueta').textContent = rellenar(t().revelacion.etiqueta_prueba, { i: e.indice + 1 });
       $('prueba-sello').textContent = $('veredicto-sello').textContent;
     }
     // La ficha, la aclaración y los detalles solo existen en el DOM a partir de aquí (ya respondida).
@@ -654,7 +697,7 @@ function renderCaso(e) {
       confesion.textContent = '';
     } else {
       vaciarAclaracion(aclaracion, aclaracionTexto, detalles);
-      confesion.textContent = typeof e.ficha === 'string' ? e.ficha : TEXTOS.confesion.no_disponible;
+      confesion.textContent = typeof e.ficha === 'string' ? e.ficha : t().confesion.no_disponible;
     }
   } else {
     vaciarVeredicto();
@@ -696,7 +739,7 @@ function crearMiniaturas(e) {
   const lista = $('resultado-revision');
   lista.replaceChildren();
   const afirmaciones = e.reto === 'afirmaciones';
-  const grupoReto = afirmaciones ? TEXTOS.afirmaciones : TEXTOS.partida;
+  const grupoReto = afirmaciones ? t().afirmaciones : t().partida;
   for (let i = 0; i < 5; i++) {
     const codigo = e.resultados[i];
     const estadoPrueba = estadoDeCodigo(codigo);
@@ -718,19 +761,19 @@ function crearMiniaturas(e) {
     boton.setAttribute('aria-haspopup', 'dialog');
     const lector = document.createElement('span');
     lector.className = 'solo-lectores';
-    const grupoEstado = afirmaciones ? TEXTOS.afirmaciones.estado_prueba : TEXTOS.final.estado_prueba;
-    lector.textContent = rellenar(grupoEstado, { i: i + 1, estado: TEXTOS.final.estados[estadoPrueba] });
+    const grupoEstado = afirmaciones ? t().afirmaciones.estado_prueba : t().final.estado_prueba;
+    lector.textContent = rellenar(grupoEstado, { i: i + 1, estado: t().final.estados[estadoPrueba] });
     const sello = verdad === null ? '' : selloDe(e.reto, verdad);
     const pie = crearSpan('mini-pie');
     if (dijo !== null) {
       const voto = grupoReto[dijo === 1 ? 'voto_generada' : 'voto_autentica'];
-      pie.append(crearSpan('mini-voto', rellenar(TEXTOS.resultado.dijiste, { voto }), false));
+      pie.append(crearSpan('mini-voto', rellenar(t().resultado.dijiste, { voto }), false));
     }
     if (afirmaciones) {
       const cabecera = crearSpan('mini-cabecera');
       cabecera.append(crearSpan('mini-numero', `#${i + 1}`, false), crearSpan('mini-sello', sello, false));
-      const afirmacion = Array.isArray(e.textos) ? desofuscarAfirmacion(e.textos[i], e.clave, e.n, i) : null;
-      const cuerpo = crearSpan('mini-texto', afirmacion ?? TEXTOS.afirmaciones.no_disponible);
+      const afirmacion = desofuscarAfirmacion(e.textos?.[e.idioma]?.[i], e.clave, e.n, i, e.idioma);
+      const cuerpo = crearSpan('mini-texto', afirmacion ?? t().afirmaciones.no_disponible);
       boton.append(lector, cabecera, cuerpo, pie);
     } else {
       const foto = crearSpan('mini-foto');
@@ -759,12 +802,12 @@ function renderResultado(e) {
   const afirmaciones = e.reto === 'afirmaciones';
   $('resultado-reto').textContent = etiquetaResultado([
     nombreReto(e.reto),
-    rellenar(TEXTOS.portada.etiqueta_caso, { n: e.n }),
-    e.tema,
+    rellenar(t().portada.etiqueta_caso, { n: e.n }),
+    temaActual(e),
     afirmaciones ? '' : nombreModo(e.modo)
   ]);
-  $('resultado-aciertos').textContent = rellenar(TEXTOS.final.aciertos, { aciertos });
-  $('resultado-mensaje').textContent = mensajeFinal(aciertos, mensajesDelReto(e.reto, TEXTOS.final));
+  $('resultado-aciertos').textContent = rellenar(t().final.aciertos, { aciertos });
+  $('resultado-mensaje').textContent = mensajeFinal(aciertos, mensajesDelReto(e.reto, t().final));
   $('resultado-racha').textContent = String(retoDatos.racha);
   $('resultado-mejor-racha').textContent = String(retoDatos.mejorRacha);
   $('resultado-proximo').hidden = false;
@@ -778,21 +821,21 @@ function renderYaJugado() {
   const partida = partidaDe(datos, reto, fecha);
   if (!partida) return;
   const enCurso = partida.estado !== 'terminada';
-  $('ya-jugado-reto').textContent = rellenar(TEXTOS.final.reto, { reto: nombreReto(reto), n: partida.n });
-  $('ya-jugado-texto').textContent = enCurso ? TEXTOS.avisos.otra_pestana : TEXTOS.ya_jugado.texto;
+  $('ya-jugado-reto').textContent = rellenar(t().final.reto, { reto: nombreReto(reto), n: partida.n });
+  $('ya-jugado-texto').textContent = enCurso ? t().avisos.otra_pestana : t().ya_jugado.texto;
   for (const id of ['ya-jugado-aciertos', 'ya-jugado-modo', 'ya-jugado-cuadros', 'ya-jugado-racha']) {
     $(id).hidden = enCurso;
   }
   for (const b of $('pantalla-ya-jugado').querySelectorAll('[data-accion="compartir"]')) b.hidden = enCurso;
   if (enCurso) return;
   const aciertos = contarAciertos(partida.resultados);
-  $('ya-jugado-aciertos').textContent = rellenar(TEXTOS.final.aciertos, { aciertos });
+  $('ya-jugado-aciertos').textContent = rellenar(t().final.aciertos, { aciertos });
   // El modo solo existe en Images.
   const modo = $('ya-jugado-modo');
   modo.hidden = reto === 'afirmaciones';
-  modo.textContent = reto === 'afirmaciones' ? '' : rellenar(TEXTOS.ya_jugado.modo, { modo: nombreModo(partida.modo) });
+  modo.textContent = reto === 'afirmaciones' ? '' : rellenar(t().ya_jugado.modo, { modo: nombreModo(partida.modo) });
   renderCuadros($('ya-jugado-cuadros'), partida.resultados, aciertos);
-  $('ya-jugado-racha').textContent = rellenar(TEXTOS.final.racha, {
+  $('ya-jugado-racha').textContent = rellenar(t().final.racha, {
     racha: calcularRacha(datos.retos[reto].partidas, fecha)
   });
 }
@@ -802,18 +845,20 @@ function render(e) {
   app.dataset.pantalla = e.pantalla;
   app.dataset.reto = e.reto;
   app.dataset.modo = e.modo;
+  actualizarSelectorIdioma(e.idioma);
 
   if (e.pantalla !== 'caso') limpiarCaso();
   if (e.pantalla !== 'resultado') $('resultado-revision').replaceChildren();
   if (e.pantalla === 'portada') renderPortada(e);
+  if (e.pantalla === 'instrucciones') renderInstrucciones(e);
   if (e.pantalla === 'caso') renderCaso(e);
   if (e.pantalla === 'resultado') renderResultado(e);
   if (e.pantalla === 'ya-jugado') renderYaJugado();
   if (e.pantalla === 'sin-casos') {
     $('sin-casos-texto').textContent =
-      calendario?.lanzamiento === null ? TEXTOS.sin_casos.sin_lanzamiento : TEXTOS.sin_casos.texto;
+      calendario?.lanzamiento === null ? t().sin_casos.sin_lanzamiento : t().sin_casos.texto;
   }
-  if (e.pantalla === 'error') $('error-texto').textContent = TEXTOS.errores[e.error];
+  if (e.pantalla === 'error') $('error-texto').textContent = t().errores[e.error];
 
   // Foco
   const cambioPantalla = e.pantalla !== ultima.pantalla;
@@ -849,20 +894,17 @@ function abrirFicha(i, conImagen, opener) {
   // Se descifra ahora y no se guarda en ningún sitio.
   const verdad = enVeredicto ? estado.revelada : desofuscar(estado.clave, estado.n, i);
   const sello = selloDe(estado.reto, verdad);
-  const estadoPrueba = TEXTOS.final.estados[estadoDeCodigo(estado.resultados[i])];
+  const estadoPrueba = t().final.estados[estadoDeCodigo(estado.resultados[i])];
 
   if (afirmaciones) {
-    const afirmacion = Array.isArray(estado.textos)
-      ? desofuscarAfirmacion(estado.textos[i], estado.clave, estado.n, i)
-      : null;
-    const ficha = Array.isArray(estado.fichas)
-      ? desofuscarAclaracion(estado.fichas[i], estado.clave, estado.n, i)
-      : null;
-    $('ficha-titulo').textContent = rellenar(TEXTOS.afirmaciones.estado_prueba, { i: i + 1, estado: estadoPrueba });
+    const idioma = estado.idioma;
+    const afirmacion = desofuscarAfirmacion(estado.textos?.[idioma]?.[i], estado.clave, estado.n, i, idioma);
+    const ficha = desofuscarAclaracion(estado.fichas?.[idioma]?.[i], estado.clave, estado.n, i, idioma);
+    $('ficha-titulo').textContent = rellenar(t().afirmaciones.estado_prueba, { i: i + 1, estado: estadoPrueba });
     $('ficha-img').hidden = true;
-    $('ficha-afirmacion').textContent = afirmacion ?? TEXTOS.afirmaciones.no_disponible;
+    $('ficha-afirmacion').textContent = afirmacion ?? t().afirmaciones.no_disponible;
     $('ficha-afirmacion').hidden = false;
-    $('ficha-era').textContent = rellenar(TEXTOS.final.era, { sello });
+    $('ficha-era').textContent = rellenar(t().final.era, { sello });
     $('ficha-confesion-titulo').hidden = true;
     $('ficha-texto').hidden = true;
     pintarAclaracion($('ficha-aclaracion'), $('ficha-aclaracion-texto'), $('ficha-detalles'), ficha);
@@ -871,16 +913,14 @@ function abrirFicha(i, conImagen, opener) {
     if (enVeredicto) {
       textoFicha = estado.ficha;
     } else {
-      textoFicha = Array.isArray(estado.fichas)
-        ? desofuscarFicha(estado.fichas[i], estado.clave, estado.n, i)
-        : null;
+      textoFicha = desofuscarFicha(estado.fichas?.[estado.idioma]?.[i], estado.clave, estado.n, i, estado.idioma);
     }
-    $('ficha-titulo').textContent = rellenar(TEXTOS.final.estado_prueba, { i: i + 1, estado: estadoPrueba });
-    $('ficha-era').textContent = rellenar(TEXTOS.final.era, { sello });
-    $('ficha-texto').textContent = typeof textoFicha === 'string' ? textoFicha : TEXTOS.confesion.no_disponible;
+    $('ficha-titulo').textContent = rellenar(t().final.estado_prueba, { i: i + 1, estado: estadoPrueba });
+    $('ficha-era').textContent = rellenar(t().final.era, { sello });
+    $('ficha-texto').textContent = typeof textoFicha === 'string' ? textoFicha : t().confesion.no_disponible;
     const img = $('ficha-img');
     if (conImagen) {
-      img.alt = rellenar(TEXTOS.final.alt_prueba, { n: i + 1 });
+      img.alt = rellenar(t().final.alt_prueba, { n: i + 1 });
       img.src = rutaPrueba(estado.pruebas[i]);
       img.hidden = false;
     } else {
@@ -916,23 +956,6 @@ $('ficha').addEventListener('close', () => {
   if (boton && boton.isConnected && !boton.closest('[hidden]')) ponerFoco(boton);
 });
 
-// ---- Ayuda (diálogo modal) ----
-// conFoco: devolver el foco al botón que la abrió.
-function cerrarAyuda(conFoco) {
-  const dialogo = $('como-jugar');
-  const opener = abridorAyuda;
-  abridorAyuda = null;
-  if (dialogo.open) dialogo.close();
-  if (conFoco && opener && opener.isConnected) ponerFoco(opener);
-}
-
-// Escape cierra de forma nativa: también devuelve el foco.
-$('como-jugar').addEventListener('close', () => {
-  const opener = abridorAyuda;
-  abridorAyuda = null;
-  if (opener && opener.isConnected && !opener.closest('[hidden]')) ponerFoco(opener);
-});
-
 // ---- Bloqueo de copia en la afirmación (freno casual) [D-102] ----
 for (const tipo of ['copy', 'cut', 'contextmenu', 'dragstart', 'selectstart']) {
   $('afirmacion').addEventListener(tipo, (ev) => ev.preventDefault());
@@ -953,7 +976,7 @@ function iniciarBucleMedianoche() {
     const ahora = new Date();
     const tiempo = formatearCuentaAtras(msHastaMedianoche(ahora));
     if (enResultado) $('resultado-cuenta-atras').textContent = tiempo;
-    else $('ya-jugado-cuenta-atras').textContent = rellenar(TEXTOS.ya_jugado.proximo, { tiempo });
+    else $('ya-jugado-cuenta-atras').textContent = rellenar(t().ya_jugado.proximo, { tiempo });
     if (hoy() !== fechaCarga) {
       bucleMedianoche = null;
       if (enResultado) {
@@ -996,7 +1019,7 @@ async function accionCompartir() {
   if (!partida || partida.estado !== 'terminada') return;
   const afirmaciones = partida.reto === 'afirmaciones';
   const mensaje = textoCompartir({
-    plantilla: afirmaciones ? TEXTOS.compartir.plantilla_afirmaciones : TEXTOS.compartir.plantilla,
+    plantilla: afirmaciones ? t().compartir.plantilla_afirmaciones : t().compartir.plantilla,
     n: partida.n,
     nombreModo: afirmaciones ? undefined : nombreModo(partida.modo),
     resultados: partida.resultados,
@@ -1006,7 +1029,7 @@ async function accionCompartir() {
   const resultado = await compartir(mensaje);
   if (resultado === 'copiado') {
     const aviso = $('compartir-aviso');
-    aviso.textContent = TEXTOS.compartir.copiado;
+    aviso.textContent = t().compartir.copiado;
     aviso.dataset.visible = 'si';
     clearTimeout(avisoCopiado);
     avisoCopiado = setTimeout(() => {
@@ -1033,25 +1056,15 @@ app.addEventListener('click', (e) => {
   const boton = e.target.closest('[data-voto], [data-accion]');
   if (!boton || !app.contains(boton)) return;
   const accion = boton.dataset.accion;
-  if (accion === 'abrir-prueba') {
-    const select = $('selector-prueba-dia');
-    if (modoPrueba && select) location.assign(`?prueba=1&dia=${select.value}&reto=${estado.reto}`);
+  if (accion === 'abrir-reto') {
+    despachar({ tipo: 'ABRIR_RETO', reto: boton.dataset.retoBoton });
     return;
   }
-  if (accion === 'abrir-ayuda') {
-    abridorAyuda = boton;
-    if (!$('como-jugar').open) $('como-jugar').showModal();
-    return;
-  }
-  if (accion === 'cerrar-ayuda') {
-    cerrarAyuda(true);
+  if (accion === 'idioma') {
+    despachar({ tipo: 'CAMBIAR_IDIOMA', idioma: boton.dataset.idioma });
     return;
   }
   if (accion === 'empezar') {
-    const reto = boton.dataset.retoBoton;
-    if (RETOS.includes(reto) && reto !== estado.reto) {
-      despachar({ tipo: 'ELEGIR_RETO', reto });
-    }
     empezar();
     return;
   }
@@ -1073,19 +1086,21 @@ app.addEventListener('click', (e) => {
   }
   const tipo = EVENTOS_ACCION[accion];
   if (tipo) {
-    const desdeResultado = estado.pantalla === 'resultado';
+    const desde = estado.pantalla;
     despachar({ tipo });
-    // Pasada la medianoche con el resultado abierto, la portada recarga el día nuevo.
-    if (tipo === 'VOLVER_PORTADA' && desdeResultado && hoy() !== fechaCarga) despachar({ tipo: 'MEDIANOCHE' });
+    // Pasada la medianoche con el resultado o las instrucciones abiertos, la portada recarga el día nuevo [D-145].
+    if (tipo === 'VOLVER_PORTADA' && (desde === 'resultado' || desde === 'instrucciones') && hoy() !== fechaCarga) {
+      despachar({ tipo: 'MEDIANOCHE' });
+    }
   }
 });
 
 app.addEventListener('change', (e) => {
   if (e.target.matches('input[name="modo"]')) {
-    if (estado.reto !== 'imagenes') despachar({ tipo: 'ELEGIR_RETO', reto: 'imagenes' });
     despachar({ tipo: 'ELEGIR_MODO', modo: e.target.value });
+  } else if (modoPrueba && e.target.id === 'selector-prueba-dia') {
+    location.assign('?prueba=1&dia=' + e.target.value);
   }
-  else if (e.target.matches('input[name="reto"]')) despachar({ tipo: 'ELEGIR_RETO', reto: e.target.value });
 });
 
 document.addEventListener('keydown', (e) => {
@@ -1093,7 +1108,7 @@ document.addEventListener('keydown', (e) => {
   if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
   if (fichaAbierta()) return; // con el diálogo abierto no hay atajos (Escape lo cierra de forma nativa)
   if (estado.pantalla === 'caso' && estado.fase === 'pregunta') {
-    const voto = votoDeTecla(estado.reto, e.key);
+    const voto = votoDeTecla(estado.reto, e.key, estado.idioma);
     if (voto !== null) despachar({ tipo: 'VOTO', voto });
   } else if (estado.pantalla === 'caso' && estado.fase === 'veredicto' && e.key === 'Enter') {
     const foco = document.activeElement;
@@ -1113,7 +1128,7 @@ function sincronizar() {
     renderYaJugado();
     return;
   }
-  if (!['cuenta-atras', 'caso', 'portada'].includes(p)) return;
+  if (!['cuenta-atras', 'caso', 'portada', 'instrucciones'].includes(p)) return;
   for (const reto of RETOS) {
     const actual = estado.retos[reto];
     if (!actual.caso) continue;
@@ -1154,7 +1169,7 @@ document.addEventListener('visibilitychange', () => {
     const ocultoMs = medirOculta(inicio, { perf: performance.now(), fecha: Date.now() });
     despachar({ tipo: 'VOLVIO', ocultoMs, indice: inicio.indice });
   }
-  if (['portada', 'ya-jugado', 'sin-casos'].includes(estado.pantalla) && hoy() !== fechaCarga) {
+  if (['portada', 'instrucciones', 'ya-jugado', 'sin-casos'].includes(estado.pantalla) && hoy() !== fechaCarga) {
     despachar({ tipo: 'MEDIANOCHE' });
     return;
   }
@@ -1173,31 +1188,61 @@ if (!enMemoria) {
   });
 }
 
-// ---- Arranque ----
+// ---- Idioma [D-154] ----
+// Si la URL lleva ?lang=, se actualiza para que recargar no deshaga la elección.
+function ponerIdiomaEnUrl(idioma) {
+  try {
+    const url = new URL(location.href);
+    if (!url.searchParams.has('lang')) return;
+    url.searchParams.set('lang', idioma);
+    history.replaceState(history.state, '', url);
+  } catch {
+    // sin historial: no pasa nada
+  }
+}
+
 function rellenarTextos() {
   for (const el of document.querySelectorAll('[data-texto]')) {
     const valor = texto(el.dataset.texto);
     if (typeof valor === 'string') el.textContent = valor;
   }
+  for (const el of document.querySelectorAll('[data-texto-aria]')) {
+    const valor = texto(el.dataset.textoAria);
+    if (typeof valor === 'string') el.setAttribute('aria-label', valor);
+  }
 }
 
+// aria-pressed de las dos instancias del selector (portada e instrucciones).
+function actualizarSelectorIdioma(idioma) {
+  for (const boton of document.querySelectorAll('[data-accion="idioma"]')) {
+    boton.setAttribute('aria-pressed', boton.dataset.idioma === idioma ? 'true' : 'false');
+  }
+}
+
+// Todo lo que depende del idioma y no se repinta con la pantalla (la pantalla la repinta render).
+function aplicarIdioma() {
+  document.documentElement.lang = estado.idioma;
+  rellenarTextos();
+  actualizarSelectorIdioma(estado.idioma);
+  pintarAvisosFecha();
+  pintarSelectorPrueba();
+}
+
+// ---- Arranque ----
 function arrancar() {
   const lectura = leerConRespaldo(almacenLocal, almacenSesion);
   datos = lectura.datos;
   marcarAlmacen(lectura.disponible);
-  // estadoInicial valida modo y reto y usa los de por defecto si no valen.
-  // En modo prueba manda ?reto= [D-110].
-  const reto = modoPrueba ? (retoDePrueba(location.search) ?? RETO_POR_DEFECTO) : datos.ajustes.reto;
-  estado = estadoInicial({ modo: datos.ajustes.modo, reto });
-  rellenarTextos();
-  ponerPasos(estado.reto);
-  if (fechaFija) {
-    const aviso = $('aviso-previsualizacion');
-    aviso.textContent = rellenar(TEXTOS.avisos.previsualizacion, { fecha: formatearFecha(fechaFija) });
-    aviso.hidden = false;
-  }
-  for (const radio of app.querySelectorAll('input[name="modo"]')) radio.checked = radio.value === estado.modo;
-  for (const radio of app.querySelectorAll('input[name="reto"]')) radio.checked = radio.value === estado.reto;
+  const { idioma, origen } = elegirIdioma({
+    search: location.search,
+    guardado: leerIdioma(almacenIdioma()),
+    lenguas: navigator.languages ?? [navigator.language]
+  });
+  if (origen === 'url') guardarIdioma(almacenIdioma(), idioma);
+  // estadoInicial valida modo, reto e idioma y usa los de por defecto si no valen.
+  estado = estadoInicial({ modo: datos.ajustes.modo, reto: datos.ajustes.reto, idioma });
+  // Los textos se pintan antes de mostrar ninguna pantalla: nunca se ven los del otro idioma.
+  aplicarIdioma();
   app.dataset.modo = estado.modo;
   app.dataset.reto = estado.reto;
   mostrarPantalla('iniciando');

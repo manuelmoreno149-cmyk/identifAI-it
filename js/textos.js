@@ -381,7 +381,7 @@ export const TEXTOS = {
     confesion: {
       titulo: 'La confesión del sospechoso',
       nota: 'La instrucción con la que se creó esta imagen.',
-      leer_entera: 'Leer la confesión completa',
+      leer_entera: 'Leer entera',
       no_disponible: 'La confesión se perdió entre papeles. Qué oportuno.'
     },
 

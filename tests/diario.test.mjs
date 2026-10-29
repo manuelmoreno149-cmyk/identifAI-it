@@ -887,3 +887,98 @@ test('4.17 semillas por idioma: el español lleva el sufijo |es y no comparte fl
   assert.equal(desofuscarFicha(ofuscarFicha('x', k, 1, 0, alea), k, 1, 0, 'fr'), null, 'desofuscar nunca lanza');
   assert.deepEqual(afirmacionesVacias('2000-01'), { version: 2, mes: '2000-01', dias: [] });
 });
+
+
+// ---- Idiomas [3.0, D-154, D-156] ----
+
+import {
+  IDIOMAS,
+  IDIOMA_POR_DEFECTO,
+  LOCALES,
+  idiomaValido,
+  idiomaDeUrl,
+  idiomaDelNavegador,
+  elegirIdioma,
+  temaDelDia
+} from '../js/diario.js';
+
+test('idiomas: constantes y idiomaValido', () => {
+  assert.deepEqual([...IDIOMAS], ['en', 'es']);
+  assert.equal(Object.isFrozen(IDIOMAS), true);
+  assert.equal(IDIOMA_POR_DEFECTO, 'en');
+  assert.deepEqual({ ...LOCALES }, { en: 'en-US', es: 'es-ES' });
+  assert.equal(Object.isFrozen(LOCALES), true);
+  assert.equal(idiomaValido('en'), true);
+  assert.equal(idiomaValido('es'), true);
+  for (const malo of ['ES', 'fr', 'es-ES', '', undefined, null, 5, ['es']]) assert.equal(idiomaValido(malo), false, String(malo));
+});
+
+test('idiomaDeUrl: ?lang= en minúsculas o null', () => {
+  assert.equal(idiomaDeUrl('?lang=es'), 'es');
+  assert.equal(idiomaDeUrl('?lang=en'), 'en');
+  assert.equal(idiomaDeUrl('?prueba=1&lang=ES&dia=2'), 'es');
+  for (const malo of ['?lang=es-ES', '?lang=fr', '?lang=', '', '?idioma=es', undefined, null]) {
+    assert.equal(idiomaDeUrl(malo), null, String(malo));
+  }
+});
+
+test('idiomaDelNavegador: solo mira el primero que sea cadena; es y es-* dan español', () => {
+  assert.equal(idiomaDelNavegador(['es']), 'es');
+  assert.equal(idiomaDelNavegador(['es-ES']), 'es');
+  assert.equal(idiomaDelNavegador(['ES-mx', 'en']), 'es');
+  assert.equal(idiomaDelNavegador(['en-US', 'es']), 'en');
+  assert.equal(idiomaDelNavegador(['fr', 'es']), 'en');
+  assert.equal(idiomaDelNavegador(['esperanto']), 'en');
+  assert.equal(idiomaDelNavegador([5, 'es']), 'es');
+  for (const raro of [[], undefined, null, 'es', {}, [null]]) assert.equal(idiomaDelNavegador(raro), 'en', String(raro));
+});
+
+test('elegirIdioma: ?lang= > guardado > navegador', () => {
+  const lenguas = ['es-ES'];
+  assert.deepEqual(elegirIdioma({ search: '?lang=en', guardado: 'es', lenguas }), { idioma: 'en', origen: 'url' });
+  assert.deepEqual(elegirIdioma({ search: '', guardado: 'en', lenguas }), { idioma: 'en', origen: 'guardado' });
+  assert.deepEqual(elegirIdioma({ search: '?lang=fr', guardado: 'es', lenguas: ['en'] }), { idioma: 'es', origen: 'guardado' });
+  assert.deepEqual(elegirIdioma({ search: '', guardado: null, lenguas }), { idioma: 'es', origen: 'navegador' });
+  assert.deepEqual(elegirIdioma({ search: '', guardado: 'xx', lenguas: ['de'] }), { idioma: 'en', origen: 'navegador' });
+  assert.deepEqual(elegirIdioma(), { idioma: 'en', origen: 'navegador' });
+});
+
+test('formatearFecha con idioma', () => {
+  assert.equal(formatearFecha('2026-11-30', 'en'), 'Nov 30, 2026');
+  assert.equal(formatearFecha('2026-11-30', 'es'), '30 nov 2026');
+  assert.equal(formatearFecha('2026-01-03', 'es'), '3 ene 2026');
+  assert.equal(formatearFecha('2026-12-09', 'es'), '9 dic 2026');
+  assert.equal(formatearFecha('2026-11-03', 'fr'), 'Nov 3, 2026', 'idioma no válido: inglés');
+  assert.equal(formatearFecha('2026-13-01', 'es'), '2026-13-01');
+  assert.equal(formatearFecha('basura', 'es'), 'basura');
+});
+
+test('temaDelDia: tema del día de prueba en el idioma', () => {
+  const t = (en, es) => ({ en, es });
+  assert.equal(temaDelDia({ n: 1, temaImagenes: t('Dogs', 'Perros'), temaAfirmaciones: t('Dogs', 'Perros') }, 'es'), 'Perros');
+  assert.equal(temaDelDia({ n: 1, temaImagenes: t('Dogs', 'Perros'), temaAfirmaciones: t('Cats', 'Gatos') }, 'en'), 'Dogs / Cats');
+  assert.equal(temaDelDia({ n: 1, temaImagenes: t('Dogs', 'Perros'), temaAfirmaciones: t('Cats', 'Gatos') }, 'es'), 'Perros / Gatos');
+  assert.equal(temaDelDia({ n: 2, temaImagenes: null, temaAfirmaciones: t('Cats', 'Gatos') }, 'es'), 'Gatos');
+  assert.equal(temaDelDia({ n: 2, temaImagenes: t('Dogs', 'Perros'), temaAfirmaciones: null }, 'en'), 'Dogs');
+  assert.equal(temaDelDia({ n: 3, temaImagenes: null, temaAfirmaciones: null }, 'en'), '');
+  assert.equal(temaDelDia({ n: 1, temaImagenes: t('Dogs', 'Perros'), temaAfirmaciones: null }, 'fr'), 'Dogs');
+  assert.equal(temaDelDia(null, 'en'), '');
+});
+
+test('vectores fijos en español (4.17), con aleatorio () => 0', () => {
+  const alea = () => 0;
+  const k = 'Mpb9Ycc=';
+  const ficha = "xuUPVchZPp73SkDMWcd3I4FezNuo6PPX6FnE8A4bpwm7L9xm2DfjYIDU5AehDjBievuD9v0It+IyG2dyeGN9v7qdHPmRjF4GRZxSgU2LLPAgn/KWKYHtVBLLkBWGZ7SslxgH0el5C9gOsiCPuknq+F3b+PP/w1a2mldiFMrRyadEeTve2a+WrDKI2NYADMXXrxC5XsO4L9tVCiJ3RwAj959SWD0VmJm1jO0uNEr/Ka7ZMc4t1tbnxw1PlYl/LLpXdkZYD/JGkwg/pxeU8L7VwaluLzQKfdwoo77rUGHHRg69dkjKP96CEoLnQi6PRBHb5kr05lq83brzyQ0fQWDHf6Mox32Kx7E6Og851AHhG9VzHq7ZOOM1kxpPHc0ZHiN2ucgvaC0Y39s2VqUguZFw6CvujgXUYNyt0/EwrontUBC/NIBXnI1KCEhRJaK/BHPEA7oVznUmmtK0eDyFJu6oPd3uTv7l5ao8isx2q1WaQfY4O5lZ9vvIYoXy8lh5Y2ppzkHeSdudVgNpG3PF/wpj6dyNJa6lue+/o7D1QU2MSADrcMeGWGNItXjs/Dnc/c8PsFjvQ9/n2ZLH4MC0mOqY0Ou/Fjr2l2fTmMMBadswkgsg0Lkw7q0DbIuFWWSg5lZx7FN87sB4hfDhchh9M2+tBY0kmfqYWVHEQo4gpYhU1xs=";
+  const afirmacion = "b3nIUjGv4flgVVGh8sB/H0ZAQ011C38AeDZOC5lOjo4oo0G7yMwTohTFDz4ibG2dK3+bAzvbocg0m41quGLCC7nsMbqfEM7PxYh0VqUD5LiYZtmAIfxHUSn131EKKT8vQvWIHqkIBSif4esWkRXZGh/fx2CEjWphZ5YcZv4sXL5maBIbuw27etZvg/v1v6XZHFs/p4EoTnPmfyMqyo+KbxCcjVMXXKIiMJ68oweV/Mg3AIHiDf4tDb187uXm89SlA33si6uzRdVZr9jNbn+LYVB1geb7+8dOoo1jHGamPyxTtNmMLaIgD0h2pQl5WpL2/h5NeADUIMy4GZI21jBXSTh9NbU70f/lQFSU6x6Pf3OTitujolgTV0ex1Pg86qre967yRp5XerSv0Jm0zvE7V7swtzml813186K2VGhH78s8sTE8HV1UlzRG8FAQKArCc5+cRBAXALO3LcNfcLphua6yu1xAcQq+gSr7NSU2XltuWNvSo+PKFpNuXEYhUzwUdXbkC9a0/FgOtRDUPaOU8s/ofuXDhAgZznWDsOVd793t1L+1J3nO0kTzA0ZCvHrrrVppsby6D0B6IAlor/P8GYYOyST6ee2HSTsPvJ/O2qxVsjkMtf4HC7pLwx69xMl4rKjl2xVyNn6nAQUjXSn83S4exoR+jfKhkFi3WgM3OAM=";
+  const aclaracion = "n60tC/SBc+Cbe9r7aXXIjebJBR2nXuC4FkoFoR6N/lWsMScFO7rSKxykmKmX7XncH2z+eM95T6oMmnX+ywsPkTv47Mp5/O64xxDxoen8Y2AwE4tmwn3Sye0uhIzJ8gW+leMOWRYJUTzb+ZylwZC+7wNhV007ytRoe/tU5Zb8CryJvPOM9W8U4Vy8aIrdw8oI2Cd9JwNfXt3VXJxSeEbc6ZZEpos+yRpGklGaTehdDk/PefMNltMnYgTCh9M2kjGAvDAuYLfgoGeKVhl0qQwQKclZtCwHgKOtkcBvIwCDthwLB3vw2QW0py3BhUa8Ejb4l71SVk4ax9RitugEjXvNyDcloeZb2IrLGX9KcMcJ4MS1TxEEwU2Am4/D0rrzM4XNYQLvmem2Cong9TEqF06g1abkXsUvaWr6AkJazoYHaqeTaJth3tcMbKE547rpp0bTWMq8KEs1mUATWVmFFi28ghsPWUWxpXW+KKi9nsT2+e4xfbTYAl3RI4J6gCv1aIZxbY6H1jFjKlcBP6yXxvPXB1dsiSjmPKe5jSlPfmQlLTCKuKCedEP81/HXkowMsCY+7ACC5C1B8uoP/rz62jY9ryt/rGITUR3bqCuni/gIahsYvUXF2ox/SmqRXOKxMUxCKMUfbvznrveOGVW2OtXExK2zMWpKZfUnBJ7ZSPngxhE=";
+  assert.equal(ofuscarFicha('Fotografía real', k, 1, 0, alea, 'es'), ficha);
+  assert.equal(ofuscarAfirmacion('Afirmación de prueba.', k, 1, 0, alea, 'es'), afirmacion);
+  assert.equal(
+    ofuscarAclaracion({ aclaracion: 'Verdad de prueba.', detalles: ['Uno.', 'Dos.'] }, k, 1, 0, alea, 'es'),
+    aclaracion
+  );
+  assert.equal(desofuscarFicha(ficha, k, 1, 0, 'es'), 'Fotografía real');
+  assert.equal(desofuscarAfirmacion(afirmacion, k, 1, 0, 'es'), 'Afirmación de prueba.');
+  assert.deepEqual(desofuscarAclaracion(aclaracion, k, 1, 0, 'es'), { aclaracion: 'Verdad de prueba.', detalles: ['Uno.', 'Dos.'] });
+  for (const bloque of [ficha, afirmacion, aclaracion]) assert.equal(bloque.length, 684);
+});

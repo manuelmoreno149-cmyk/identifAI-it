@@ -1,10 +1,34 @@
 // Almacenamiento local con clave versionada. Ninguna función lanza.
-import { sumarDias } from './diario.js';
+import { sumarDias, idiomaValido } from './diario.js';
 
 export const CLAVE = 'identifaiit.v3';
 export const VERSION = 3;
 export const RETOS = ['imagenes', 'afirmaciones'];
 const CLAVE_PRUEBA = 'identifaiit.prueba';
+
+// Preferencia de idioma [D-154]: clave aparte, fuera de identifaiit.v3 (el idioma no entra en el progreso).
+export const CLAVE_IDIOMA = 'identifaiit.idioma';
+
+// 'en' o 'es' guardado, o null si falta, no es válido o el almacén falla. Nunca lanza.
+export function leerIdioma(almacen = almacenGlobal()) {
+  try {
+    const valor = almacen.getItem(CLAVE_IDIOMA);
+    return idiomaValido(valor) ? valor : null;
+  } catch {
+    return null;
+  }
+}
+
+// true si lo guardó; false si el idioma no es válido o el almacén falla. Nunca lanza.
+export function guardarIdioma(almacen, idioma) {
+  if (!idiomaValido(idioma)) return false;
+  try {
+    almacen.setItem(CLAVE_IDIOMA, idioma);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function almacenGlobal() {
   try {

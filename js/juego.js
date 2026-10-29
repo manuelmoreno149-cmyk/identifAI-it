@@ -1,5 +1,12 @@
 // Reglas del juego y máquina de estados (funciones puras).
-import { desofuscar, desofuscarFicha, desofuscarAfirmacion, desofuscarAclaracion } from './diario.js';
+import {
+  desofuscar,
+  desofuscarFicha,
+  desofuscarAfirmacion,
+  desofuscarAclaracion,
+  idiomaValido,
+  IDIOMA_POR_DEFECTO
+} from './diario.js';
 
 // Milisegundos de observación por prueba; null = sin límite [D-81].
 export const MODOS = Object.freeze({ investigador: null, normal: 3000, perro: 1000 });
@@ -10,10 +17,16 @@ export const VOTOS = { autentica: 0, generada: 1 };
 export const RETOS = Object.freeze(['imagenes', 'afirmaciones']);
 export const RETO_POR_DEFECTO = 'imagenes';
 
-// Teclas de voto por reto [D-122].
+// Teclas de voto por idioma y reto [D-122, D-156]. Congelada en profundidad.
 export const TECLAS = Object.freeze({
-  imagenes: Object.freeze({ r: 'autentica', i: 'generada' }),
-  afirmaciones: Object.freeze({ f: 'autentica', k: 'generada' })
+  en: Object.freeze({
+    imagenes: Object.freeze({ r: 'autentica', i: 'generada' }),
+    afirmaciones: Object.freeze({ f: 'autentica', k: 'generada' })
+  }),
+  es: Object.freeze({
+    imagenes: Object.freeze({ r: 'autentica', i: 'generada' }),
+    afirmaciones: Object.freeze({ d: 'autentica', b: 'generada' })
+  })
 });
 
 // Umbral de una ausencia en Fact or Fake [D-115].
@@ -29,27 +42,18 @@ export function retoValido(reto) {
   return typeof reto === 'string' && RETOS.includes(reto);
 }
 
-// Valor de ?reto= si es válido; si no, null [D-110].
-export function retoDePrueba(search) {
-  try {
-    const valor = new URLSearchParams(typeof search === 'string' ? search : '').get('reto');
-    return retoValido(valor) ? valor : null;
-  } catch {
-    return null;
-  }
+// Voto de una tecla en el reto y el idioma, o null [D-122, D-156].
+export function votoDeTecla(reto, tecla, idioma = IDIOMA_POR_DEFECTO) {
+  if (!idiomaValido(idioma) || !retoValido(reto) || typeof tecla !== 'string' || tecla.length !== 1) return null;
+  const minuscula = tecla.toLowerCase();
+  const tabla = TECLAS[idioma][reto];
+  return Object.hasOwn(tabla, minuscula) ? tabla[minuscula] : null;
 }
 
-// Voto de una tecla en el reto, o null [D-122].
-export function votoDeTecla(reto, tecla) {
-  if (!retoValido(reto) || typeof tecla !== 'string' || tecla.length !== 1) return null;
-  const voto = TECLAS[reto][tecla.toLowerCase()];
-  return voto ?? null;
-}
-
-// Tecla en mayúscula de un voto en el reto, o null.
-export function teclaDeVoto(reto, voto) {
-  if (!retoValido(reto) || typeof voto !== 'string') return null;
-  const par = Object.entries(TECLAS[reto]).find(([, v]) => v === voto);
+// Tecla en mayúscula de un voto en el reto y el idioma, o null.
+export function teclaDeVoto(reto, voto, idioma = IDIOMA_POR_DEFECTO) {
+  if (!idiomaValido(idioma) || !retoValido(reto) || typeof voto !== 'string') return null;
+  const par = Object.entries(TECLAS[idioma][reto]).find(([, v]) => v === voto);
   return par ? par[0].toUpperCase() : null;
 }
 
@@ -128,12 +132,13 @@ export function recortarFicha(texto, max = 90) {
   return { texto: corte.join('').trimEnd() + '…', recortada: true };
 }
 
-export function estadoInicial({ modo, reto } = {}) {
+export function estadoInicial({ modo, reto, idioma } = {}) {
   return {
     pantalla: 'iniciando',
     fase: null,
     reto: retoValido(reto) ? reto : RETO_POR_DEFECTO,
     modo: modoValido(modo) ? modo : MODO_POR_DEFECTO,
+    idioma: idiomaValido(idioma) ? idioma : IDIOMA_POR_DEFECTO,
     retos: {
       imagenes: { caso: null, jugado: false },
       afirmaciones: { caso: null, jugado: false }
@@ -157,7 +162,7 @@ export function estadoInicial({ modo, reto } = {}) {
   };
 }
 
-// Copia del caso del reto elegido (CARGADO, ELEGIR_RETO, VOLVER_PORTADA).
+// Copia del caso del reto elegido (CARGADO, ABRIR_RETO, VOLVER_PORTADA). tema, textos y fichas son {en, es}.
 function copiarCaso(retos, reto) {
   const caso = retos[reto].caso;
   const imagenes = reto === 'imagenes';
@@ -185,19 +190,19 @@ function ponerCodigo(resultados, indice, codigo) {
   return resultados.slice(0, indice) + codigo + resultados.slice(indice + 1);
 }
 
+// Afirmación del índice en el idioma del estado; null si falta el idioma o el bloque (nunca lanza).
 function textoDe(estado, indice) {
-  return Array.isArray(estado.textos) ? desofuscarAfirmacion(estado.textos[indice], estado.clave, estado.n, indice) : null;
+  const bloque = estado.textos?.[estado.idioma]?.[indice];
+  return desofuscarAfirmacion(bloque, estado.clave, estado.n, indice, estado.idioma);
 }
 
 function resolverPrueba(estado, codigo, motivo = null) {
   const i = estado.indice;
-  let ficha = null;
-  if (Array.isArray(estado.fichas)) {
-    ficha =
-      estado.reto === 'afirmaciones'
-        ? desofuscarAclaracion(estado.fichas[i], estado.clave, estado.n, i)
-        : desofuscarFicha(estado.fichas[i], estado.clave, estado.n, i);
-  }
+  const bloque = estado.fichas?.[estado.idioma]?.[i];
+  const ficha =
+    estado.reto === 'afirmaciones'
+      ? desofuscarAclaracion(bloque, estado.clave, estado.n, i, estado.idioma)
+      : desofuscarFicha(bloque, estado.clave, estado.n, i, estado.idioma);
   return {
     ...estado,
     fase: 'veredicto',
@@ -226,14 +231,22 @@ export function transicion(estado, evento) {
     }
     case 'ERROR_CALENDARIO':
       return pantalla === 'iniciando' ? { ...estado, pantalla: 'error', error: 'calendario' } : estado;
-    case 'ELEGIR_RETO':
-      if (pantalla !== 'portada' || !retoValido(evento.reto) || evento.reto === estado.reto) return estado;
-      return { ...estado, ...copiarCaso(estado.retos, evento.reto), reto: evento.reto };
+    case 'ABRIR_RETO': {
+      // Portada -> instrucciones (o ya-jugado si el intento está gastado). No gasta el intento [D-153].
+      if (pantalla !== 'portada' || !retoValido(evento.reto) || !estado.retos[evento.reto].caso) return estado;
+      const base = { ...estado, ...LIMPIO, ...copiarCaso(estado.retos, evento.reto), reto: evento.reto, fecha: null };
+      if (estado.retos[evento.reto].jugado) return { ...base, pantalla: 'ya-jugado' };
+      return { ...base, pantalla: 'instrucciones', indice: 0, resultados: '-----' };
+    }
+    case 'CAMBIAR_IDIOMA':
+      if ((pantalla !== 'portada' && pantalla !== 'instrucciones') || !idiomaValido(evento.idioma)) return estado;
+      return evento.idioma === estado.idioma ? estado : { ...estado, idioma: evento.idioma };
     case 'ELEGIR_MODO':
-      if (pantalla !== 'portada' || !modoValido(evento.modo) || evento.modo === estado.modo) return estado;
+      if (pantalla !== 'instrucciones' || estado.reto !== 'imagenes') return estado;
+      if (!modoValido(evento.modo) || evento.modo === estado.modo) return estado;
       return { ...estado, modo: evento.modo };
     case 'EMPEZAR': {
-      if (pantalla !== 'portada') return estado;
+      if (pantalla !== 'instrucciones') return estado;
       const { caso, jugado } = estado.retos[estado.reto];
       if (!caso) return estado;
       if (jugado) return { ...estado, ...LIMPIO, pantalla: 'ya-jugado' };
@@ -313,7 +326,7 @@ export function transicion(estado, evento) {
         retos: { ...estado.retos, [estado.reto]: { ...estado.retos[estado.reto], jugado: true } }
       };
     case 'VOLVER_PORTADA':
-      if (pantalla !== 'resultado' && pantalla !== 'ya-jugado') return estado;
+      if (pantalla !== 'instrucciones' && pantalla !== 'resultado' && pantalla !== 'ya-jugado') return estado;
       return {
         ...estado,
         ...LIMPIO,
@@ -328,13 +341,13 @@ export function transicion(estado, evento) {
       const retos = estado.retos[evento.reto].jugado
         ? estado.retos
         : { ...estado.retos, [evento.reto]: { ...estado.retos[evento.reto], jugado: true } };
-      if (evento.reto === estado.reto && ['portada', 'cuenta-atras', 'caso'].includes(pantalla)) {
+      if (evento.reto === estado.reto && ['instrucciones', 'cuenta-atras', 'caso'].includes(pantalla)) {
         return { ...estado, ...LIMPIO, retos, pantalla: 'ya-jugado' };
       }
       return retos === estado.retos ? estado : { ...estado, retos };
     }
     case 'MEDIANOCHE':
-      if (pantalla !== 'ya-jugado' && pantalla !== 'sin-casos' && pantalla !== 'portada') return estado;
+      if (!['portada', 'instrucciones', 'ya-jugado', 'sin-casos'].includes(pantalla)) return estado;
       return { ...estado, ...LIMPIO, pantalla: 'iniciando', indice: 0, resultados: '-----', fecha: null };
     default:
       return estado;
