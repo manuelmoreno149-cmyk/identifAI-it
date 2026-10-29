@@ -90,13 +90,6 @@
   }
 }
 
-/* Botones sueltos dentro de papel (selector del modo prueba) */
-#selector-prueba .boton {
-  color: var(--color-tinta);
-  background: var(--color-papel-2);
-  border-color: var(--color-tinta);
-}
-
 .boton:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
@@ -145,18 +138,55 @@
   }
 }
 
+/* ---------- Selector de idioma (portada e instrucciones) ---------- */
+.selector-idioma {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--fuente-titulos);
+}
+
+.selector-idioma button {
+  min-width: var(--tactil-min);
+  min-height: var(--tactil-min);
+  padding: 0 var(--espacio-1);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 1.0625rem;
+  letter-spacing: 0.1em;
+  color: var(--color-texto-suave);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radio-2);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+
+/* El idioma activo se distingue por color y por subrayado */
+.selector-idioma button[aria-pressed="true"] {
+  color: var(--color-ambar);
+  text-decoration-color: currentColor;
+}
+
+@media (hover: hover) {
+  .selector-idioma button[aria-pressed="false"]:hover {
+    color: var(--color-texto);
+  }
+}
+
+.selector-idioma-barra {
+  color: var(--color-texto-suave);
+}
+
 /* ---------- Portada: dos expedientes ---------- */
 .portada-cabecera {
   flex: none;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "marca marca ayuda"
-    "caso tema tema"
-    "prueba prueba prueba";
+  display: flex;
   align-items: center;
-  column-gap: var(--espacio-3);
-  row-gap: 2px;
+  justify-content: space-between;
+  gap: var(--espacio-3);
 }
 
 .portada-marca {
@@ -211,144 +241,245 @@
   content: "\00b7\00a0";
 }
 
-/* Boton "How to play": en movil solo el icono (44 x 44); el texto sigue ahi para lectores */
-.boton-ayuda {
-  grid-area: ayuda;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--espacio-2);
-  min-width: var(--tactil-min);
-  min-height: var(--tactil-min);
-  padding: 0;
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-ambar);
-  background: transparent;
-  border: 2px dashed var(--color-ambar);
-  border-radius: var(--radio-2);
-}
-
-.boton-ayuda:active {
-  transform: translateY(2px);
-}
-
-@media (hover: hover) {
-  .boton-ayuda:hover {
-    background: var(--color-ambar-suave);
-  }
-}
-
-.icono-ayuda {
+/* Dia y tema: "Case #3" en una etiqueta de papel y el tema al lado (o el desplegable del modo prueba) */
+#portada-dia {
   flex: none;
-  width: 1.75rem;
-  height: 1.75rem;
-  background: url("../img/ui/interrogacion.svg") no-repeat center / contain;
-}
-
-.boton-ayuda-texto {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-#portada-retos {
-  flex: 1 1 0;
-  min-width: 0;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--espacio-3);
+  min-width: 0;
 }
 
-#portada-retos legend {
-  padding: 0;
-  margin-bottom: clamp(2px, 1dvh, var(--espacio-2));
+#portada-tema {
+  flex: 1 1 0;
+}
+
+#selector-prueba-dia {
+  flex: 1 1 10rem;
+  min-width: 0;
+  min-height: var(--tactil-min);
+  padding: 0 var(--espacio-2);
+  font: inherit;
   font-family: var(--fuente-datos);
+  font-size: var(--texto-pequeno);
+  color: var(--color-tinta);
+  background: var(--color-papel);
+  border: 2px solid var(--color-tinta);
+  border-radius: var(--radio-1);
+}
+
+#selector-prueba-dia:focus-visible {
+  outline-color: var(--color-foco);
+}
+
+#portada-elige {
+  flex: none;
+  font-family: var(--fuente-datos);
+  font-weight: 400;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
   color: var(--color-ambar);
 }
 
 .retos {
   flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  max-width: 62rem;
+  max-height: 40rem;
+  margin-inline: auto;
+  margin-block: auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: clamp(8px, 1.6dvh, var(--espacio-4));
-  max-height: 34rem;
-  margin-block: auto;
+  gap: clamp(12px, 2.4dvh, var(--espacio-5));
 }
 
-/* Tarjeta de reto: expediente de papel; la elegida lleva borde ambar continuo y la otra, discontinuo */
+/* Tarjeta de reto: expediente de papel con pestana; toda ella es el boton */
 .reto {
   position: relative;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(2px, 0.8dvh, var(--espacio-2));
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(3.5rem, 1fr) auto auto auto auto auto;
+  grid-template-areas:
+    "ilu"
+    "exp"
+    "nom"
+    "desc"
+    "est"
+    "abrir";
+  align-items: center;
+  row-gap: clamp(2px, 0.7dvh, 6px);
   padding: clamp(10px, 2dvh, var(--espacio-4));
+  font: inherit;
+  text-align: left;
   color: var(--color-tinta);
-  background-color: var(--color-papel-2);
-  background-image: url("../img/ui/papel.svg");
-  background-size: 240px 240px;
-  border: 3px dashed var(--color-texto-suave);
-  border-radius: var(--radio-2);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+  border: 0;
+  border-radius: 0 var(--radio-2) var(--radio-1) var(--radio-1);
   box-shadow: var(--sombra-papel);
   cursor: pointer;
-  transition: transform var(--duracion-corta), background-color var(--duracion-corta);
+  container-type: inline-size;
+  transition: transform var(--duracion-corta), box-shadow var(--duracion-corta);
 }
 
-.reto:has(.reto-radio:checked) {
-  background-color: var(--color-papel);
-  border-style: solid;
-  border-color: var(--color-ambar);
-  box-shadow: var(--sombra-papel), 0 0 0 1px var(--color-ambar), 0 0 22px rgba(242, 169, 59, 0.3);
-}
-
-/* Marca de elegida que no depende del color */
-.reto:has(.reto-radio:checked)::after {
+/* Pestana de la carpeta */
+.reto::before {
   content: "";
   position: absolute;
-  top: -0.6rem;
-  right: -0.45rem;
-  width: 1.75rem;
-  height: 1.75rem;
-  background: url("../img/ui/icono-acierto.svg") no-repeat center / contain;
-  pointer-events: none;
+  top: -9px;
+  left: 0;
+  width: 38%;
+  max-width: 7rem;
+  height: 10px;
+  background: var(--color-papel);
+  border-radius: var(--radio-2) var(--radio-2) 0 0;
 }
 
-.reto:has(.reto-radio:focus-visible) {
+@media (hover: hover) {
+  .reto:not(:disabled):hover {
+    transform: translateY(-3px);
+    box-shadow: var(--sombra-papel), 0 0 0 2px var(--color-ambar), 0 0 24px rgba(242, 169, 59, 0.35);
+  }
+}
+
+.reto:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.reto:focus-visible {
   outline: 3px solid var(--color-foco);
   outline-offset: 4px;
 }
 
-/* Foco de los botones que viven sobre papel: el amarillo del foco no se ve sobre papel (1,4:1) */
-.reto .boton:focus-visible {
-  outline-color: var(--color-tinta);
+.reto:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.7);
 }
 
-.reto-radio {
+/* Ilustracion decorativa hecha solo con CSS. Se mide con unidades del contenedor (cqmin) para
+   encoger sin romperse: es lo primero que cede cuando falta sitio (R8) */
+.reto-ilustracion {
+  grid-area: ilu;
+  align-self: stretch;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  container-type: size;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(242, 169, 59, 0.3), transparent 75%), var(--color-fondo-2);
+  border-radius: var(--radio-1);
+  box-shadow: inset 0 0 0 2px var(--color-borde), inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+
+.polaroid {
+  --dx: 0cqmin;
+  --giro: 0deg;
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
+  top: 50%;
+  left: calc(50% + var(--dx));
+  width: 56cqmin;
+  aspect-ratio: 4 / 5;
+  background: var(--color-papel-claro);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) rotate(var(--giro));
 }
 
-.reto-cabecera {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espacio-2);
+.polaroid::before {
+  content: "";
+  position: absolute;
+  inset: 8% 8% 24% 8%;
+  background: var(--foto);
+}
+
+.polaroid:nth-child(1) {
+  --dx: -20cqmin;
+  --giro: -9deg;
+  --foto: radial-gradient(circle at 72% 28%, #f2d08a 0 13%, transparent 14%), linear-gradient(#3f6288 0 62%, #24323a 62%);
+}
+
+.polaroid:nth-child(2) {
+  --giro: 2deg;
+  z-index: 2;
+  --foto: linear-gradient(160deg, #1f3a3a, #6d8f6a);
+}
+
+.polaroid:nth-child(3) {
+  --dx: 20cqmin;
+  --giro: 10deg;
+  --foto: radial-gradient(circle at 35% 45%, #c4572f 0 18%, transparent 19%), linear-gradient(#2a2440, #463a5e);
+}
+
+.ficha-muestra {
+  --dx: -26cqmin;
+  --giro: -5deg;
+  --sello-giro: -9deg;
+  position: absolute;
+  top: 50%;
+  left: calc(50% + var(--dx));
+  width: 50cqmin;
+  height: 64cqmin;
+  background: var(--color-papel-claro);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) rotate(var(--giro));
+}
+
+.ficha-muestra:nth-child(2) {
+  --dx: 26cqmin;
+  --giro: 6deg;
+  --sello-giro: 7deg;
+}
+
+/* Lineas de texto de mentira */
+.ficha-muestra::before {
+  content: "";
+  position: absolute;
+  inset: 14% 12% auto 12%;
+  height: 46%;
+  background: repeating-linear-gradient(180deg, #7b715a 0 2px, transparent 2px 7px);
+}
+
+.ilustracion-sello {
+  position: absolute;
+  z-index: 3;
+  padding: 0 0.35em;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(0.75rem, 15cqmin, 1.5rem);
+  line-height: 1.25;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: var(--color-sello);
+  background: rgba(242, 233, 210, 0.94);
+  border: 2px solid var(--color-sello);
+  border-radius: var(--radio-1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  transform: rotate(-9deg);
+}
+
+.polaroid ~ .ilustracion-sello {
+  left: calc(50% + 2cqmin);
+  bottom: 10%;
+}
+
+.ficha-muestra .ilustracion-sello {
+  right: -14%;
+  bottom: 9%;
+  transform: rotate(var(--sello-giro));
+}
+
+.ficha-muestra:first-child .ilustracion-sello {
+  color: var(--color-hecho);
+  border-color: var(--color-hecho);
 }
 
 .reto-expediente {
+  grid-area: exp;
   font-family: var(--fuente-datos);
   font-size: 0.8125rem;
   letter-spacing: 0.08em;
@@ -356,12 +487,33 @@
   color: var(--color-sello);
 }
 
+.reto-nombre {
+  grid-area: nom;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(1.5rem, min(11cqi, 7dvh), 3.25rem);
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-tinta);
+}
+
+.reto-desc {
+  grid-area: desc;
+  font-family: var(--fuente-cuerpo);
+  font-size: clamp(0.9375rem, 2dvh, 1.0625rem);
+  line-height: 1.3;
+  color: var(--color-tinta-suave);
+}
+
 .reto-estado {
+  grid-area: est;
+  justify-self: start;
   min-width: 0;
   padding: 0 var(--espacio-2);
   font-family: var(--fuente-datos);
   font-size: 0.8125rem;
-  line-height: 1.4;
+  line-height: 1.5;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-tinta);
@@ -373,71 +525,336 @@
   display: none;
 }
 
-.reto-nombre {
-  display: block;
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: clamp(1.75rem, min(9vw, 6.5dvh), 3.5rem);
-  line-height: 1.05;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--color-tinta);
-  cursor: pointer;
-}
-
-.reto-desc {
-  font-size: 0.9375rem;
-  line-height: 1.3;
-  color: var(--color-tinta-suave);
-}
-
-.reto-accion {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(4px, 1dvh, var(--espacio-3));
-}
-
-.reto .boton {
-  position: relative;
-  width: 100%;
-  min-height: var(--tactil-min);
-  font-size: clamp(1.0625rem, 3.2dvh, 1.375rem);
-}
-
-#portada-regla {
-  min-height: var(--tactil-min);
+/* "Open file ->": barra roja de sello en el pie de la tarjeta (decorativa; la tarjeta entera es el boton) */
+.reto-abrir {
+  grid-area: abrir;
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  margin-top: clamp(2px, 0.6dvh, 6px);
   padding: 0 var(--espacio-3);
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-papel);
+  background: var(--color-sello);
+  border-radius: var(--radio-1);
+  box-shadow: var(--sombra-boton);
+}
+
+/* Pie: aviso del dia a la izquierda y creditos a la derecha */
+#portada-pie {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  min-height: var(--tactil-min);
+}
+
+#portada-aviso-dia {
+  flex: 1 1 0;
+  min-width: 0;
   font-family: var(--fuente-datos);
-  font-size: 0.9375rem;
-  line-height: 1.3;
-  color: var(--color-tinta);
-  border: 2px dashed var(--color-tinta-suave);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  color: var(--color-texto-suave);
+}
+
+#portada-creditos {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tactil-min);
+  min-height: var(--tactil-min);
+  padding: 0 var(--espacio-3);
+  font-family: var(--fuente-cuerpo);
+  font-size: var(--texto-pequeno);
+  color: var(--color-texto-suave);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Vertical estrecho y bajo, u horizontal bajo: la ilustracion pasa a un lado y la tarjeta se compacta (R8) */
+@media (max-width: 599px) and (max-height: 760px), (orientation: landscape) and (max-height: 480px) {
+  .reto {
+    grid-template-columns: 6rem minmax(0, 1fr);
+    grid-template-rows: repeat(5, auto);
+    grid-template-areas:
+      "ilu exp"
+      "ilu nom"
+      "ilu desc"
+      "ilu est"
+      "ilu abrir";
+    align-content: center;
+    column-gap: var(--espacio-3);
+    padding: 10px 12px;
+  }
+
+  .reto-nombre {
+    font-size: clamp(1.375rem, min(7vw, 5.5dvh), 2rem);
+  }
+
+  .reto-desc {
+    font-size: 0.9375rem;
+  }
+
+  .reto-abrir {
+    min-height: 2rem;
+    font-size: 1rem;
+  }
+}
+
+/* Horizontal bajo (640 x 360): sin el titulo "Choose your case file" a la vista */
+@media (max-height: 420px) {
+  #portada-elige {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Tarjetas lado a lado en cuanto caben (tambien en horizontal bajo, aunque sea estrecho) */
+@media (min-width: 600px), (orientation: landscape) and (max-height: 480px) {
+  .retos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    max-height: 27rem;
+  }
+}
+
+/* Tarjetas anchas: el estado y "Open file" comparten fila */
+@media (min-width: 900px) and (min-height: 560px) {
+  .reto {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "ilu ilu"
+      "exp exp"
+      "nom nom"
+      "desc desc"
+      "est abrir";
+    column-gap: var(--espacio-3);
+  }
+
+  .reto-abrir {
+    margin-top: 0;
+    padding: 0 var(--espacio-4);
+  }
+}
+
+/* ---------- Instrucciones: carpeta de carton abierta con dos paginas de papel ---------- */
+#pantalla-instrucciones:not([hidden]) {
+  flex: 1 1 0;
+  gap: clamp(4px, 1.2dvh, 10px);
+  padding-block: clamp(6px, 1.5dvh, 14px);
+  padding-inline: clamp(8px, 3vw, 20px);
+  overflow: hidden;
+}
+
+.instrucciones-cabecera {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.boton-volver {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: var(--tactil-min);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding: 0 var(--espacio-3) 0 var(--espacio-2);
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(0.8125rem, 3.6vw, 1rem);
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--color-ambar);
+  background: transparent;
+  border: 2px dashed var(--color-ambar);
   border-radius: var(--radio-2);
 }
 
-/* Modos de Images: tres botones en fila dentro de la tarjeta */
-#portada-modos {
-  min-width: 0;
+.boton-volver:active {
+  transform: translateY(2px);
 }
 
-.modos {
+@media (hover: hover) {
+  .boton-volver:hover {
+    background: var(--color-ambar-suave);
+  }
+}
+
+.boton-volver-flecha {
+  flex: none;
+  font-size: 1.25em;
+  line-height: 1;
+}
+
+/* El logo solo cabe cuando hay ancho de sobra */
+.instrucciones-logo {
+  display: none;
+  flex: none;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-papel);
+  text-shadow: 0 0 24px rgba(242, 169, 59, 0.35);
+}
+
+@media (min-width: 480px) {
+  .instrucciones-logo {
+    display: block;
+  }
+}
+
+.carpeta {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(min-content, 1fr);
+  padding: clamp(5px, 1.2dvh, 12px) clamp(5px, 1.4vw, 12px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.035) 0 2px, transparent 2px 6px),
+    linear-gradient(160deg, var(--color-carton), var(--color-carton-oscuro));
+  border-radius: var(--radio-2);
+  box-shadow: var(--sombra-papel);
+}
+
+.pagina {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3px, 0.8dvh, 8px);
+  padding: clamp(8px, 1.6dvh, 18px) clamp(10px, 3.4vw, 24px);
+  font-family: var(--fuente-datos);
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+}
+
+.pagina :focus-visible {
+  outline-color: var(--color-tinta);
+}
+
+/* En vertical es una sola hoja: la segunda pagina cuelga de la primera por una linea de puntos */
+#instrucciones-briefing {
+  border-radius: var(--radio-1) var(--radio-1) 0 0;
+}
+
+#instrucciones-accion {
+  border-top: 2px dashed var(--color-tinta-suave);
+  border-radius: 0 0 var(--radio-1) var(--radio-1);
+}
+
+#instrucciones-membrete {
+  padding-bottom: 3px;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-sello);
+  border-bottom: 1px solid var(--color-tinta-suave);
+}
+
+#instrucciones-titulo {
+  font-size: clamp(1.5rem, min(7.5vw, 5dvh), 2.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  color: var(--color-sello);
+}
+
+#instrucciones-frase {
+  font-size: 0.9375rem;
+  line-height: 1.3;
+}
+
+#instrucciones-pasos {
+  counter-reset: paso;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.6dvh, 6px);
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+#instrucciones-pasos li {
+  counter-increment: paso;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+#instrucciones-pasos li::before {
+  content: counter(paso) ".";
+  position: absolute;
+  left: 0;
+  color: var(--color-sello);
+}
+
+#instrucciones-firma {
+  margin-top: auto;
+  padding-top: 3px;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  text-align: right;
+  color: var(--color-tinta-azul);
+  border-top: 1px solid rgba(74, 63, 42, 0.5);
+}
+
+/* Titulos de la segunda pagina: METHOD OF INVESTIGATION / HOUSE RULES */
+#instrucciones-modos legend,
+#instrucciones-reglas h3 {
+  padding: 0;
+  margin-bottom: clamp(3px, 0.8dvh, 8px);
+  font-family: var(--fuente-datos);
+  font-weight: 400;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-sello);
+}
+
+/* Los tres modos son casillas de un formulario: la elegida lleva un aspa roja */
+#instrucciones-modos {
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(4px, 1.2vw, var(--espacio-2));
+  gap: 6px;
+}
+
+#instrucciones-modos legend {
+  grid-column: 1 / -1;
 }
 
 .modo {
   position: relative;
+  min-width: 0;
   display: flex;
 }
 
 .modo input {
   position: absolute;
   inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
   margin: 0;
@@ -449,53 +866,37 @@
   position: relative;
   flex: 1;
   min-width: 0;
+  min-height: var(--tactil-min);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1px;
-  min-height: var(--tactil-min);
-  padding: 2px var(--espacio-1);
+  gap: 3px;
+  padding: 6px 4px;
   text-align: center;
   color: var(--color-tinta);
-  background: transparent;
-  border: 2px dashed var(--color-tinta-suave);
-  border-radius: var(--radio-2);
-  transition: background-color var(--duracion-corta), transform var(--duracion-corta);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--color-tinta-suave);
+  border-radius: var(--radio-1);
 }
 
-.modo-nombre {
-  max-width: 100%;
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: clamp(0.8rem, 3.4vw, 1rem);
-  line-height: 1.1;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.modo-desc {
-  font-family: var(--fuente-datos);
-  font-size: 0.8125rem;
-  line-height: 1.1;
+.modo label::before {
+  content: "";
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  background: var(--color-papel-claro);
+  border: 2px solid var(--color-tinta);
+  border-radius: 2px;
 }
 
 .modo input:checked + label {
-  background: var(--color-ambar);
-  border-style: solid;
-  border-color: var(--color-tinta);
-  box-shadow: var(--sombra-boton);
+  background: rgba(155, 28, 28, 0.1);
+  border-color: var(--color-sello);
+  box-shadow: inset 0 0 0 1px var(--color-sello);
 }
 
-.modo input:checked + label::after {
-  content: "";
-  position: absolute;
-  top: -0.45rem;
-  right: -0.3rem;
-  width: 1.125rem;
-  height: 1.125rem;
-  background: url("../img/ui/icono-acierto.svg") no-repeat center / contain;
+.modo input:checked + label::before {
+  background: url("../img/ui/aspa.svg") no-repeat center / 88%, var(--color-papel-claro);
 }
 
 .modo input:focus-visible + label {
@@ -503,151 +904,254 @@
   outline-offset: 2px;
 }
 
-/* Pie: racha a la izquierda y creditos pequenos a la derecha */
-#portada-pie {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espacio-3);
-  min-height: var(--tactil-min);
+.modo-nombre {
+  max-width: 100%;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: clamp(0.75rem, 3.6vw, 0.9375rem);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
-#portada-racha {
+.modo-desc {
   font-family: var(--fuente-datos);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+/* Normas de Fact or Fake */
+#instrucciones-reglas {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 1dvh, 8px);
+}
+
+#instrucciones-reglas h3 {
+  margin-bottom: 0;
+}
+
+#instrucciones-aviso {
+  position: relative;
+  padding: 6px 8px 6px 2.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  color: var(--color-tinta);
+  background: rgba(155, 28, 28, 0.09);
+  border: 2px solid var(--color-sello);
+  border-radius: var(--radio-1);
+}
+
+#instrucciones-aviso::before {
+  content: "!";
+  content: "!" / "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1;
+  color: var(--color-papel);
+  background: var(--color-sello);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+/* Ficha de muestra: no es interactiva y no lleva respuesta */
+#instrucciones-ejemplo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "etq marca"
+    "txt txt"
+    "b1 b2";
+  gap: 3px var(--espacio-2);
+  padding: 6px 10px 8px;
+  color: var(--color-tinta);
+  background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel-claro);
+  box-shadow: 0 0 0 1px rgba(74, 63, 42, 0.5), 0 3px 8px rgba(0, 0, 0, 0.35);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.ejemplo-etiqueta {
+  grid-area: etq;
+  justify-self: start;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-sello);
+}
+
+.ejemplo-marca {
+  grid-area: marca;
+  justify-self: end;
+  font-size: 0.6875rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  color: var(--color-nota);
+}
+
+.ejemplo-texto {
+  grid-area: txt;
+  padding-block: 2px;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.ejemplo-boton {
+  min-height: 2rem;
+  display: grid;
+  place-items: center;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
   font-size: 1rem;
-  color: var(--color-ambar);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-gris-muestra-texto);
+  background: var(--color-gris-muestra);
+  border: 2px dashed #8f8a78;
+  border-radius: var(--radio-2);
+  cursor: default;
+  pointer-events: none;
 }
 
-#portada-creditos {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--tactil-min);
+.ejemplo-boton:nth-of-type(1) {
+  grid-area: b1;
+}
+
+#instrucciones-ejemplo .ejemplo-boton:last-child {
+  grid-area: b2;
+}
+
+/* "Open the case": rojo de sello, siempre visible al final de la pagina de accion (R13: si hay que
+   desplazar la carpeta, el boton se queda pegado abajo) */
+#instrucciones-accion > .boton {
+  position: sticky;
+  bottom: 0;
+  flex: none;
+  width: 100%;
+  margin-top: auto;
   min-height: var(--tactil-min);
-  margin-left: auto;
-  padding: 0 var(--espacio-4);
-  font-family: var(--fuente-cuerpo);
-  font-size: var(--texto-pequeno);
-  color: var(--color-texto-suave);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-size: 1.25rem;
+  color: var(--color-papel);
+  background: var(--color-sello);
+  border-color: var(--color-tinta);
 }
 
-/* Vertical bajo: se comprime primero la descripcion (orden de R8) */
-@media (orientation: portrait) and (max-height: 600px) {
-  .reto-desc {
-    display: none;
-  }
-}
-
-/* Vertical hasta 740 px (360 x 640 con barra de prueba): leyenda solo para lectores y tarjetas mas compactas */
-@media (orientation: portrait) and (max-height: 740px) {
-  #portada-retos legend {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .reto {
-    padding: 10px 12px;
-    gap: 2px;
-  }
-
-  .reto-nombre {
-    font-size: clamp(1.5rem, min(9vw, 4.8dvh), 3.5rem);
-  }
-
-  #portada-pie,
-  #portada-creditos {
-    min-height: var(--tactil-min);
-  }
-}
-
-/* Modo prueba (selector de dias): ocupa sitio, asi que se quita la descripcion en vertical */
-@media (orientation: portrait) {
-  #pantalla-portada:has(#selector-prueba) .reto-desc {
-    display: none;
-  }
-}
-
-/* Tarjetas lado a lado en cuanto caben */
-@media (min-width: 640px) {
-  .portada-cabecera {
-    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, max-content) auto;
-    grid-template-areas:
-      "marca . caso tema ayuda"
-      "prueba prueba prueba prueba prueba";
-  }
-
-  .portada-cabecera h1 {
-    font-size: clamp(1.75rem, min(5vw, 6dvh), 2.75rem);
-  }
-
-  .retos {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1fr);
-    max-height: 26rem;
-  }
-
-  .reto {
-    padding: clamp(12px, 2.4dvh, var(--espacio-5));
-  }
-
-  .reto-nombre {
-    font-size: clamp(1.75rem, min(5.2vw, 7.5dvh), 3.5rem);
-  }
-}
-
-/* Tarjetas lado a lado y estrechas (640 a 899 px): nombres de modo mas pequenos para que quepan en su caja */
-@media (min-width: 640px) and (max-width: 899px) {
-  .modos {
-    gap: 4px;
+/* Diseno ancho (>= 600 px): modos en lista de casillas */
+@media (min-width: 600px) {
+  #instrucciones-modos {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .modo label {
-    padding-inline: 2px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "caja nom"
+      "caja desc";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 0;
+    padding: 4px 10px;
+    text-align: left;
+  }
+
+  .modo label::before {
+    grid-area: caja;
   }
 
   .modo-nombre {
-    font-size: 0.75rem;
-    letter-spacing: 0;
+    grid-area: nom;
+    font-size: 1rem;
   }
 
   .modo-desc {
-    font-size: 0.75rem;
+    grid-area: desc;
   }
 }
 
-@media (min-width: 720px) {
-  .boton-ayuda {
-    padding: 0 var(--espacio-3) 0 var(--espacio-2);
+/* Horizontal ancho: la carpeta se abre con dos paginas de igual alto y lomo central */
+@media (min-width: 600px) and (orientation: landscape) {
+  .carpeta {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-rows: minmax(min-content, 1fr);
   }
 
-  .boton-ayuda-texto {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-    clip-path: none;
+  #instrucciones-briefing {
+    border-radius: var(--radio-1) 0 0 var(--radio-1);
+    box-shadow: inset -16px 0 14px -12px rgba(0, 0, 0, 0.45);
+  }
+
+  #instrucciones-accion {
+    border-top: 0;
+    border-radius: 0 var(--radio-1) var(--radio-1) 0;
+    box-shadow: inset 16px 0 14px -12px rgba(0, 0, 0, 0.45);
   }
 }
 
-/* Horizontal bajo (640 x 360): la leyenda pasa a ser solo para lectores */
-@media (max-height: 420px) {
-  #portada-retos legend {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+/* Mas alto: el texto de la hoja crece */
+@media (min-height: 761px) {
+  #instrucciones-pasos,
+  #instrucciones-firma,
+  #instrucciones-aviso {
+    font-size: 1rem;
+  }
+
+  #instrucciones-frase {
+    font-size: 1.0625rem;
+  }
+
+  #instrucciones-membrete {
+    font-size: 0.8125rem;
+  }
+
+  .modo-desc {
+    font-size: 0.8125rem;
+  }
+
+  .ejemplo-texto {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 900px) and (min-height: 560px) and (orientation: landscape) {
+  #pantalla-instrucciones:not([hidden]) {
+    max-width: 64rem;
+  }
+
+  #instrucciones-pasos,
+  #instrucciones-firma,
+  #instrucciones-aviso {
+    font-size: 1rem;
+  }
+}
+
+/* Horizontal bajo (640 x 360): la frase se omite, el resto de la hoja se apreta */
+@media (orientation: landscape) and (max-height: 420px) {
+  #instrucciones-frase {
+    display: none;
+  }
+
+  .pagina {
+    padding: 6px 12px;
+  }
+
+  #instrucciones-modos legend,
+  #instrucciones-reglas h3 {
+    margin-bottom: 2px;
   }
 }
 
@@ -683,9 +1187,8 @@
   background: url("../img/ui/huella.svg") no-repeat center / contain;
 }
 
-/* ---------- Dialogos: ficha y como jugar ---------- */
-#ficha,
-#como-jugar {
+/* ---------- Dialogo de la ficha ---------- */
+#ficha {
   width: min(36rem, calc(100vw - 2rem));
   max-width: min(36rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
@@ -699,63 +1202,26 @@
   box-shadow: var(--sombra-papel);
 }
 
-#ficha[open],
-#como-jugar[open] {
+#ficha[open] {
   display: flex;
   flex-direction: column;
   gap: var(--espacio-2);
 }
 
-#ficha::backdrop,
-#como-jugar::backdrop {
+#ficha::backdrop {
   background: rgba(5, 8, 13, 0.82);
 }
 
-#ficha :focus-visible,
-#como-jugar :focus-visible {
+#ficha :focus-visible {
   outline-color: var(--color-tinta);
 }
 
-#ficha-titulo,
-#como-jugar-titulo {
+#ficha-titulo {
   font-size: clamp(1.5rem, 6vw, 2rem);
   color: var(--color-sello);
 }
 
-#como-jugar-pasos {
-  counter-reset: paso;
-  display: flex;
-  flex-direction: column;
-  gap: var(--espacio-3);
-  font-size: 1rem;
-  line-height: 1.35;
-}
-
-#como-jugar-pasos li {
-  counter-increment: paso;
-  position: relative;
-  padding-left: 2.5rem;
-  min-height: 1.75rem;
-}
-
-#como-jugar-pasos li::before {
-  content: counter(paso);
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  font-family: var(--fuente-titulos);
-  font-size: 1.125rem;
-  color: var(--color-papel);
-  background: var(--color-sello);
-  border-radius: 50%;
-}
-
-#ficha-cerrar,
-#como-jugar-cerrar {
+#ficha-cerrar {
   align-self: flex-start;
   margin-top: var(--espacio-2);
   color: var(--color-tinta);
@@ -821,6 +1287,12 @@
 }
 
 #caso-tema {
+  /* En espanol el tema ("Caso del dia: Fuegos artificiales") es mas largo: hasta dos lineas */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
   font-size: 0.875rem;
   line-height: 1.25;
   color: var(--color-ambar);
@@ -2254,13 +2726,13 @@
   font-family: var(--fuente-datos);
 }
 
-.dato {
+.cifra {
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.dato-etiqueta {
+.cifra-etiqueta {
   font-size: 0.75rem;
   line-height: 1.2;
   letter-spacing: 0.06em;
@@ -2268,13 +2740,13 @@
   color: var(--color-texto-suave);
 }
 
-.dato-valor {
+.cifra-valor {
   font-size: 1.125rem;
   line-height: 1.25;
   color: var(--color-texto);
 }
 
-.dato-ambar {
+.cifra-ambar {
   color: var(--color-ambar);
   font-variant-numeric: tabular-nums;
 }
@@ -2398,8 +2870,8 @@
   #resultado-mensaje {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
     overflow: hidden;
     font-size: 14px;
     line-height: 1.25;
@@ -2565,14 +3037,14 @@
     align-items: end;
   }
 
-  .dato-etiqueta {
+  .cifra-etiqueta {
     font-size: 0.6875rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .dato-valor {
+  .cifra-valor {
     font-size: 1rem;
     line-height: 1.2;
     white-space: nowrap;
@@ -2591,12 +3063,14 @@
     gap: clamp(0.25rem, 1.8vw, 0.5rem);
     font-size: clamp(0.8125rem, 4vw, 1.125rem);
     letter-spacing: 0.04em;
-    line-height: 1;
-    white-space: nowrap;
+    line-height: 1.05;
+    white-space: normal;
   }
 
+  /* "Compartir resultado" cabe en dos lineas dentro de los 52 px del boton */
   #resultado-pie .acciones .boton .boton-texto {
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
   }
 
   #resultado-pie .acciones .icono-compartir {
@@ -2642,7 +3116,7 @@
     grid-template-columns: repeat(2, minmax(7.5rem, 11rem));
   }
 
-  .dato-valor {
+  .cifra-valor {
     font-size: 1.125rem;
   }
 }
@@ -2660,7 +3134,7 @@
     grid-template-columns: repeat(2, minmax(8.5rem, 11rem));
   }
 
-  .dato-valor {
+  .cifra-valor {
     font-size: 1.25rem;
   }
 }
@@ -2800,23 +3274,16 @@
 }
 
 @media (max-height: 420px) {
-  #ficha,
-  #como-jugar {
+  #ficha {
     padding: var(--espacio-2) var(--espacio-4);
   }
 
-  #ficha[open],
-  #como-jugar[open] {
+  #ficha[open] {
     gap: var(--espacio-1);
   }
 
-  #ficha-titulo,
-  #como-jugar-titulo {
+  #ficha-titulo {
     font-size: 1.25rem;
-  }
-
-  #como-jugar-pasos {
-    gap: var(--espacio-2);
   }
 
   #ficha-afirmacion {
@@ -2919,59 +3386,6 @@
   line-height: 1.2;
 }
 
-/* Modo prueba [D-70]: una fila (select + boton) bajo la cabecera de la portada; la etiqueta queda solo para lectores */
-#selector-prueba {
-  grid-area: prueba;
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--espacio-2);
-  margin-top: var(--espacio-1);
-  padding: 2px var(--espacio-2);
-  font-family: var(--fuente-datos);
-  font-size: var(--texto-pequeno);
-  color: var(--color-tinta);
-  background: var(--color-papel);
-  border: 1px dashed var(--color-tinta-suave);
-  border-radius: var(--radio-1);
-}
-
-#selector-prueba label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-#selector-prueba-dia {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: var(--tactil-min);
-  padding: 0 var(--espacio-2);
-  font: inherit;
-  color: var(--color-tinta);
-  background: var(--color-papel-2);
-  border: 2px solid var(--color-tinta);
-  border-radius: var(--radio-1);
-}
-
-#selector-prueba .boton {
-  min-height: var(--tactil-min);
-  flex: none;
-  padding: 0 var(--espacio-3);
-  font-size: 0.9375rem;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-#selector-prueba :focus-visible {
-  outline-color: var(--color-tinta);
-  outline-offset: 2px;
-}
-
 /* ---------- Escritorio ---------- */
 @media (min-width: 768px) {
   .acciones {
@@ -2983,6 +3397,16 @@
     flex: 1;
     max-width: 16rem;
   }
+}
+
+/* ---------- Espanol (R20): textos mas largos, solo ajustes de composicion ---------- */
+:lang(es) .cifra-etiqueta,
+:lang(es) #resultado-reto {
+  letter-spacing: 0;
+}
+
+:lang(es) .modo-nombre {
+  letter-spacing: 0;
 }
 
 /* ---------- Pagina de creditos (2.7) ---------- */
