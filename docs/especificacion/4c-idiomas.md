@@ -180,7 +180,7 @@ plantilla_afirmaciones: 'identifAI-it ¿Dato o Bulo? #{caso}\n{aciertos}/5 {cuad
 - El texto sale en el idioma activo al pulsar Share; `{modo}` = `TEXTOS[idioma].portada.modo_*`; el resto como en la 2.1 (mismo `n`, misma racha, mismos cuadros, sin tema ni contenido). `{url}` = `urlDelJuego()`, sin `?lang=`.
 - No revela qué pruebas eran IA, FAKE o BULO. Excepciones de palabras: "identifAI-it" y el nombre del reto en la primera línea ("Fact or Fake" / "¿Dato o Bulo?"); "Fake", "Dato" y "Bulo" no aparecen en ninguna otra parte; "IA", "REAL" y "DATO" no aparecen como palabra suelta fuera de ese nombre.
 
-Ejemplos en español, en `https://usuario.github.io/identifAI-it/`:
+Ejemplos en español, en `https://identifaiit.com/`:
 
 Imágenes, caso 12, modo `perro`, `AAFAF`, racha 3:
 ```
@@ -188,7 +188,7 @@ identifAI-it Imágenes #12
 Modo: Sabueso
 3/5 🟩🟩🟥🟩🟥
 Racha: 3
-https://usuario.github.io/identifAI-it/
+https://identifaiit.com/
 ```
 
 ¿Dato o Bulo?, caso 12, `FAAAA`, racha 5:
@@ -196,5 +196,5 @@ https://usuario.github.io/identifAI-it/
 identifAI-it ¿Dato o Bulo? #12
 4/5 🟥🟩🟩🟩🟩
 Racha: 5
-https://usuario.github.io/identifAI-it/
+https://identifaiit.com/
 ```

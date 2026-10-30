@@ -55,7 +55,7 @@ Parte de la especificación 2.1 (índice en `docs/ESPECIFICACION.md`) [D-120]. S
 43. [1.3] Sustituido por los criterios 126 a 128 y 182.
 44. Contraste AA y foco visible en todos los controles (también fichas de reto y botones numerados), y contraste AA de `#caso-aviso` y de los sellos FACT y FAKE.
 45. [2.1] Con `prefers-reduced-motion: reduce`, sin animación de sellos (de los dos retos), sobre ni sacudidas.
-46. Rutas relativas; funciona bajo `/identifAI-it/` (también `data/facts/{mes}.json`).
+46. Rutas relativas; funciona en la raíz de `https://identifaiit.com/` y bajo una subcarpeta como `/identifAI-it/` (también `data/facts/{mes}.json`).
 47. [2.1] Antes de responder, el DOM no contiene la verdad ni la ficha (1.3) y, en Fact or Fake: `#veredicto` sin `data-estado` ni `data-verdad`, `#veredicto-aclaracion` oculto y vacío, y ningún atributo depende de la verdad.
 48. Todas las peticiones van al mismo origen.
 49. [2.1] CSP de 2.4 sin violaciones en una partida completa de cada reto.

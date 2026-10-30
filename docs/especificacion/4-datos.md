@@ -202,7 +202,7 @@ plantilla_afirmaciones: 'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadro
 - No incluye tema, fichas, afirmaciones, aclaraciones, detalles, prompts ni el mensaje final, y no revela qué pruebas eran IA o FAKE: solo acierto o fallo por posición. Un fallo por ausencia es un `🟥` como cualquier otro. [2.1] La palabra "Fake" solo aparece en el nombre del reto.
 - **Mensaje final del resultado** [D-134]: no se comparte, pero se elige con el mismo criterio de reto que la plantilla: `#resultado-mensaje` = `mensajeFinal(aciertos, mensajesDelReto(estado.reto, TEXTOS.final))`, es decir, `final.mensajes` en Images y `final.mensajes_afirmaciones` en Fact or Fake (3.1, 3.3). `ya-jugado` no muestra mensaje.
 
-Ejemplos literales completos, en `https://usuario.github.io/identifAI-it/`:
+Ejemplos literales completos, en `https://identifaiit.com/`:
 
 Images, caso 12, modo `perro`, `AAFAF`, racha 3:
 ```
@@ -210,7 +210,7 @@ identifAI-it Images #12
 Mode: Bloodhound
 3/5 🟩🟩🟥🟩🟥
 Streak: 3
-https://usuario.github.io/identifAI-it/
+https://identifaiit.com/
 ```
 
 Fact or Fake, caso 12, `FAAAA`, racha 5:
@@ -218,7 +218,7 @@ Fact or Fake, caso 12, `FAAAA`, racha 5:
 identifAI-it Fact or Fake #12
 4/5 🟥🟩🟩🟩🟩
 Streak: 5
-https://usuario.github.io/identifAI-it/
+https://identifaiit.com/
 ```
 
 `compartir(texto, nav)`: sin cambios (share → portapapeles → `#compartir-manual`).

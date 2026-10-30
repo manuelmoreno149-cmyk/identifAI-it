@@ -72,6 +72,7 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 | `index.html` | sí | Todas las pantallas (también `instrucciones`) y el diálogo de ficha. Ya no hay `dialog#como-jugar` [D-152]. |
 | `creditos.html`, **`creditos.es.html`** | sí | Créditos estáticos, sin JS, en inglés y en español, generados por `herramientas/creditos.mjs` [D-39, D-129, D-161]. |
 | `.nojekyll` | sí | Vacío. |
+| `CNAME` | sí | Lo crea GitHub al conectar el dominio: `identifaiit.com`. No se toca a mano [D-170]. |
 | `css/variables.css`, `css/base.css`, `css/componentes.css` | sí | |
 | `fonts/` | sí | Sin cambios (las dos fuentes cubren los caracteres del español: á é í ó ú ü ñ ¿ ¡; lo comprueba la tarea 100) [D-29, D-40]. |
 | `js/` | sí | `main.js`, `juego.js`, `temporizador.js`, `diario.js`, `almacen.js`, `compartir.js`, `textos.js`. Sin archivos nuevos. |

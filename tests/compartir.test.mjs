@@ -4,21 +4,21 @@ import { CUADROS, rellenar, cuadros, textoCompartir, urlDelJuego, compartir } fr
 import { TEXTOS } from '../js/textos.js';
 import { IDIOMAS } from '../js/diario.js';
 
-const URL_JUEGO = 'https://usuario.github.io/identifAI-it/';
+const URL_JUEGO = 'https://identifaiit.com/';
 
 // Ejemplos literales de la sección 7 (4c-idiomas.md, 4.24).
 const EJEMPLOS = {
   en: {
     imagenes:
-      'identifAI-it Images #12\nMode: Bloodhound\n3/5 🟩🟩🟥🟩🟥\nStreak: 3\nhttps://usuario.github.io/identifAI-it/',
+      'identifAI-it Images #12\nMode: Bloodhound\n3/5 🟩🟩🟥🟩🟥\nStreak: 3\nhttps://identifaiit.com/',
     afirmaciones:
-      'identifAI-it Fact or Fake #12\n4/5 🟥🟩🟩🟩🟩\nStreak: 5\nhttps://usuario.github.io/identifAI-it/'
+      'identifAI-it Fact or Fake #12\n4/5 🟥🟩🟩🟩🟩\nStreak: 5\nhttps://identifaiit.com/'
   },
   es: {
     imagenes:
-      'identifAI-it Imágenes #12\nModo: Sabueso\n3/5 🟩🟩🟥🟩🟥\nRacha: 3\nhttps://usuario.github.io/identifAI-it/',
+      'identifAI-it Imágenes #12\nModo: Sabueso\n3/5 🟩🟩🟥🟩🟥\nRacha: 3\nhttps://identifaiit.com/',
     afirmaciones:
-      'identifAI-it ¿Dato o Bulo? #12\n4/5 🟥🟩🟩🟩🟩\nRacha: 5\nhttps://usuario.github.io/identifAI-it/'
+      'identifAI-it ¿Dato o Bulo? #12\n4/5 🟥🟩🟩🟩🟩\nRacha: 5\nhttps://identifaiit.com/'
   }
 };
 
@@ -193,6 +193,8 @@ test('37. urlDelJuego', () => {
     'https://u.github.io/identifAI-it/'
   );
   assert.equal(urlDelJuego({ origin: 'http://localhost:3000', pathname: '/' }), 'http://localhost:3000/');
+  assert.equal(urlDelJuego({ origin: 'https://identifaiit.com', pathname: '/index.html' }), 'https://identifaiit.com/');
+  assert.equal(urlDelJuego({ origin: 'https://identifaiit.com', pathname: '/', search: '?prueba=1&dia=3' }), 'https://identifaiit.com/');
   assert.equal(
     urlDelJuego({ origin: 'https://u.github.io', pathname: '/identifAI-it/index.html', search: '?prueba=1&dia=3' }),
     'https://u.github.io/identifAI-it/'

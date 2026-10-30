@@ -16,7 +16,7 @@ Juego web diario (estilo Wordle) con dos retos: Images (cada día se muestran 5 
 
 ## Stack y restricciones
 - HTML + CSS + JavaScript puro con módulos ES. Sin frameworks, sin build, sin dependencias en el navegador.
-- Se publica en GitHub Pages bajo /identifAI-it/: usar siempre rutas relativas.
+- Se publica en GitHub Pages con dominio propio, https://identifaiit.com (archivo CNAME en la raíz): el juego vive en la raíz del dominio. Usar siempre rutas relativas (sin / inicial), así también funciona en una subcarpeta.
 - Node (20 o superior) solo para herramientas/ y tests/. Única dependencia permitida: sharp.
 - Móvil primero (360 px). Accesible: teclado (Images: R = real, I = IA, en los dos idiomas; Fact or Fake: F = fact, K = fake en inglés, D = dato, B = bulo en español), contraste AA, aria-live para el temporizador y el sobre, prefers-reduced-motion.
 - Interfaz en inglés americano (en-US) y español de España (es-ES), con selector EN | ES. La primera vez se elige por el idioma del navegador (español si empieza por "es"; si no, inglés); después se recuerda en localStorage, y ?lang=es o ?lang=en lo fuerza. El idioma cambia todo lo que ve el jugador: textos, <html lang>, aria-labels, alt, temas, afirmaciones, verdades, detalles, prompts, créditos, texto compartido y fechas. Lo interno (spec, decisiones, comentarios, mensajes de los scripts y commits) se queda en español.
