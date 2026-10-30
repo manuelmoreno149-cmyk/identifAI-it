@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<title>identifAI-it: daily game to spot AI images and fake facts</title>
+<meta name="description" content="Real or AI game and daily fact or fake game: spot the AI image and the fake claim. Two cases a day, same for everyone.">
+<link rel="canonical" href="https://identifaiit.com/en/">
+<link rel="alternate" hreflang="en" href="https://identifaiit.com/en/">
+<link rel="alternate" hreflang="es" href="https://identifaiit.com/es/">
+<link rel="alternate" hreflang="x-default" href="https://identifaiit.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="identifAI-it">
+<meta property="og:title" content="identifAI-it: daily game to spot AI images and fake facts">
+<meta property="og:description" content="Real or AI game and daily fact or fake game: spot the AI image and the fake claim. Two cases a day, same for everyone.">
+<meta property="og:url" content="https://identifaiit.com/en/">
+<meta property="og:image" content="https://identifaiit.com/img/og/portada-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="identifAI-it: a daily case file with photos and claims to judge.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../img/ui/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/variables.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/componentes.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"identifAI-it","url":"https://identifaiit.com/","inLanguage":"en"}</script>
+<script type="module" src="../js/main.js"></script>
+</head>
+<body data-pagina="juego">
+<main id="app" data-pantalla="portada" data-reto="imagenes" data-modo="normal">
+
+  <!-- Portada: dos expedientes -->
+  <section class="pantalla" id="pantalla-portada" hidden>
+    <div class="cinta-peligro" aria-hidden="true"></div>
+    <header class="portada-cabecera">
+      <div class="portada-marca">
+        <h1 tabindex="-1" data-foco data-texto="portada.titulo">identifAI-it</h1>
+        <p class="portada-lema" data-texto="portada.lema">Two cases a day. Spot the fake.</p>
+      </div>
+      <div class="selector-idioma" role="group" data-texto-aria="portada.idioma" aria-label="Language">
+        <button type="button" data-accion="idioma" data-idioma="en" lang="en" aria-label="English" aria-pressed="true">EN</button>
+        <span class="selector-idioma-barra" aria-hidden="true">|</span>
+        <button type="button" data-accion="idioma" data-idioma="es" lang="es" aria-label="Español" aria-pressed="false">ES</button>
+      </div>
+    </header>
+    <div id="portada-dia">
+      <p id="portada-caso"></p>
+      <p id="portada-tema"></p>
+    </div>
+    <h2 id="portada-elige" data-texto="portada.elige_reto">Choose your case file</h2>
+    <div class="retos">
+
+      <button type="button" class="reto" data-accion="abrir-reto" data-reto-boton="imagenes" aria-labelledby="reto-imagenes-nombre" aria-describedby="reto-imagenes-desc reto-imagenes-estado">
+        <span class="reto-ilustracion" aria-hidden="true">
+          <span class="polaroid"></span>
+          <span class="polaroid"></span>
+          <span class="polaroid"></span>
+          <span class="ilustracion-sello" data-texto="portada.sello_ilustracion">AI?</span>
+        </span>
+        <span class="reto-expediente" data-texto="portada.expediente_imagenes">CASE FILE · 01/02</span>
+        <span class="reto-nombre" id="reto-imagenes-nombre" data-texto="portada.reto_imagenes">Images</span>
+        <span class="reto-desc" id="reto-imagenes-desc" data-texto="portada.desc_reto_imagenes">Five photos. Spot the AI ones.</span>
+        <span class="reto-estado" id="reto-imagenes-estado"></span>
+        <span class="reto-abrir" aria-hidden="true"><span data-texto="portada.abrir">Open file</span><span class="icono-flecha" aria-hidden="true"></span></span>
+      </button>
+
+      <button type="button" class="reto" data-accion="abrir-reto" data-reto-boton="afirmaciones" aria-labelledby="reto-afirmaciones-nombre" aria-describedby="reto-afirmaciones-desc reto-afirmaciones-estado">
+        <span class="reto-ilustracion" aria-hidden="true">
+          <span class="ficha-muestra"><span class="ilustracion-sello" data-texto="afirmaciones.sello_autentica">FACT</span></span>
+          <span class="ficha-muestra"><span class="ilustracion-sello" data-texto="afirmaciones.sello_generada">FAKE</span></span>
+        </span>
+        <span class="reto-expediente" data-texto="portada.expediente_afirmaciones">CASE FILE · 02/02</span>
+        <span class="reto-nombre" id="reto-afirmaciones-nombre" data-texto="portada.reto_afirmaciones">Fact or Fake</span>
+        <span class="reto-desc" id="reto-afirmaciones-desc" data-texto="portada.desc_reto_afirmaciones">Five claims. Spot the fakes.</span>
+        <span class="reto-estado" id="reto-afirmaciones-estado"></span>
+        <span class="reto-abrir" aria-hidden="true"><span data-texto="portada.abrir">Open file</span><span class="icono-flecha" aria-hidden="true"></span></span>
+      </button>
+
+    </div>
+    <aside id="anuncio-portada" class="anuncio" data-texto-aria="anuncios.etiqueta" aria-label="Advertisement" hidden></aside>
+    <footer id="portada-pie">
+      <p id="portada-aviso-dia" data-texto="portada.pie">New cases every day at midnight.</p>
+      <nav id="portada-enlaces" data-texto-aria="pie.etiqueta" aria-label="Site">
+        <a data-enlace="sobre" href="about/" data-texto="pie.corto_sobre">About</a>
+        <a data-enlace="como_jugar" href="how-to-play/" data-texto="pie.corto_como_jugar">Rules</a>
+        <a data-enlace="archivo" href="archive/" data-texto="pie.corto_archivo">Archive</a>
+        <a data-enlace="privacidad" href="privacy/" data-texto="pie.corto_privacidad">Privacy</a>
+        <a id="portada-creditos" data-enlace="creditos" href="credits/" data-texto="pie.corto_creditos">Credits</a>
+      </nav>
+    </footer>
+  </section>
+
+  <!-- Instrucciones: carpeta abierta con el briefing y la pagina de accion -->
+  <section class="pantalla" id="pantalla-instrucciones" hidden>
+    <header class="instrucciones-cabecera">
+      <button type="button" class="boton-volver" data-accion="volver-portada">
+        <span class="boton-volver-flecha" aria-hidden="true">←</span><span class="boton-texto" data-texto="instrucciones.volver">All case files</span>
+      </button>
+      <p class="instrucciones-logo" data-texto="portada.titulo">identifAI-it</p>
+      <div class="selector-idioma" role="group" data-texto-aria="portada.idioma" aria-label="Language">
+        <button type="button" data-accion="idioma" data-idioma="en" lang="en" aria-label="English" aria-pressed="true">EN</button>
+        <span class="selector-idioma-barra" aria-hidden="true">|</span>
+        <button type="button" data-accion="idioma" data-idioma="es" lang="es" aria-label="Español" aria-pressed="false">ES</button>
+      </div>
+    </header>
+    <div class="carpeta-caja">
+    <p class="carpeta-pestana" aria-hidden="true">
+      <span data-reto-nombre="imagenes" data-texto="instrucciones.pestana_imagenes">Case file 01 · Images</span>
+      <span data-reto-nombre="afirmaciones" data-texto="instrucciones.pestana_afirmaciones">Case file 02 · Fact or Fake</span>
+    </p>
+    <div class="carpeta">
+      <article class="pagina" id="instrucciones-briefing" aria-labelledby="instrucciones-titulo">
+        <p id="instrucciones-membrete"></p>
+        <h2 id="instrucciones-titulo" tabindex="-1" data-foco>
+          <span data-reto-nombre="imagenes" data-texto="portada.reto_imagenes">Images</span>
+          <span data-reto-nombre="afirmaciones" data-texto="portada.reto_afirmaciones">Fact or Fake</span>
+        </h2>
+        <p id="instrucciones-frase">
+          <span data-reto-nombre="imagenes" data-texto="instrucciones.frase_imagenes">Five photos. One call each: real or AI.</span>
+          <span data-reto-nombre="afirmaciones" data-texto="instrucciones.frase_afirmaciones">A true fact or a clever lie?</span>
+        </p>
+        <ol id="instrucciones-pasos"></ol>
+        <p id="instrucciones-firma" data-texto="instrucciones.firma">One try per day. — The Chief</p>
+      </article>
+      <div class="pagina" id="instrucciones-accion">
+        <span class="carpeta-clip" aria-hidden="true"></span>
+        <fieldset id="instrucciones-modos">
+          <legend data-texto="instrucciones.metodo">METHOD OF INVESTIGATION</legend>
+          <div class="modo">
+            <input type="radio" name="modo" id="modo-investigador" value="investigador">
+            <label for="modo-investigador"><span class="modo-nombre" data-texto="portada.modo_investigador">Investigator</span><span class="modo-desc" data-texto="portada.desc_investigador">No time limit</span></label>
+          </div>
+          <div class="modo">
+            <input type="radio" name="modo" id="modo-normal" value="normal">
+            <label for="modo-normal"><span class="modo-nombre" data-texto="portada.modo_normal">Normal</span><span class="modo-desc" data-texto="portada.desc_normal">3 seconds to examine</span></label>
+          </div>
+          <div class="modo">
+            <input type="radio" name="modo" id="modo-perro" value="perro">
+            <label for="modo-perro"><span class="modo-nombre" data-texto="portada.modo_perro">Bloodhound</span><span class="modo-desc" data-texto="portada.desc_perro">1 second to examine</span></label>
+          </div>
+        </fieldset>
+        <div id="instrucciones-reglas">
+          <h3 data-texto="instrucciones.reglas">HOUSE RULES</h3>
+          <div id="instrucciones-aviso-caja">
+            <span class="aviso-icono" aria-hidden="true"></span>
+            <p class="aviso-titulo" data-texto="instrucciones.aviso_titulo">Stay on the case</p>
+            <p id="instrucciones-aviso" data-texto="afirmaciones.aviso_oculta">Leaving the page for more than a few seconds counts as a miss.</p>
+          </div>
+          <div id="instrucciones-ejemplo" aria-hidden="true">
+            <p class="ejemplo-etiqueta" data-texto="instrucciones.ejemplo_etiqueta">EXHIBIT FOR TRAINING PURPOSES</p>
+            <p class="ejemplo-texto" data-texto="instrucciones.ejemplo">Bronze is an alloy of copper and tin, used for tools long before iron.</p>
+            <p class="ejemplo-marca" data-texto="afirmaciones.marca">identifAI-it · Fact or Fake?</p>
+            <span class="ejemplo-boton" data-texto="afirmaciones.boton_autentica">FACT</span>
+            <span class="ejemplo-boton" data-texto="afirmaciones.boton_generada">FAKE</span>
+          </div>
+        </div>
+        <button type="button" class="boton boton-primario" data-accion="empezar">
+          <span class="boton-texto" data-texto="instrucciones.boton_empezar">Open the case</span>
+        </button>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- Cargando -->
+  <section class="pantalla" id="pantalla-cargando" hidden>
+    <div class="centrado">
+      <div class="lupa-giro" aria-hidden="true"></div>
+      <p role="status" tabindex="-1" data-foco data-texto="cargando.texto">Preparing the case evidence...</p>
+    </div>
+  </section>
+
+  <!-- Cuenta atras -->
+  <section class="pantalla" id="pantalla-cuenta-atras" hidden>
+    <div class="centrado">
+      <p tabindex="-1" data-foco data-texto="cuenta_atras.aviso">Steady your eyes. The first piece of evidence arrives in:</p>
+      <p id="cuenta-atras-numero" aria-live="assertive"></p>
+    </div>
+  </section>
+
+  <!-- Caso -->
+  <section class="pantalla" id="pantalla-caso" data-fase="pregunta" data-tapada="no" hidden>
+    <header id="caso-cabecera">
+      <div id="caso-titulo">
+        <p id="caso-reto">
+          <span data-reto-nombre="imagenes" data-texto="portada.reto_imagenes">Images</span>
+          <span data-reto-nombre="afirmaciones" data-texto="portada.reto_afirmaciones">Fact or Fake</span>
+        </p>
+        <p id="caso-tema"></p>
+      </div>
+      <p id="caso-etiqueta" class="solo-lectores" tabindex="-1" data-foco></p>
+      <ol id="caso-progreso" aria-hidden="true">
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+      </ol>
+      <div id="caso-puntuacion">
+        <p id="caso-modo"></p>
+        <p id="caso-marcador"></p>
+      </div>
+      <p id="caso-aviso" data-texto="afirmaciones.aviso_oculta" hidden>Leaving the page for more than a few seconds counts as a miss.</p>
+    </header>
+    <div id="caso-escena">
+      <!-- Images: la foto, el sobre sellado y, en la revelacion, la etiqueta y el sello sobre sus esquinas -->
+      <div id="prueba-vitrina">
+        <div id="prueba-caja">
+          <figure id="prueba-marco"></figure>
+          <div id="prueba-sobre" hidden aria-hidden="true">
+            <p id="prueba-sobre-texto" data-texto="partida.sobre_texto">SEALED EVIDENCE</p>
+          </div>
+          <p id="prueba-etiqueta" aria-hidden="true"></p>
+          <p id="prueba-sello" aria-hidden="true"></p>
+        </div>
+      </div>
+      <!-- Ficha de papel: la afirmacion (Fact or Fake) y la revelacion de los dos retos -->
+      <div id="caso-tarjeta">
+        <div id="veredicto-banda" role="status">
+          <span id="veredicto-icono" aria-hidden="true"></span>
+          <div id="veredicto-banda-cuerpo">
+            <p id="veredicto-banda-texto"></p>
+            <p id="veredicto-texto"></p>
+          </div>
+        </div>
+        <article id="afirmacion" hidden aria-labelledby="caso-etiqueta">
+          <p id="afirmacion-titulo" aria-hidden="true" data-texto="revelacion.titulo_afirmacion">The claim</p>
+          <p id="afirmacion-texto"></p>
+          <p id="afirmacion-marca" aria-hidden="true" data-texto="afirmaciones.marca">identifAI-it · Fact or Fake?</p>
+        </article>
+        <div id="veredicto" role="status" aria-live="polite" hidden>
+          <p id="veredicto-sello"></p>
+          <p id="veredicto-titulo">
+            <span data-reto-nombre="imagenes" data-texto="revelacion.titulo_imagenes">The verdict</span>
+            <span data-reto-nombre="afirmaciones" data-texto="revelacion.titulo_afirmaciones">The truth</span>
+          </p>
+          <p id="veredicto-resumen"></p>
+          <div id="veredicto-aclaracion" hidden>
+            <p id="veredicto-aclaracion-texto"></p>
+            <ul id="veredicto-detalles"></ul>
+          </div>
+          <div id="veredicto-confesion">
+            <p id="veredicto-confesion-titulo" data-texto="confesion.titulo">The suspect&#39;s confession</p>
+            <blockquote id="veredicto-confesion-texto"></blockquote>
+            <p id="veredicto-confesion-nota" aria-hidden="true" data-texto="confesion.nota">The prompt used to create this image.</p>
+          </div>
+        </div>
+        <!-- Solo Images (ordenador/horizontal): marca al pie de la ficha, sobre la barra del boton -->
+        <p id="veredicto-marca" aria-hidden="true" data-texto="partida.marca">identifAI-it · Real or AI?</p>
+      </div>
+      <div id="temporizador" data-nivel="normal" aria-hidden="true">
+        <div id="temporizador-cinta"></div>
+      </div>
+      <p id="temporizador-anuncio" class="solo-lectores" aria-live="polite"></p>
+      <div id="caso-botones">
+        <button type="button" class="boton boton-voto" data-voto="autentica" aria-keyshortcuts="R">
+          <span class="boton-texto" id="voto-autentica-texto"></span>
+          <kbd id="voto-autentica-tecla" aria-hidden="true"></kbd>
+        </button>
+        <button type="button" class="boton boton-voto" data-voto="generada" aria-keyshortcuts="I">
+          <span class="boton-texto" id="voto-generada-texto"></span>
+          <kbd id="voto-generada-tecla" aria-hidden="true"></kbd>
+        </button>
+        <button type="button" class="boton boton-primario" data-accion="siguiente"><span class="boton-texto" data-texto="partida.boton_siguiente">Next evidence</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Resultado -->
+  <section class="pantalla" id="pantalla-resultado" hidden>
+    <div class="cinta-peligro" aria-hidden="true"></div>
+    <!-- Franja: puntuacion, etiqueta del caso y mensaje, sello -->
+    <header id="resultado-franja">
+      <p id="resultado-aciertos" tabindex="-1" data-foco></p>
+      <div id="resultado-datos">
+        <p id="resultado-reto"></p>
+        <p id="resultado-mensaje"></p>
+      </div>
+      <p id="resultado-sello" aria-hidden="true" data-texto="resultado.sello_cerrado">CASE CLOSED</p>
+    </header>
+    <!-- Tablon: las cinco pruebas (las crea main.js) y su nota -->
+    <div id="resultado-tablon">
+      <ol id="resultado-revision"></ol>
+      <p id="resultado-nota">
+        <span data-reto-nombre="imagenes" data-texto="resultado.nota_imagenes">Tap a photo to see its file</span>
+        <span data-reto-nombre="afirmaciones" data-texto="resultado.nota_afirmaciones">Tap a claim to read the truth again</span>
+      </p>
+    </div>
+    <!-- Pie: rachas y cuenta atras a la izquierda, botones a la derecha -->
+    <footer id="resultado-pie">
+      <div id="resultado-rachas">
+        <p class="cifra"><span class="cifra-etiqueta" data-texto="resultado.etiqueta_racha">Streak</span><span class="cifra-valor" id="resultado-racha"></span></p>
+        <p class="cifra"><span class="cifra-etiqueta" data-texto="resultado.etiqueta_mejor_racha">Best streak</span><span class="cifra-valor" id="resultado-mejor-racha"></span></p>
+        <p class="cifra" id="resultado-proximo"><span class="cifra-etiqueta" data-texto="resultado.siguiente_caso">Next case in</span><span class="cifra-valor cifra-ambar" id="resultado-cuenta-atras" aria-live="off"></span></p>
+        <div id="resultado-nuevo-caso" hidden>
+          <p data-texto="resultado.nuevo_caso">New case available</p>
+          <button type="button" class="boton boton-primario" data-accion="volver-portada"><span class="boton-texto" data-texto="resultado.boton_nuevo_caso">Play</span></button>
+        </div>
+      </div>
+      <div class="acciones">
+        <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">Back</span></button>
+        <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">Share result</span></button>
+      </div>
+    </footer>
+    <aside id="anuncio-resultado" class="anuncio" data-texto-aria="anuncios.etiqueta" aria-label="Advertisement" hidden></aside>
+  </section>
+
+  <!-- Ya jugado -->
+  <section class="pantalla" id="pantalla-ya-jugado" hidden>
+    <div class="tarjeta">
+      <h2 tabindex="-1" data-texto="ya_jugado.titulo">Case closed</h2>
+      <p id="ya-jugado-texto" data-texto="ya_jugado.texto">You&#39;ve already filed today&#39;s case. Come back tomorrow. Crime never sleeps.</p>
+      <p id="ya-jugado-reto"></p>
+      <p id="ya-jugado-aciertos"></p>
+      <p id="ya-jugado-modo"></p>
+      <p id="ya-jugado-cuadros" role="img"></p>
+      <p id="ya-jugado-racha"></p>
+      <p id="ya-jugado-cuenta-atras" aria-live="off"></p>
+    </div>
+    <div class="acciones">
+      <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">Share result</span></button>
+      <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">Back</span></button>
+    </div>
+  </section>
+
+  <!-- Sin casos -->
+  <section class="pantalla" id="pantalla-sin-casos" hidden>
+    <div class="centrado">
+      <div class="huella-fondo" aria-hidden="true"></div>
+      <p id="sin-casos-texto" tabindex="-1" data-foco data-texto="sin_casos.texto">No case today. Come back when the file has evidence.</p>
+    </div>
+  </section>
+
+  <!-- Error -->
+  <section class="pantalla" id="pantalla-error" hidden>
+    <div class="centrado">
+      <p id="error-texto" role="alert" tabindex="-1" data-foco></p>
+      <div class="acciones">
+        <button type="button" class="boton boton-primario" data-accion="reintentar"><span class="boton-texto" data-texto="errores.boton_reintentar">Retry</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Elementos comunes -->
+  <p id="compartir-aviso" aria-live="polite" data-visible="no"></p>
+  <textarea id="compartir-manual" rows="5" readonly hidden></textarea>
+  <label for="compartir-manual" class="solo-lectores" data-texto="compartir.manual">Copy this text:</label>
+  <p id="aviso-almacen" role="status" hidden data-texto="avisos.sin_guardar">This device&#39;s file is sealed. Today&#39;s attempt won&#39;t be recorded.</p>
+  <p id="aviso-previsualizacion" role="status" hidden></p>
+
+  <dialog id="ficha" aria-labelledby="ficha-titulo">
+    <h2 id="ficha-titulo"></h2>
+    <img id="ficha-img" alt="" width="1080" height="1350" hidden>
+    <p id="ficha-afirmacion" hidden></p>
+    <p id="ficha-era"></p>
+    <h3 id="ficha-confesion-titulo" data-texto="confesion.titulo">The suspect&#39;s confession</h3>
+    <p id="ficha-texto"></p>
+    <div id="ficha-aclaracion" hidden>
+      <p id="ficha-aclaracion-texto"></p>
+      <ul id="ficha-detalles"></ul>
+    </div>
+    <button type="button" id="ficha-cerrar" class="boton" data-accion="cerrar-ficha">
+      <span class="boton-texto" data-texto="ficha.cerrar">Close</span>
+    </button>
+  </dialog>
+
+</main>
+<noscript>
+  <p>identifAI-it needs JavaScript to run. Turn it on in your browser to examine today&#39;s evidence.</p>
+  <p><a href="../es/" hreflang="es" lang="es">Español</a></p>
+  <nav data-texto-aria="pie.etiqueta" aria-label="Site">
+    <a href="about/">About</a>
+    <a href="how-to-play/">Rules</a>
+    <a href="archive/">Archive</a>
+    <a href="privacy/">Privacy</a>
+    <a href="credits/">Credits</a>
+  </nav>
+</noscript>
+</body>
+</html>

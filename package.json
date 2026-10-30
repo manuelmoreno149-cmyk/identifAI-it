@@ -11,6 +11,7 @@
     "test": "node --test tests/",
     "validar": "node herramientas/validar.mjs",
     "importar": "node herramientas/importar.mjs",
+    "paginas": "node herramientas/paginas.mjs",
     "creditos": "node herramientas/creditos.mjs",
     "lanzamiento": "node herramientas/lanzamiento.mjs",
     "afirmaciones": "node herramientas/importar-afirmaciones.mjs"

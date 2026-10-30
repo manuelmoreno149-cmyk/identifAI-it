@@ -71,6 +71,7 @@ import {
 import { rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from './compartir.js';
 
 const PRUEBAS_ABIERTAS = true; // Modo prueba [D-71]: poner false antes de la fecha de lanzamiento.
+const ANUNCIOS_ACTIVOS = false; // Anuncios [D-182, 10.13]: hoy solo hay un hueco vacío; validar falla si vale true. Aún sin uso (fase 5).
 
 // Previsualización local [D-68]: fecha fija y almacenes en memoria (undefined = los del navegador).
 const fechaFija = fechaPrevisualizada(location.search, location.hostname);

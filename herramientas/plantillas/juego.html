@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="{{idioma}}">
+<head>
+{{cabecera}}
+<script type="module" src="{{raiz}}js/main.js"></script>
+</head>
+<body data-pagina="juego">
+<main id="app" data-pantalla="portada" data-reto="imagenes" data-modo="normal">
+
+  <!-- Portada: dos expedientes -->
+  <section class="pantalla" id="pantalla-portada" hidden>
+    <div class="cinta-peligro" aria-hidden="true"></div>
+    <header class="portada-cabecera">
+      <div class="portada-marca">
+        <h1 tabindex="-1" data-foco data-texto="portada.titulo">[[portada.titulo]]</h1>
+        <p class="portada-lema" data-texto="portada.lema">[[portada.lema]]</p>
+      </div>
+      <div class="selector-idioma" role="group" data-texto-aria="portada.idioma">
+        <button type="button" data-accion="idioma" data-idioma="en" lang="en" aria-label="English" aria-pressed="{{pulsado:en}}">EN</button>
+        <span class="selector-idioma-barra" aria-hidden="true">|</span>
+        <button type="button" data-accion="idioma" data-idioma="es" lang="es" aria-label="Español" aria-pressed="{{pulsado:es}}">ES</button>
+      </div>
+    </header>
+    <div id="portada-dia">
+      <p id="portada-caso"></p>
+      <p id="portada-tema"></p>
+    </div>
+    <h2 id="portada-elige" data-texto="portada.elige_reto">[[portada.elige_reto]]</h2>
+    <div class="retos">
+
+      <button type="button" class="reto" data-accion="abrir-reto" data-reto-boton="imagenes" aria-labelledby="reto-imagenes-nombre" aria-describedby="reto-imagenes-desc reto-imagenes-estado">
+        <span class="reto-ilustracion" aria-hidden="true">
+          <span class="polaroid"></span>
+          <span class="polaroid"></span>
+          <span class="polaroid"></span>
+          <span class="ilustracion-sello" data-texto="portada.sello_ilustracion">[[portada.sello_ilustracion]]</span>
+        </span>
+        <span class="reto-expediente" data-texto="portada.expediente_imagenes">[[portada.expediente_imagenes]]</span>
+        <span class="reto-nombre" id="reto-imagenes-nombre" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
+        <span class="reto-desc" id="reto-imagenes-desc" data-texto="portada.desc_reto_imagenes">[[portada.desc_reto_imagenes]]</span>
+        <span class="reto-estado" id="reto-imagenes-estado"></span>
+        <span class="reto-abrir" aria-hidden="true"><span data-texto="portada.abrir">[[portada.abrir]]</span><span class="icono-flecha" aria-hidden="true"></span></span>
+      </button>
+
+      <button type="button" class="reto" data-accion="abrir-reto" data-reto-boton="afirmaciones" aria-labelledby="reto-afirmaciones-nombre" aria-describedby="reto-afirmaciones-desc reto-afirmaciones-estado">
+        <span class="reto-ilustracion" aria-hidden="true">
+          <span class="ficha-muestra"><span class="ilustracion-sello" data-texto="afirmaciones.sello_autentica">[[afirmaciones.sello_autentica]]</span></span>
+          <span class="ficha-muestra"><span class="ilustracion-sello" data-texto="afirmaciones.sello_generada">[[afirmaciones.sello_generada]]</span></span>
+        </span>
+        <span class="reto-expediente" data-texto="portada.expediente_afirmaciones">[[portada.expediente_afirmaciones]]</span>
+        <span class="reto-nombre" id="reto-afirmaciones-nombre" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
+        <span class="reto-desc" id="reto-afirmaciones-desc" data-texto="portada.desc_reto_afirmaciones">[[portada.desc_reto_afirmaciones]]</span>
+        <span class="reto-estado" id="reto-afirmaciones-estado"></span>
+        <span class="reto-abrir" aria-hidden="true"><span data-texto="portada.abrir">[[portada.abrir]]</span><span class="icono-flecha" aria-hidden="true"></span></span>
+      </button>
+
+    </div>
+    <aside id="anuncio-portada" class="anuncio" data-texto-aria="anuncios.etiqueta" hidden></aside>
+    <footer id="portada-pie">
+      <p id="portada-aviso-dia" data-texto="portada.pie">[[portada.pie]]</p>
+      <nav id="portada-enlaces" data-texto-aria="pie.etiqueta">
+        <a data-enlace="sobre" href="{{enlace:sobre}}" data-texto="pie.corto_sobre">[[pie.corto_sobre]]</a>
+        <a data-enlace="como_jugar" href="{{enlace:como_jugar}}" data-texto="pie.corto_como_jugar">[[pie.corto_como_jugar]]</a>
+        <a data-enlace="archivo" href="{{enlace:archivo}}" data-texto="pie.corto_archivo">[[pie.corto_archivo]]</a>
+        <a data-enlace="privacidad" href="{{enlace:privacidad}}" data-texto="pie.corto_privacidad">[[pie.corto_privacidad]]</a>
+        <a id="portada-creditos" data-enlace="creditos" href="{{enlace:creditos}}" data-texto="pie.corto_creditos">[[pie.corto_creditos]]</a>
+      </nav>
+    </footer>
+  </section>
+
+  <!-- Instrucciones: carpeta abierta con el briefing y la pagina de accion -->
+  <section class="pantalla" id="pantalla-instrucciones" hidden>
+    <header class="instrucciones-cabecera">
+      <button type="button" class="boton-volver" data-accion="volver-portada">
+        <span class="boton-volver-flecha" aria-hidden="true">←</span><span class="boton-texto" data-texto="instrucciones.volver">[[instrucciones.volver]]</span>
+      </button>
+      <p class="instrucciones-logo" data-texto="portada.titulo">[[portada.titulo]]</p>
+      <div class="selector-idioma" role="group" data-texto-aria="portada.idioma">
+        <button type="button" data-accion="idioma" data-idioma="en" lang="en" aria-label="English" aria-pressed="{{pulsado:en}}">EN</button>
+        <span class="selector-idioma-barra" aria-hidden="true">|</span>
+        <button type="button" data-accion="idioma" data-idioma="es" lang="es" aria-label="Español" aria-pressed="{{pulsado:es}}">ES</button>
+      </div>
+    </header>
+    <div class="carpeta-caja">
+    <p class="carpeta-pestana" aria-hidden="true">
+      <span data-reto-nombre="imagenes" data-texto="instrucciones.pestana_imagenes">[[instrucciones.pestana_imagenes]]</span>
+      <span data-reto-nombre="afirmaciones" data-texto="instrucciones.pestana_afirmaciones">[[instrucciones.pestana_afirmaciones]]</span>
+    </p>
+    <div class="carpeta">
+      <article class="pagina" id="instrucciones-briefing" aria-labelledby="instrucciones-titulo">
+        <p id="instrucciones-membrete"></p>
+        <h2 id="instrucciones-titulo" tabindex="-1" data-foco>
+          <span data-reto-nombre="imagenes" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
+          <span data-reto-nombre="afirmaciones" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
+        </h2>
+        <p id="instrucciones-frase">
+          <span data-reto-nombre="imagenes" data-texto="instrucciones.frase_imagenes">[[instrucciones.frase_imagenes]]</span>
+          <span data-reto-nombre="afirmaciones" data-texto="instrucciones.frase_afirmaciones">[[instrucciones.frase_afirmaciones]]</span>
+        </p>
+        <ol id="instrucciones-pasos"></ol>
+        <p id="instrucciones-firma" data-texto="instrucciones.firma">[[instrucciones.firma]]</p>
+      </article>
+      <div class="pagina" id="instrucciones-accion">
+        <span class="carpeta-clip" aria-hidden="true"></span>
+        <fieldset id="instrucciones-modos">
+          <legend data-texto="instrucciones.metodo">[[instrucciones.metodo]]</legend>
+          <div class="modo">
+            <input type="radio" name="modo" id="modo-investigador" value="investigador">
+            <label for="modo-investigador"><span class="modo-nombre" data-texto="portada.modo_investigador">[[portada.modo_investigador]]</span><span class="modo-desc" data-texto="portada.desc_investigador">[[portada.desc_investigador]]</span></label>
+          </div>
+          <div class="modo">
+            <input type="radio" name="modo" id="modo-normal" value="normal">
+            <label for="modo-normal"><span class="modo-nombre" data-texto="portada.modo_normal">[[portada.modo_normal]]</span><span class="modo-desc" data-texto="portada.desc_normal">[[portada.desc_normal]]</span></label>
+          </div>
+          <div class="modo">
+            <input type="radio" name="modo" id="modo-perro" value="perro">
+            <label for="modo-perro"><span class="modo-nombre" data-texto="portada.modo_perro">[[portada.modo_perro]]</span><span class="modo-desc" data-texto="portada.desc_perro">[[portada.desc_perro]]</span></label>
+          </div>
+        </fieldset>
+        <div id="instrucciones-reglas">
+          <h3 data-texto="instrucciones.reglas">[[instrucciones.reglas]]</h3>
+          <div id="instrucciones-aviso-caja">
+            <span class="aviso-icono" aria-hidden="true"></span>
+            <p class="aviso-titulo" data-texto="instrucciones.aviso_titulo">[[instrucciones.aviso_titulo]]</p>
+            <p id="instrucciones-aviso" data-texto="afirmaciones.aviso_oculta">[[afirmaciones.aviso_oculta]]</p>
+          </div>
+          <div id="instrucciones-ejemplo" aria-hidden="true">
+            <p class="ejemplo-etiqueta" data-texto="instrucciones.ejemplo_etiqueta">[[instrucciones.ejemplo_etiqueta]]</p>
+            <p class="ejemplo-texto" data-texto="instrucciones.ejemplo">[[instrucciones.ejemplo]]</p>
+            <p class="ejemplo-marca" data-texto="afirmaciones.marca">[[afirmaciones.marca]]</p>
+            <span class="ejemplo-boton" data-texto="afirmaciones.boton_autentica">[[afirmaciones.boton_autentica]]</span>
+            <span class="ejemplo-boton" data-texto="afirmaciones.boton_generada">[[afirmaciones.boton_generada]]</span>
+          </div>
+        </div>
+        <button type="button" class="boton boton-primario" data-accion="empezar">
+          <span class="boton-texto" data-texto="instrucciones.boton_empezar">[[instrucciones.boton_empezar]]</span>
+        </button>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- Cargando -->
+  <section class="pantalla" id="pantalla-cargando" hidden>
+    <div class="centrado">
+      <div class="lupa-giro" aria-hidden="true"></div>
+      <p role="status" tabindex="-1" data-foco data-texto="cargando.texto">[[cargando.texto]]</p>
+    </div>
+  </section>
+
+  <!-- Cuenta atras -->
+  <section class="pantalla" id="pantalla-cuenta-atras" hidden>
+    <div class="centrado">
+      <p tabindex="-1" data-foco data-texto="cuenta_atras.aviso">[[cuenta_atras.aviso]]</p>
+      <p id="cuenta-atras-numero" aria-live="assertive"></p>
+    </div>
+  </section>
+
+  <!-- Caso -->
+  <section class="pantalla" id="pantalla-caso" data-fase="pregunta" data-tapada="no" hidden>
+    <header id="caso-cabecera">
+      <div id="caso-titulo">
+        <p id="caso-reto">
+          <span data-reto-nombre="imagenes" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
+          <span data-reto-nombre="afirmaciones" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
+        </p>
+        <p id="caso-tema"></p>
+      </div>
+      <p id="caso-etiqueta" class="solo-lectores" tabindex="-1" data-foco></p>
+      <ol id="caso-progreso" aria-hidden="true">
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+        <li data-estado="pendiente"></li>
+      </ol>
+      <div id="caso-puntuacion">
+        <p id="caso-modo"></p>
+        <p id="caso-marcador"></p>
+      </div>
+      <p id="caso-aviso" data-texto="afirmaciones.aviso_oculta" hidden>[[afirmaciones.aviso_oculta]]</p>
+    </header>
+    <div id="caso-escena">
+      <!-- Images: la foto, el sobre sellado y, en la revelacion, la etiqueta y el sello sobre sus esquinas -->
+      <div id="prueba-vitrina">
+        <div id="prueba-caja">
+          <figure id="prueba-marco"></figure>
+          <div id="prueba-sobre" hidden aria-hidden="true">
+            <p id="prueba-sobre-texto" data-texto="partida.sobre_texto">[[partida.sobre_texto]]</p>
+          </div>
+          <p id="prueba-etiqueta" aria-hidden="true"></p>
+          <p id="prueba-sello" aria-hidden="true"></p>
+        </div>
+      </div>
+      <!-- Ficha de papel: la afirmacion (Fact or Fake) y la revelacion de los dos retos -->
+      <div id="caso-tarjeta">
+        <div id="veredicto-banda" role="status">
+          <span id="veredicto-icono" aria-hidden="true"></span>
+          <div id="veredicto-banda-cuerpo">
+            <p id="veredicto-banda-texto"></p>
+            <p id="veredicto-texto"></p>
+          </div>
+        </div>
+        <article id="afirmacion" hidden aria-labelledby="caso-etiqueta">
+          <p id="afirmacion-titulo" aria-hidden="true" data-texto="revelacion.titulo_afirmacion">[[revelacion.titulo_afirmacion]]</p>
+          <p id="afirmacion-texto"></p>
+          <p id="afirmacion-marca" aria-hidden="true" data-texto="afirmaciones.marca">[[afirmaciones.marca]]</p>
+        </article>
+        <div id="veredicto" role="status" aria-live="polite" hidden>
+          <p id="veredicto-sello"></p>
+          <p id="veredicto-titulo">
+            <span data-reto-nombre="imagenes" data-texto="revelacion.titulo_imagenes">[[revelacion.titulo_imagenes]]</span>
+            <span data-reto-nombre="afirmaciones" data-texto="revelacion.titulo_afirmaciones">[[revelacion.titulo_afirmaciones]]</span>
+          </p>
+          <p id="veredicto-resumen"></p>
+          <div id="veredicto-aclaracion" hidden>
+            <p id="veredicto-aclaracion-texto"></p>
+            <ul id="veredicto-detalles"></ul>
+          </div>
+          <div id="veredicto-confesion">
+            <p id="veredicto-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</p>
+            <blockquote id="veredicto-confesion-texto"></blockquote>
+            <p id="veredicto-confesion-nota" aria-hidden="true" data-texto="confesion.nota">[[confesion.nota]]</p>
+          </div>
+        </div>
+        <!-- Solo Images (ordenador/horizontal): marca al pie de la ficha, sobre la barra del boton -->
+        <p id="veredicto-marca" aria-hidden="true" data-texto="partida.marca">[[partida.marca]]</p>
+      </div>
+      <div id="temporizador" data-nivel="normal" aria-hidden="true">
+        <div id="temporizador-cinta"></div>
+      </div>
+      <p id="temporizador-anuncio" class="solo-lectores" aria-live="polite"></p>
+      <div id="caso-botones">
+        <button type="button" class="boton boton-voto" data-voto="autentica" aria-keyshortcuts="R">
+          <span class="boton-texto" id="voto-autentica-texto"></span>
+          <kbd id="voto-autentica-tecla" aria-hidden="true"></kbd>
+        </button>
+        <button type="button" class="boton boton-voto" data-voto="generada" aria-keyshortcuts="I">
+          <span class="boton-texto" id="voto-generada-texto"></span>
+          <kbd id="voto-generada-tecla" aria-hidden="true"></kbd>
+        </button>
+        <button type="button" class="boton boton-primario" data-accion="siguiente"><span class="boton-texto" data-texto="partida.boton_siguiente">[[partida.boton_siguiente]]</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Resultado -->
+  <section class="pantalla" id="pantalla-resultado" hidden>
+    <div class="cinta-peligro" aria-hidden="true"></div>
+    <!-- Franja: puntuacion, etiqueta del caso y mensaje, sello -->
+    <header id="resultado-franja">
+      <p id="resultado-aciertos" tabindex="-1" data-foco></p>
+      <div id="resultado-datos">
+        <p id="resultado-reto"></p>
+        <p id="resultado-mensaje"></p>
+      </div>
+      <p id="resultado-sello" aria-hidden="true" data-texto="resultado.sello_cerrado">[[resultado.sello_cerrado]]</p>
+    </header>
+    <!-- Tablon: las cinco pruebas (las crea main.js) y su nota -->
+    <div id="resultado-tablon">
+      <ol id="resultado-revision"></ol>
+      <p id="resultado-nota">
+        <span data-reto-nombre="imagenes" data-texto="resultado.nota_imagenes">[[resultado.nota_imagenes]]</span>
+        <span data-reto-nombre="afirmaciones" data-texto="resultado.nota_afirmaciones">[[resultado.nota_afirmaciones]]</span>
+      </p>
+    </div>
+    <!-- Pie: rachas y cuenta atras a la izquierda, botones a la derecha -->
+    <footer id="resultado-pie">
+      <div id="resultado-rachas">
+        <p class="cifra"><span class="cifra-etiqueta" data-texto="resultado.etiqueta_racha">[[resultado.etiqueta_racha]]</span><span class="cifra-valor" id="resultado-racha"></span></p>
+        <p class="cifra"><span class="cifra-etiqueta" data-texto="resultado.etiqueta_mejor_racha">[[resultado.etiqueta_mejor_racha]]</span><span class="cifra-valor" id="resultado-mejor-racha"></span></p>
+        <p class="cifra" id="resultado-proximo"><span class="cifra-etiqueta" data-texto="resultado.siguiente_caso">[[resultado.siguiente_caso]]</span><span class="cifra-valor cifra-ambar" id="resultado-cuenta-atras" aria-live="off"></span></p>
+        <div id="resultado-nuevo-caso" hidden>
+          <p data-texto="resultado.nuevo_caso">[[resultado.nuevo_caso]]</p>
+          <button type="button" class="boton boton-primario" data-accion="volver-portada"><span class="boton-texto" data-texto="resultado.boton_nuevo_caso">[[resultado.boton_nuevo_caso]]</span></button>
+        </div>
+      </div>
+      <div class="acciones">
+        <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">[[final.boton_volver]]</span></button>
+        <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
+      </div>
+    </footer>
+    <aside id="anuncio-resultado" class="anuncio" data-texto-aria="anuncios.etiqueta" hidden></aside>
+  </section>
+
+  <!-- Ya jugado -->
+  <section class="pantalla" id="pantalla-ya-jugado" hidden>
+    <div class="tarjeta">
+      <h2 tabindex="-1" data-texto="ya_jugado.titulo">[[ya_jugado.titulo]]</h2>
+      <p id="ya-jugado-texto" data-texto="ya_jugado.texto">[[ya_jugado.texto]]</p>
+      <p id="ya-jugado-reto"></p>
+      <p id="ya-jugado-aciertos"></p>
+      <p id="ya-jugado-modo"></p>
+      <p id="ya-jugado-cuadros" role="img"></p>
+      <p id="ya-jugado-racha"></p>
+      <p id="ya-jugado-cuenta-atras" aria-live="off"></p>
+    </div>
+    <div class="acciones">
+      <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">[[compartir.boton]]</span></button>
+      <button type="button" class="boton" data-accion="volver-portada"><span class="boton-texto" data-texto="final.boton_volver">[[final.boton_volver]]</span></button>
+    </div>
+  </section>
+
+  <!-- Sin casos -->
+  <section class="pantalla" id="pantalla-sin-casos" hidden>
+    <div class="centrado">
+      <div class="huella-fondo" aria-hidden="true"></div>
+      <p id="sin-casos-texto" tabindex="-1" data-foco data-texto="sin_casos.texto">[[sin_casos.texto]]</p>
+    </div>
+  </section>
+
+  <!-- Error -->
+  <section class="pantalla" id="pantalla-error" hidden>
+    <div class="centrado">
+      <p id="error-texto" role="alert" tabindex="-1" data-foco></p>
+      <div class="acciones">
+        <button type="button" class="boton boton-primario" data-accion="reintentar"><span class="boton-texto" data-texto="errores.boton_reintentar">[[errores.boton_reintentar]]</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Elementos comunes -->
+  <p id="compartir-aviso" aria-live="polite" data-visible="no"></p>
+  <textarea id="compartir-manual" rows="5" readonly hidden></textarea>
+  <label for="compartir-manual" class="solo-lectores" data-texto="compartir.manual">[[compartir.manual]]</label>
+  <p id="aviso-almacen" role="status" hidden data-texto="avisos.sin_guardar">[[avisos.sin_guardar]]</p>
+  <p id="aviso-previsualizacion" role="status" hidden></p>
+
+  <dialog id="ficha" aria-labelledby="ficha-titulo">
+    <h2 id="ficha-titulo"></h2>
+    <img id="ficha-img" alt="" width="1080" height="1350" hidden>
+    <p id="ficha-afirmacion" hidden></p>
+    <p id="ficha-era"></p>
+    <h3 id="ficha-confesion-titulo" data-texto="confesion.titulo">[[confesion.titulo]]</h3>
+    <p id="ficha-texto"></p>
+    <div id="ficha-aclaracion" hidden>
+      <p id="ficha-aclaracion-texto"></p>
+      <ul id="ficha-detalles"></ul>
+    </div>
+    <button type="button" id="ficha-cerrar" class="boton" data-accion="cerrar-ficha">
+      <span class="boton-texto" data-texto="ficha.cerrar">[[ficha.cerrar]]</span>
+    </button>
+  </dialog>
+
+</main>
+<noscript>
+  <p>{{noscript}}</p>
+  <p><a href="{{enlace_otro}}" hreflang="{{otro_idioma}}" lang="{{otro_idioma}}">{{otro_nombre}}</a></p>
+  <nav data-texto-aria="pie.etiqueta">
+    <a href="{{enlace:sobre}}">[[pie.corto_sobre]]</a>
+    <a href="{{enlace:como_jugar}}">[[pie.corto_como_jugar]]</a>
+    <a href="{{enlace:archivo}}">[[pie.corto_archivo]]</a>
+    <a href="{{enlace:privacidad}}">[[pie.corto_privacidad]]</a>
+    <a href="{{enlace:creditos}}">[[pie.corto_creditos]]</a>
+  </nav>
+</noscript>
+</body>
+</html>

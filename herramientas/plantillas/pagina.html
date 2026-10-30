@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="{{idioma}}">
+<head>
+{{cabecera}}
+</head>
+<body data-pagina="{{pagina}}">
+<a class="saltar" href="#contenido">[[paginas.saltar]]</a>
+<header class="pagina-cabecera">
+  <a class="pagina-logo" href="{{enlace:juego}}">identifAI-it</a>
+  <a class="pagina-jugar" href="{{enlace:juego}}">[[paginas.jugar]]</a>
+  <a class="pagina-idioma" href="{{enlace_otro}}" hreflang="{{otro_idioma}}" lang="{{otro_idioma}}">{{otro_nombre}}</a>
+</header>
+<main id="contenido" tabindex="-1">
+  <{{contenedor}}>
+{{cuerpo}}
+  </{{contenedor}}>
+</main>
+<footer class="pagina-pie">
+  <nav aria-label="[[pie.etiqueta]]">
+    <ul>
+{{pie}}
+    </ul>
+  </nav>
+  <p class="pagina-pie-correo"><a href="{{correo}}">{{correo_texto}}</a></p>
+</footer>
+</body>
+</html>

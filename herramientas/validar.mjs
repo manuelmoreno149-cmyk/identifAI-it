@@ -2,6 +2,7 @@
 // Lógica en `validar({raiz, estricto, hoyISO, git})` para poder probarla con raíces temporales; no lee entrada/ [D-139].
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join, posix } from 'node:path';
 import sharp from 'sharp';
@@ -30,7 +31,9 @@ import {
   avisosMezcla,
   analizarPruebasAbiertas,
   distanciaHamming,
-  FUENTES
+  FUENTES,
+  analizarAnunciosActivos,
+  comprobarReutilizacion
 } from './temas.mjs';
 import {
   ACLARACION_MAX,
@@ -42,6 +45,22 @@ import {
   unirMeses
 } from './afirmaciones.mjs';
 import { TIPOGRAFIAS, ARCHIVOS_CREDITOS, creditosParaBanco } from './creditos.mjs';
+import {
+  ARCHIVOS_CREDITOS_REDIRECCION,
+  CSP,
+  RECURSOS_PENDIENTES,
+  SUBCADENAS_GUIAS,
+  avisosMeta,
+  comprobarAtributos,
+  comprobarListaBlanca,
+  comprobarSitio,
+  diasArchivables,
+  existentesDeDisco,
+  generarSitio,
+  leerEntradas,
+  palabraProhibidaEnRuta,
+  ultimoArchivadoEnDisco
+} from './paginas.mjs';
 
 const RAIZ_REAL = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const puntos = (t) => Array.from(t).length;
@@ -81,7 +100,7 @@ function listaDias(n) {
   return `los días ${rango}`;
 }
 
-export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fechaLocal(new Date()), git = true } = {}) {
+export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fechaLocal(new Date()), ahoraMs = Date.now(), git = true } = {}) {
   const p = (...r) => join(raiz, ...r);
   const errores = [];
   const avisos = [];
@@ -286,8 +305,9 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
 
   // ---------- Archivos publicados ----------
 
-  for (const f of ['.nojekyll', ...Object.values(ARCHIVOS_CREDITOS), 'index.html']) {
-    if (!existsSync(p(f))) error(`Falta ${f} en la raíz.`);
+  const REQUERIDOS = ['.nojekyll', 'index.html', '404.html', 'robots.txt', 'sitemap.xml', ...Object.values(ARCHIVOS_CREDITOS_REDIRECCION), ...Object.values(ARCHIVOS_CREDITOS)];
+  for (const f of REQUERIDOS) {
+    if (!existsSync(p(f))) error(`Falta ${f}${f.includes('/') ? '' : ' en la raíz'}.`);
   }
 
   for (const t of TIPOGRAFIAS) {
@@ -298,55 +318,6 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
       if (!existsSync(p(m[1]))) error(`css/base.css referencia ${m[1]}, que no existe.`);
     }
   }
-
-  const atributo = /([a-zA-Z][\w:-]*)\s*=\s*"([^"]*)"/g;
-
-  const comprobarRuta = (origen, ruta, base) => {
-    const destino = posix.normalize(posix.join(base, ruta));
-    if (destino.startsWith('..') || destino.startsWith('/')) {
-      error(`${origen}: la ruta ${ruta} sale del sitio o es absoluta.`);
-      return;
-    }
-    let dir = raiz;
-    for (const parte of destino.split('/')) {
-      if (!existsSync(dir) || !statSync(dir).isDirectory() || !readdirSync(dir).includes(parte)) {
-        error(`${origen}: ${ruta} no existe (se distingue entre mayúsculas y minúsculas).`);
-        return;
-      }
-      dir = join(dir, parte);
-    }
-  };
-
-  const revisarHtml = (nombre) => {
-    if (!existsSync(p(nombre))) return;
-    const html = leer(nombre);
-    for (const tag of html.matchAll(/<[a-zA-Z][^>]*>/g)) {
-      for (const [, attr, valor] of tag[0].matchAll(atributo)) {
-        const a = attr.toLowerCase();
-        if (a.startsWith('data-')) {
-          const pn = contienePalabraProhibida(a);
-          if (pn) error(`${nombre}: el atributo ${a} contiene "${pn}".`);
-        }
-        if (a === 'id' || a === 'class' || a === 'alt' || a.startsWith('data-')) {
-          const pv = contienePalabraProhibida(valor);
-          if (pv) error(`${nombre}: ${a}="${valor}" contiene la palabra prohibida "${pv}".`);
-          if (a === 'class' && valor.split(/\s+/).some((c) => /^dato/i.test(c))) {
-            error(`${nombre}: class="${valor}" contiene una clase que empieza por dato.`);
-          }
-        } else if (a === 'href' || a === 'src') {
-          const pv = contienePalabraProhibida(valor);
-          if (pv) error(`${nombre}: ${a}="${valor}" contiene la palabra prohibida "${pv}".`);
-          if (/^(https?:)?\/\//i.test(valor)) error(`${nombre}: ${a}="${valor}" es una URL externa.`);
-          else if (!/^(#|mailto:|tel:|data:)/i.test(valor) && valor !== '') {
-            comprobarRuta(nombre, valor.split(/[?#]/)[0], '');
-          }
-        }
-      }
-    }
-  };
-
-  revisarHtml('index.html');
-  for (const f of Object.values(ARCHIVOS_CREDITOS)) revisarHtml(f);
 
   // Nombres de archivos publicados.
   const recorrer = (dir) => {
@@ -363,9 +334,12 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     const pn = contienePalabraProhibida(f.split('/').pop());
     if (pn) error(`${f}: el nombre de archivo contiene "${pn}".`);
   }
+  for (const f of [...recorrer('css'), ...recorrer('js'), ...recorrer('img'), ...recorrer('fonts'), ...recorrer('data'), ...recorrer('casos')]) {
+    if (palabraProhibidaEnRuta(f)) error(`${f}: la ruta contiene una palabra prohibida.`);
+  }
 
-  // URL externas y fecha de lanzamiento fija.
-  for (const f of ['index.html', ...Object.values(ARCHIVOS_CREDITOS), ...recorrer('css'), ...recorrer('js')]) {
+  // URL externas (los HTML se comprueban en comprobarSitio) y fecha de lanzamiento fija.
+  for (const f of [...recorrer('css'), ...recorrer('js')]) {
     if (!existsSync(p(f))) continue;
     const t = leer(f);
     if (/https?:\/\//i.test(t)) error(`${f}: contiene una URL externa (http:// o https://).`);
@@ -377,23 +351,108 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     if (leer(f).includes(FECHA_FIJA_ANTIGUA)) error(`${f}: contiene la fecha fija ${FECHA_FIJA_ANTIGUA}; el lanzamiento vive solo en data/calendario.json [D-95].`);
   }
 
-  // creditos.html (en) y creditos.es.html (es)
-  if (existsSync(p('index.html'))) {
-    const cspIndex = leer('index.html').match(/<meta http-equiv="Content-Security-Policy"[^>]*>/)?.[0];
-    for (const idioma of IDIOMAS) {
-      const nombre = ARCHIVOS_CREDITOS[idioma];
-      if (!existsSync(p(nombre))) continue;
-      const c = leer(nombre);
-      if (!c.includes(`<html lang="${idioma}">`)) error(`${nombre}: falta <html lang="${idioma}">.`);
-      if (!/<title>[^<]+<\/title>/.test(c)) error(`${nombre}: falta <title>.`);
-      if (!/<meta name="viewport"/.test(c)) error(`${nombre}: falta el viewport.`);
-      if (!cspIndex || !c.includes(cspIndex)) error(`${nombre}: la CSP no es idéntica a la de index.html.`);
-      if (!/<a id="creditos-volver" href="index\.html">/.test(c)) error(`${nombre}: #creditos-volver debe apuntar a index.html.`);
-      if (/<script/i.test(c)) error(`${nombre}: contiene <script>.`);
-      if (/\sstyle\s*=/i.test(c)) error(`${nombre}: contiene atributo style.`);
-      for (const id of vistos.keys()) if (c.includes(id)) error(`${nombre}: contiene el id de imagen ${id}.`);
-      if (!c.endsWith('\n') || c.endsWith('\n\n') || c.includes('\r')) error(`${nombre}: debe usar LF y terminar con un único salto de línea.`);
+  // en/credits/ (lang en) y es/creditos/ (lang es): páginas de contenido que escribe creditos.mjs [10.10]
+  for (const idioma of IDIOMAS) {
+    const nombre = ARCHIVOS_CREDITOS[idioma];
+    if (!existsSync(p(nombre))) continue;
+    const c = leer(nombre);
+    if (!c.includes('<html lang="' + idioma + '">')) error(nombre + ': falta <html lang="' + idioma + '">.');
+    if (!/<title>[^<]+<\/title>/.test(c)) error(nombre + ': falta <title>.');
+    if (!/<meta name="viewport"/.test(c)) error(nombre + ': falta el viewport.');
+    if (!c.includes('<meta http-equiv="Content-Security-Policy" content="' + CSP + '">')) error(nombre + ': la CSP no es la de la spec.');
+    if (!c.includes('data-pagina="creditos"')) error(nombre + ': falta data-pagina="creditos".');
+    if (/<script/i.test(c)) error(nombre + ': contiene <script>.');
+    if (/\sstyle\s*=/i.test(c)) error(nombre + ': contiene atributo style.');
+    for (const id of vistos.keys()) if (c.includes(id)) error(nombre + ': contiene el id de imagen ' + id + '.');
+    if (!c.endsWith('\n') || c.endsWith('\n\n') || c.includes('\r')) error(nombre + ': debe usar LF y terminar con un único salto de línea.');
+  }
+
+  // ---------- Páginas generadas por paginas.mjs [10.6.5] ----------
+
+  const codigoMain = existsSync(p('js', 'main.js')) ? leer('js/main.js') : '';
+  const anunciosActivos = analizarAnunciosActivos(codigoMain);
+  if (existsSync(p('js', 'main.js'))) {
+    if (anunciosActivos === null) error('js/main.js debe declarar una sola vez const ANUNCIOS_ACTIVOS = false; (10.13).');
+    else if (anunciosActivos) error('ANUNCIOS_ACTIVOS vale true en js/main.js: activar anuncios exige una versión nueva de la spec (10.13).');
+  }
+  if (anunciosActivos === false && (existsSync(p('es', 'aviso-legal')) || existsSync(p('en', 'legal-notice')))) {
+    error('Existe la página del aviso legal (es/aviso-legal/ o en/legal-notice/) con ANUNCIOS_ACTIVOS = false: no se publica hasta que haya anuncios (10.14).');
+  }
+
+  for (const e of comprobarListaBlanca()) error(e);
+  for (const f of recorrer('js').filter((x) => /\.m?js$/.test(x))) {
+    const codigo = leer(f);
+    for (const s of SUBCADENAS_GUIAS) if (codigo.includes(s)) error(f + ': contiene la dirección de una guía (' + s + '); el juego no puede enlazarlas.');
+  }
+  const PLANTILLA_JUEGO = 'herramientas/plantillas/juego.html';
+  if (existsSync(p(PLANTILLA_JUEGO))) {
+    const plantilla = leer(PLANTILLA_JUEGO);
+    for (const s of SUBCADENAS_GUIAS) if (plantilla.includes(s)) error(PLANTILLA_JUEGO + ': contiene la dirección de una guía (' + s + ').');
+    for (const e of comprobarAtributos(PLANTILLA_JUEGO, plantilla, { juego: true })) error(e);
+  } else {
+    error('Falta ' + PLANTILLA_JUEGO + '.');
+  }
+
+  const normalizar = (s) => s.replace(/\r\n?/g, '\n');
+  const DIRS_DIAS = [['en', 'archive', /^case-(\d+)$/], ['es', 'archivo', /^caso-(\d+)$/]];
+  const publicado = new Map(); // lo que hay (o debería haber) publicado, para comprobarSitio
+  let entradas = null;
+  let mapa = null;
+  if (version5 && calendario && validarCalendario(calendario)) {
+    const enDisco = ultimoArchivadoEnDisco(raiz);
+    try {
+      entradas = leerEntradas(raiz);
+      mapa = generarSitio({ entradas, ahoraMs, limiteN: enDisco });
+    } catch (e) {
+      error('No se pueden regenerar las páginas: ' + e.message);
     }
+  }
+  if (mapa && entradas) {
+    // Días de archivo que no deberían existir todavía (o sin lanzamiento) [324].
+    const archivables = new Set(diasArchivables({ calendario, meses: entradas.meses, ahoraMs }).map((d) => d.n));
+    const diasFuera = new Set(); // carpetas de día de más
+    for (const [idioma, carpeta, patron] of DIRS_DIAS) {
+      for (const nombre of listar(idioma + '/' + carpeta)) {
+        const m = patron.exec(nombre);
+        if (!m || archivables.has(Number(m[1]))) continue;
+        diasFuera.add(idioma + '/' + carpeta + '/' + nombre + '/');
+        const fecha = fechaDelDia(lanzamiento, Number(m[1]));
+        error(
+          'El caso n.º ' + m[1] + ' (' + idioma + '/' + carpeta + '/' + nombre + '/) está archivado pero ' +
+            (lanzamiento === null ? 'aún no hay fecha de lanzamiento' : 'su fecha (' + fecha + ') no ha terminado en todo el mundo') +
+            ': nada de hoy ni del futuro puede estar en el archivo (10.8.2).'
+        );
+      }
+    }
+    // Páginas desactualizadas: se regenera en memoria y se compara con lo escrito (CRLF y LF son iguales).
+    const desactualizadas = [];
+    for (const [r, contenido] of mapa) {
+      const abs = p(...r.split('/'));
+      const actual = existsSync(abs) ? normalizar(readFileSync(abs, 'utf8')) : null;
+      if (actual !== contenido) desactualizadas.push(r);
+      publicado.set(r, actual ?? contenido);
+    }
+    if (desactualizadas.length > 0) {
+      const muestra = desactualizadas.slice(0, 8).join(', ');
+      error('Páginas desactualizadas: ejecuta npm run paginas. (' + desactualizadas.length + ': ' + muestra + (desactualizadas.length > 8 ? ', …' : '') + ')');
+    }
+    // Lo que sobra en en/ y es/.
+    const propios = new Set(Object.values(ARCHIVOS_CREDITOS));
+    for (const f of [...recorrer('en'), ...recorrer('es')]) {
+      if (mapa.has(f) || propios.has(f) || [...diasFuera].some((d) => f.startsWith(d))) continue;
+      error('Archivo inesperado en lo publicado: ' + f + ' (no lo genera paginas.mjs).');
+      publicado.set(f, /\.(html|xml|txt)$/.test(f) ? leer(f) : '');
+    }
+    for (const nombre of propios) if (existsSync(p(nombre))) publicado.set(nombre, leer(nombre));
+    const existentes = existentesDeDisco(raiz);
+    for (const e of comprobarSitio(publicado, existentes, { pendientes: RECURSOS_PENDIENTES })) error(e);
+    const faltan = RECURSOS_PENDIENTES.filter((r) => !existsSync(p(r)));
+    if (faltan.length > 0) {
+      const msg = 'Faltan recursos que enlazan las páginas y que crean las fases 4 y 5: ' + faltan.join(', ') + '.';
+      if (estricto) error(msg);
+      else aviso(msg);
+    }
+    for (const a of avisosMeta(publicado)) aviso(a);
   }
 
   // ---------- Git e ignorados (no se lee entrada/) ----------
@@ -422,8 +481,8 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
         .toString()
         .split(/\r?\n/)
         .map((x) => x.trim())
-        .filter((x) => x && !x.startsWith('fonts/'));
-      if (txt.length > 0) error(`Hay ${txt.length} archivo(s) .txt rastreados por git fuera de fonts/ (podrían ser prompts, afirmaciones o notas).`);
+        .filter((x) => x && !x.startsWith('fonts/') && x !== 'robots.txt');
+      if (txt.length > 0) error(`Hay ${txt.length} archivo(s) .txt rastreados por git fuera de fonts/ y robots.txt (podrían ser prompts, afirmaciones o notas).`);
     } catch {
       aviso('No se pudo consultar git; se omiten las comprobaciones de archivos rastreados.');
     }
@@ -548,6 +607,21 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
         }
       }
     }
+  }
+
+  // Una imagen de un día ya llegado no vuelve en un día futuro [10.8.7]. Siempre, también sin banco.
+  if (version5 && calendario && validarCalendario(calendario)) {
+    const huellas = new Map();
+    const dhashes = new Map((banco?.version === 3 && Array.isArray(banco.imagenes) ? banco.imagenes : []).map((i) => [i.id, i.dhash]));
+    for (const d of dias) {
+      for (const id of d.pruebas) {
+        const ruta = p('casos', id + '.webp');
+        if (!existsSync(ruta)) continue;
+        huellas.set(id, { sha256: createHash('sha256').update(readFileSync(ruta)).digest('hex'), dhash: dhashes.get(id) ?? null });
+      }
+    }
+    const diasFecha = dias.map((d) => ({ n: d.n, fecha: fechaDe(d.n), pruebas: d.pruebas }));
+    for (const e of comprobarReutilizacion({ dias: diasFecha, huellas, hoyISO: hoy })) error(e);
   }
 
   // ---------- Resultado ----------

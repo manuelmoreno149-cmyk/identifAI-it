@@ -7,6 +7,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import sharp from 'sharp';
+import { fechaLocal } from '../js/diario.js';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Bytes no UTF-8 y texto con llaves, "source:" y "---": el importador nunca debe abrir ni mostrar esto.
@@ -145,5 +146,31 @@ test('69 importar: calendario v3 o banco v2 detienen con el mensaje de 4.4.2 y n
     assert.equal(existsSync(join(m.raiz, 'data', 'calendario.json')), false);
   } finally {
     rmSync(m.raiz, { recursive: true, force: true });
+  }
+});
+
+test('335 importar: una imagen igual a una de un día ya llegado en un día nuevo es error y no se escribe nada', async () => {
+  const { raiz } = await montar({});
+  try {
+    assert.equal(correr(raiz).status, 0);
+    const rutaCal = join(raiz, 'data', 'calendario.json');
+    const cal = JSON.parse(readFileSync(rutaCal, 'utf8'));
+    cal.lanzamiento = fechaLocal(new Date()); // el día 1 es hoy: ya ha llegado
+    writeFileSync(rutaCal, JSON.stringify(cal, null, 2) + '\n');
+    // Sin banco no hay dHash: cuenta el SHA-256 del WebP publicado frente al que saldría del mismo origen.
+    rmSync(join(raiz, 'herramientas', 'banco.json'));
+    cpSync(join(raiz, 'entrada', 'temas', '01-dogs'), join(raiz, 'entrada', 'temas', '02-cats'), { recursive: true });
+    writeFileSync(join(raiz, 'entrada', 'temas', '02-cats', 'tema.es.txt'), 'Gatos\n');
+    const casos = readdirSync(join(raiz, 'casos')).sort();
+    const antesCal = readFileSync(rutaCal, 'utf8');
+    const r = correr(raiz, '--banco-nuevo');
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stderr, /La prueba \d del día 2 repite la prueba \d del día 1, que ya ha llegado: una imagen jugada o archivada no puede volver en un día futuro\./);
+    assert.deepEqual(readdirSync(join(raiz, 'casos')).sort(), casos);
+    assert.equal(readFileSync(rutaCal, 'utf8'), antesCal);
+    assert.equal(existsSync(join(raiz, 'herramientas', 'banco.json')), false);
+    assert.equal(existsSync(join(raiz, 'en')), true);
+  } finally {
+    rmSync(raiz, { recursive: true, force: true });
   }
 });

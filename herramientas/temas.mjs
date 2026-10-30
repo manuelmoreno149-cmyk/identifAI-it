@@ -722,4 +722,52 @@ export function analizarPruebasAbiertas(codigo) {
   return m.length === 1 ? m[0][1] === 'true' : null;
 }
 
+
+// Interruptor de los anuncios en el texto de js/main.js [D-182]: true, false o null (ausente o declarado más de una vez).
+export function analizarAnunciosActivos(codigo) {
+  if (typeof codigo !== 'string') return null;
+  const m = [...codigo.matchAll(/^const ANUNCIOS_ACTIVOS = (true|false);/gm)];
+  return m.length === 1 ? m[0][1] === 'true' : null;
+}
+
+// Una imagen de un día ya llegado no vuelve en un día futuro [D-191, spec 10.8.7].
+// dias: [{n, fecha, pruebas}] (fecha null sin lanzamiento); huellas: Map<id, {sha256, dhash}>. Nunca lanza.
+export const MENSAJE_REUTILIZACION_INVALIDO = 'Datos de reutilización de imágenes no válidos.';
+
+export function comprobarReutilizacion({ dias, huellas, hoyISO } = {}) {
+  try {
+    if (!Array.isArray(dias) || !(huellas instanceof Map) || typeof hoyISO !== 'string') return [MENSAJE_REUTILIZACION_INVALIDO];
+    const llegados = [];
+    const futuros = [];
+    for (const d of dias) {
+      if (!d || !Number.isInteger(d.n) || !Array.isArray(d.pruebas) || !(d.fecha === null || typeof d.fecha === 'string')) {
+        return [MENSAJE_REUTILIZACION_INVALIDO];
+      }
+      (d.fecha !== null && d.fecha <= hoyISO ? llegados : futuros).push(d);
+    }
+    const errores = [];
+    for (const a of llegados) {
+      for (const b of futuros) {
+        a.pruebas.forEach((idA, i) => {
+          b.pruebas.forEach((idB, j) => {
+            const ha = huellas.get(idA);
+            const hb = huellas.get(idB);
+            const mismoId = idA === idB;
+            const mismoSha = ha && hb && ha.sha256 && hb.sha256 && ha.sha256 === hb.sha256;
+            const parecida = ha && hb && ha.dhash && hb.dhash && distanciaHamming(ha.dhash, hb.dhash) <= 5;
+            if (mismoId || mismoSha || parecida) {
+              errores.push(
+                `La prueba ${j + 1} del día ${b.n} repite la prueba ${i + 1} del día ${a.n}, que ya ha llegado: una imagen jugada o archivada no puede volver en un día futuro.`
+              );
+            }
+          });
+        });
+      }
+    }
+    return errores;
+  } catch {
+    return [MENSAJE_REUTILIZACION_INVALIDO];
+  }
+}
+
 export { EXT_IMAGEN, EXT_FICHA, EXT_FICHA_EN };

@@ -1,6 +1,6 @@
 // Importador por temas (spec 4.4.2 y 4.4.4). Node 20+, dependencia: sharp.
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync, statSync, copyFileSync, unlinkSync } from 'node:fs';
-import { randomInt } from 'node:crypto';
+import { randomInt, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import sharp from 'sharp';
@@ -30,6 +30,7 @@ import {
   POSICIONES_RECORTE,
   EXT_IMAGEN,
   EXT_FICHA,
+  comprobarReutilizacion,
   ARCHIVO_TEMA_ES
 } from './temas.mjs';
 import { escribirCreditos } from './creditos.mjs';
@@ -390,13 +391,11 @@ async function main() {
   }
 
   // Fase B
-  if (reimportar && existsSync(RUTA_BANCO)) copyFileSync(RUTA_BANCO, RUTA_BANCO_ANTERIOR);
-  mkdirSync(RUTA_CASOS, { recursive: true });
-  mkdirSync(dirname(RUTA_CALENDARIO), { recursive: true });
+  // Hasta comprobar la reutilización de imágenes [10.8.7] no se escribe nada (ni casos/, ni banco, ni calendario, ni créditos).
   const usados = new Set([...banco.imagenes.map((i) => i.id), ...casosExistentes.map((f) => f.replace(/\.webp$/i, ''))]);
   if (reimportar) for (const d of calendario.dias) for (const id of d.pruebas) usados.add(id);
-  if (reimportar && existsSync(RUTA_BANCO_ANTERIOR)) {
-    for (const i of JSON.parse(readFileSync(RUTA_BANCO_ANTERIOR, 'utf8')).imagenes ?? []) usados.add(i.id);
+  if (reimportar && existsSync(RUTA_BANCO)) {
+    for (const i of JSON.parse(readFileSync(RUTA_BANCO, 'utf8')).imagenes ?? []) usados.add(i.id);
   }
   const diasNuevos = [];
   const entradasBanco = [];
@@ -436,7 +435,6 @@ async function main() {
   const avisosPeso = [];
   const calidades = [];
   for (const t of barajar(trabajos, aleatorio)) {
-    const destino = join(RUTA_CASOS, `${t.id}.webp`);
     const position = t.recorte === 'atencion' ? sharp.strategy.attention : POSICIONES_RECORTE[t.recorte];
     const { data, info } = await sharp(t.origen)
       .rotate()
@@ -448,13 +446,41 @@ async function main() {
         .webp({ quality, effort: 6 })
         .toBuffer();
     const r = await buscarCalidad(codificar);
-    writeFileSync(destino, r.buffer);
+    t.buffer = r.buffer;
     calidades.push(r.calidad);
     if (r.fuera) {
       avisosPeso.push(
         `${t.ruta} pesa ${(r.buffer.length / 1024).toFixed(0)} KB con calidad ${r.calidad}, ${r.fuera === 'alto' ? 'por encima' : 'por debajo'} de la franja de ${PESO_MIN_KB}-${PESO_MAX_KB} KB (calidad permitida ${CALIDAD_MIN}-${CALIDAD_MAX}); se usa el límite más cercano.`
       );
     }
+  }
+
+  // Una imagen de un día ya llegado no vuelve en un día futuro [D-191, 10.8.7]: antes de escribir nada.
+  {
+    const sha = (b) => createHash('sha256').update(b).digest('hex');
+    const bancoActual = existsSync(RUTA_BANCO) ? JSON.parse(readFileSync(RUTA_BANCO, 'utf8')) : banco; // con --reimportar cuenta el banco que se va a sustituir
+    const dhashes = new Map((bancoActual.imagenes ?? []).map((i) => [i.id, i.dhash]));
+    const huellas = new Map();
+    for (const d of calendario.dias) {
+      for (const id of d.pruebas) {
+        const f = join(RUTA_CASOS, `${id}.webp`);
+        if (existsSync(f)) huellas.set(id, { sha256: sha(readFileSync(f)), dhash: dhashes.get(id) ?? null });
+      }
+    }
+    for (const t of trabajos) huellas.set(t.id, { sha256: sha(t.buffer), dhash: entradasBanco.find((e) => e.id === t.id)?.dhash ?? null });
+    const dias = [...calendario.dias, ...diasNuevos].map((d) => ({ n: d.n, fecha: fechaDe(d.n), pruebas: d.pruebas }));
+    const reutilizadas = comprobarReutilizacion({ dias, huellas, hoyISO: hoy });
+    if (reutilizadas.length > 0) {
+      salir(['No se importa nada. Corrige lo siguiente y vuelve a ejecutar:', ...reutilizadas.map((e) => `  ERROR: ${e}`)]);
+    }
+  }
+
+  if (reimportar && existsSync(RUTA_BANCO)) copyFileSync(RUTA_BANCO, RUTA_BANCO_ANTERIOR);
+  mkdirSync(RUTA_CASOS, { recursive: true });
+  mkdirSync(dirname(RUTA_CALENDARIO), { recursive: true });
+  for (const t of trabajos) {
+    const destino = join(RUTA_CASOS, `${t.id}.webp`);
+    writeFileSync(destino, t.buffer);
     await comprobarArchivo(destino);
   }
 

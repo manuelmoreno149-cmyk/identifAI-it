@@ -665,3 +665,75 @@ test('borrarAntiguas cuenta las borradas de verdad y no se detiene si una falla'
   assert.match(r.fallidas[1], /^c\.webp/);
   assert.ok(presentes.has('e.webp'));
 });
+
+// ---------- 333 comprobarReutilizacion [D-191, 10.8.7] ----------
+
+test('333 comprobarReutilizacion: mismo id, mismo sha256 o dHash a distancia <= 5 entre un día llegado y uno futuro', async () => {
+  const { comprobarReutilizacion, PALABRAS_PROHIBIDAS, contienePalabraProhibida: prohibida } = await import('../herramientas/temas.mjs');
+  const fecha = (n) => `2026-12-${String(n).padStart(2, '0')}`;
+  const hex = (i) => i.toString(16).padStart(16, '0');
+  const base = () => {
+    const dias = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ n, fecha: fecha(n), pruebas: [0, 1, 2, 3, 4].map((i) => `d${n}p${i}`) }));
+    const huellas = new Map();
+    let k = 1;
+    for (const d of dias) for (const id of d.pruebas) huellas.set(id, { sha256: `sha${k}`, dhash: k++ % 2 ? hex(k * 0x0123456789abcdf) : null });
+    return { dias, huellas, hoyISO: '2026-12-05' }; // llegados 1 a 5, futuros 6 y 7
+  };
+  assert.deepEqual(comprobarReutilizacion(base()), []);
+  // El mismo id.
+  let e = base();
+  e.dias[5].pruebas[2] = 'd2p1';
+  let r = comprobarReutilizacion(e);
+  assert.equal(r.length, 1);
+  assert.match(r[0], /día 6/);
+  assert.match(r[0], /día 2/);
+  // Otro id con el mismo sha256.
+  e = base();
+  e.huellas.set('d7p0', { sha256: e.huellas.get('d3p4').sha256, dhash: null });
+  r = comprobarReutilizacion(e);
+  assert.equal(r.length, 1);
+  assert.match(r[0], /La prueba 1 del día 7 repite la prueba 5 del día 3/);
+  // dHash a distancia 5 (error) y 6 (nada).
+  e = base();
+  e.huellas.set('d1p0', { sha256: 'a', dhash: '0000000000000000' });
+  e.huellas.set('d6p0', { sha256: 'b', dhash: '000000000000001f' });
+  assert.equal(comprobarReutilizacion(e).length, 1);
+  e.huellas.set('d6p0', { sha256: 'b', dhash: '000000000000003f' });
+  assert.deepEqual(comprobarReutilizacion(e), []);
+  // Con dhash null en uno de los dos solo cuentan id y sha256.
+  e.huellas.set('d6p0', { sha256: 'b', dhash: null });
+  assert.deepEqual(comprobarReutilizacion(e), []);
+  // El día 5 (hoy) cuenta como llegado.
+  e = base();
+  e.dias[5].pruebas[0] = 'd5p3';
+  assert.equal(comprobarReutilizacion(e).length, 1);
+  // Repetidas entre dos futuros o entre dos llegados: no es asunto de esta función.
+  e = base();
+  e.dias[6].pruebas[0] = 'd6p1';
+  e.dias[3].pruebas[0] = 'd2p0';
+  assert.deepEqual(comprobarReutilizacion(e), []);
+  // Sin lanzamiento ningún día ha llegado.
+  e = base();
+  e.dias.forEach((d) => (d.fecha = null));
+  e.dias[5].pruebas[0] = 'd2p0';
+  assert.deepEqual(comprobarReutilizacion(e), []);
+  // Los mensajes no llevan tipo, tema ni palabras prohibidas.
+  e = base();
+  e.dias[5].pruebas[2] = 'd2p1';
+  assert.ok(!/autentica|generada/.test(comprobarReutilizacion(e)[0]));
+  assert.equal(prohibida(comprobarReutilizacion(e)[0]), null);
+  assert.ok(PALABRAS_PROHIBIDAS.length > 0);
+  // Entrada mal formada: mensaje fijo, sin lanzar.
+  for (const malo of [{ dias: 'x', huellas: new Map(), hoyISO: '2026-12-05' }, { dias: [], huellas: {}, hoyISO: '2026-12-05' }, { dias: [null], huellas: new Map(), hoyISO: '2026-12-05' }, undefined]) {
+    assert.deepEqual(comprobarReutilizacion(malo), ['Datos de reutilización de imágenes no válidos.']);
+  }
+});
+
+test('analizarAnunciosActivos: true, false o null si falta o está repetida', async () => {
+  const { analizarAnunciosActivos } = await import('../herramientas/temas.mjs');
+  assert.equal(analizarAnunciosActivos('const ANUNCIOS_ACTIVOS = false;\n'), false);
+  assert.equal(analizarAnunciosActivos('const ANUNCIOS_ACTIVOS = true;\n'), true);
+  assert.equal(analizarAnunciosActivos('// nada\n'), null);
+  assert.equal(analizarAnunciosActivos('const ANUNCIOS_ACTIVOS = false;\nconst ANUNCIOS_ACTIVOS = false;\n'), null);
+  assert.equal(analizarAnunciosActivos(undefined), null);
+});
