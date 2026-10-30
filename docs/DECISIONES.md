@@ -377,3 +377,14 @@ Para cambiar una decisión:
 ### 2026-10-30 · Ajustes tras la primera revisión del español
 
 - D-164 · **Cifras en español con punto de millares desde cuatro cifras** ("840.537", "4.000", "1.296,72"), como en los textos del usuario; los años no llevan separador. Sustituye al espacio de millares desde cinco cifras de DP-67 (RESUELTA). El mensaje final de ¿Dato o Bulo? con 1 acierto ya no menciona fuentes (el reto no las usa); el inglés ("Check the sources.") queda igual, a la espera de que el usuario decida.
+
+### 2026-10-30 · Flecha de las tarjetas, mensaje en inglés y tarea pendiente
+
+- D-165 · La flecha de "Open file" / "Abrir expediente" deja de ser el carácter → (las fuentes alojadas no lo incluyen y caía a la fuente del sistema) y pasa a un icono SVG propio, `img/ui/flecha.svg`, pintado como el de compartir con `span.icono-flecha[aria-hidden]` dentro de `span.reto-abrir`. `portada.abrir` pasa a ser "Open file" y "Abrir expediente" (sin flecha).
+- D-166 · El mensaje final de Fact or Fake con 1 acierto en inglés ya no menciona fuentes: "One call held up. The other lies outfoxed you. Study every claim under a magnifying glass." (mismo sentido que el español de D-164). Los créditos no cambian.
+
+### TAREA PENDIENTE ANTES DEL LANZAMIENTO · No cerrar como abandonada una partida viva en otra pestaña
+
+- TP-01 · Hoy (D-51, D-79), al cargar el juego, main.js cierra como abandonada (pendientes → `F`) cualquier partida `en_curso` de hoy. Abrir el juego en una segunda pestaña cierra así la partida de otra pestaña que sigue abierta y viva, y esa pestaña salta a `ya-jugado` con lo respondido hasta entonces (visto en la comprobación del 2026-10-30). **No se implementa todavía.**
+- Idea: cada pestaña tiene un identificador propio en `sessionStorage` y, mientras juega, escribe un latido en `localStorage` (identificador y marca de tiempo) cada pocos segundos. Al cargar, si hay una partida `en_curso` de hoy cuya pestaña dueña tiene latido reciente, la pestaña nueva muestra ese reto como "en otra pestaña" (`OTRA_PESTANA`) y no cierra nada; si el latido lleva más de 15 segundos parado (o no existe), la partida se considera abandonada y se cierra como hasta ahora.
+- Por definir al hacerla: dónde vive el latido (dentro de `identifaiit.v3` o en una clave aparte), qué pasa con una pestaña recargada (nuevo identificador: su partida anterior se cierra tras los 15 s) y los tests con relojes simulados.

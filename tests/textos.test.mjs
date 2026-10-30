@@ -149,7 +149,7 @@ test('38. los dos árboles son paralelos: mismas claves, mismos arrays y mismos 
 
 test('38. valores exactos en inglés', () => {
   const T = TEXTOS.en;
-  assert.equal(T.portada.abrir, 'Open file →');
+  assert.equal(T.portada.abrir, 'Open file');
   assert.equal(T.portada.pie, 'New cases every day at midnight.');
   assert.equal(T.portada.elige_reto, 'Choose your case file');
   assert.equal(T.portada.lema, 'Two cases a day. Spot the fake.');
