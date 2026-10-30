@@ -81,6 +81,11 @@
         <button type="button" data-accion="idioma" data-idioma="es" lang="es" aria-label="Español" aria-pressed="false">ES</button>
       </div>
     </header>
+    <div class="carpeta-caja">
+    <p class="carpeta-pestana" aria-hidden="true">
+      <span data-reto-nombre="imagenes" data-texto="instrucciones.pestana_imagenes">[[instrucciones.pestana_imagenes]]</span>
+      <span data-reto-nombre="afirmaciones" data-texto="instrucciones.pestana_afirmaciones">[[instrucciones.pestana_afirmaciones]]</span>
+    </p>
     <div class="carpeta">
       <article class="pagina" id="instrucciones-briefing" aria-labelledby="instrucciones-titulo">
         <p id="instrucciones-membrete"></p>
@@ -96,6 +101,7 @@
         <p id="instrucciones-firma" data-texto="instrucciones.firma">[[instrucciones.firma]]</p>
       </article>
       <div class="pagina" id="instrucciones-accion">
+        <span class="carpeta-clip" aria-hidden="true"></span>
         <fieldset id="instrucciones-modos">
           <legend data-texto="instrucciones.metodo">[[instrucciones.metodo]]</legend>
           <div class="modo">
@@ -113,7 +119,11 @@
         </fieldset>
         <div id="instrucciones-reglas">
           <h3 data-texto="instrucciones.reglas">[[instrucciones.reglas]]</h3>
-          <p id="instrucciones-aviso" data-texto="afirmaciones.aviso_oculta">[[afirmaciones.aviso_oculta]]</p>
+          <div id="instrucciones-aviso-caja">
+            <span class="aviso-icono" aria-hidden="true"></span>
+            <p class="aviso-titulo" data-texto="instrucciones.aviso_titulo">[[instrucciones.aviso_titulo]]</p>
+            <p id="instrucciones-aviso" data-texto="afirmaciones.aviso_oculta">[[afirmaciones.aviso_oculta]]</p>
+          </div>
           <div id="instrucciones-ejemplo" aria-hidden="true">
             <p class="ejemplo-etiqueta" data-texto="instrucciones.ejemplo_etiqueta">[[instrucciones.ejemplo_etiqueta]]</p>
             <p class="ejemplo-texto" data-texto="instrucciones.ejemplo">[[instrucciones.ejemplo]]</p>
@@ -126,6 +136,7 @@
           <span class="boton-texto" data-texto="instrucciones.boton_empezar">[[instrucciones.boton_empezar]]</span>
         </button>
       </div>
+    </div>
     </div>
   </section>
 

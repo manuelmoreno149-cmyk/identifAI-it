@@ -737,6 +737,36 @@
   }
 }
 
+/* Caja de la carpeta: la pestana de carton va encima de la carpeta, a la izquierda */
+.carpeta-caja {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+}
+
+.carpeta-pestana {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  align-self: flex-start;
+  max-width: 100%;
+  margin: 0 0 -1px clamp(8px, 3vw, 28px);
+  padding: 3px 12px 2px;
+  font-family: var(--fuente-datos);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-tinta);
+  background: var(--color-carton);
+  border-radius: var(--radio-2) var(--radio-2) 0 0;
+}
+
 .carpeta {
   flex: 1 1 0;
   min-height: 0;
@@ -749,19 +779,34 @@
   background:
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.035) 0 2px, transparent 2px 6px),
     linear-gradient(160deg, var(--color-carton), var(--color-carton-oscuro));
-  border-radius: var(--radio-2);
+  border-radius: 0 var(--radio-2) var(--radio-2) var(--radio-2);
   box-shadow: var(--sombra-papel);
 }
 
 .pagina {
+  position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(3px, 0.8dvh, 8px);
-  padding: clamp(8px, 1.6dvh, 18px) clamp(10px, 3.4vw, 24px);
+  gap: clamp(4px, 1dvh, 10px);
+  padding: clamp(6px, 1.4dvh, 14px) clamp(10px, 3.4vw, 24px);
   font-family: var(--fuente-datos);
   color: var(--color-tinta);
   background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel);
+}
+
+/* Clip metalico de la pagina derecha: solo adorno, aparece en el diseno de dos paginas */
+.carpeta-clip {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: clamp(24px, 6%, 64px);
+  z-index: 2;
+  width: 22px;
+  height: 58px;
+  background: url("../img/ui/clip.svg") no-repeat center / contain;
+  filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
 }
 
 .pagina :focus-visible {
@@ -779,6 +824,7 @@
 }
 
 #instrucciones-membrete {
+  flex: none;
   padding-bottom: 3px;
   font-size: 0.75rem;
   line-height: 1.25;
@@ -789,24 +835,30 @@
 }
 
 #instrucciones-titulo {
-  font-size: clamp(1.5rem, min(7.5vw, 5dvh), 2.5rem);
+  flex: none;
+  font-size: clamp(2rem, min(11.5vw, 6.5dvh), 2.875rem);
   line-height: 1.05;
   letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
   color: var(--color-sello);
 }
 
 #instrucciones-frase {
+  flex: none;
   font-size: 0.9375rem;
   line-height: 1.3;
 }
 
+/* Los pasos cuelgan de una linea discontinua; en la pagina ancha reparten el alto libre */
 #instrucciones-pasos {
   counter-reset: paso;
   display: flex;
   flex-direction: column;
-  gap: clamp(2px, 0.6dvh, 6px);
-  font-size: 0.875rem;
-  line-height: 1.3;
+  gap: clamp(3px, 0.9dvh, 8px);
+  padding-top: clamp(4px, 1dvh, 8px);
+  font-size: clamp(0.8125rem, min(3.7vw, 2.1dvh), 0.9rem);
+  line-height: 1.25;
+  border-top: 2px dashed var(--color-tinta-suave);
 }
 
 #instrucciones-pasos li {
@@ -823,9 +875,10 @@
 }
 
 #instrucciones-firma {
+  flex: none;
   margin-top: auto;
   padding-top: 3px;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.25;
   text-align: right;
   color: var(--color-tinta-azul);
@@ -839,19 +892,22 @@
   margin-bottom: clamp(3px, 0.8dvh, 8px);
   font-family: var(--fuente-datos);
   font-weight: 400;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.2;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-sello);
 }
 
-/* Los tres modos son casillas de un formulario: la elegida lleva un aspa roja */
+/* Los tres modos son casillas de un formulario: la elegida lleva un aspa roja. Se reparten el alto libre */
 #instrucciones-modos {
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(min-content, 1fr);
+  gap: clamp(6px, 1.2dvh, 12px);
 }
 
 #instrucciones-modos legend {
@@ -880,12 +936,17 @@
   flex: 1;
   min-width: 0;
   min-height: var(--tactil-min);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "caja nom"
+    "caja desc";
+  align-content: center;
   align-items: center;
-  gap: 3px;
-  padding: 6px 4px;
-  text-align: center;
+  column-gap: 12px;
+  row-gap: 1px;
+  padding: 4px 12px;
+  text-align: left;
   color: var(--color-tinta);
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid var(--color-tinta-suave);
@@ -894,9 +955,9 @@
 
 .modo label::before {
   content: "";
-  flex: none;
-  width: 1.375rem;
-  height: 1.375rem;
+  grid-area: caja;
+  width: 1.5rem;
+  height: 1.5rem;
   background: var(--color-papel-claro);
   border: 2px solid var(--color-tinta);
   border-radius: 2px;
@@ -918,10 +979,11 @@
 }
 
 .modo-nombre {
+  grid-area: nom;
   max-width: 100%;
   font-family: var(--fuente-titulos);
   font-weight: 600;
-  font-size: clamp(0.75rem, 3.6vw, 0.9375rem);
+  font-size: clamp(1rem, min(5vw, 3dvh), 1.625rem);
   line-height: 1.1;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -929,83 +991,101 @@
 }
 
 .modo-desc {
+  grid-area: desc;
   font-family: var(--fuente-datos);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.2;
 }
 
-/* Normas de Fact or Fake */
+/* Normas de Fact or Fake: el aviso, la etiqueta y la ficha de ejemplo, que crece hasta llenar el hueco */
 #instrucciones-reglas {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(4px, 1dvh, 8px);
+  gap: clamp(4px, 1dvh, 10px);
 }
 
 #instrucciones-reglas h3 {
+  flex: none;
   margin-bottom: 0;
 }
 
-#instrucciones-aviso {
-  position: relative;
-  padding: 6px 8px 6px 2.5rem;
-  font-size: 0.875rem;
-  line-height: 1.25;
+#instrucciones-aviso-caja {
+  flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "icono titulo"
+    "icono texto";
+  align-items: center;
+  column-gap: 10px;
+  padding: 6px 10px;
   color: var(--color-tinta);
   background: rgba(155, 28, 28, 0.09);
   border: 2px solid var(--color-sello);
   border-radius: var(--radio-1);
 }
 
-#instrucciones-aviso::before {
-  content: "!";
-  content: "!" / "";
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  font-family: var(--fuente-titulos);
-  font-weight: 600;
-  font-size: 1.0625rem;
-  line-height: 1;
-  color: var(--color-papel);
-  background: var(--color-sello);
-  border-radius: 50%;
-  transform: translateY(-50%);
+.aviso-icono {
+  grid-area: icono;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: url("../img/ui/aviso.svg") no-repeat center / contain;
 }
 
-/* Ficha de muestra: no es interactiva y no lleva respuesta */
+.aviso-titulo {
+  grid-area: titulo;
+  font-family: var(--fuente-titulos);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1.15;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-sello);
+}
+
+#instrucciones-aviso {
+  grid-area: texto;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+/* Ficha de muestra: no es interactiva y no lleva respuesta. Crece y se ladea un poco */
 #instrucciones-ejemplo {
+  flex: 1 1 auto;
+  margin-block: 3px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   grid-template-areas:
-    "etq marca"
+    "etq etq"
     "txt txt"
+    "marca marca"
     "b1 b2";
   gap: 3px var(--espacio-2);
   padding: 6px 10px 8px;
   color: var(--color-tinta);
   background: url("../img/ui/papel.svg") repeat top left / 240px 240px, var(--color-papel-claro);
   box-shadow: 0 0 0 1px rgba(74, 63, 42, 0.5), 0 3px 8px rgba(0, 0, 0, 0.35);
+  transform: rotate(-1.5deg);
   -webkit-user-select: none;
   user-select: none;
 }
 
 .ejemplo-etiqueta {
   grid-area: etq;
-  justify-self: start;
   font-size: 0.75rem;
   line-height: 1.25;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-sello);
 }
 
 .ejemplo-marca {
   grid-area: marca;
-  justify-self: end;
+  justify-self: center;
+  margin-bottom: 4px;
   font-size: 0.6875rem;
   line-height: 1.25;
   white-space: nowrap;
@@ -1014,10 +1094,11 @@
 
 .ejemplo-texto {
   grid-area: txt;
+  align-self: center;
   padding-block: 2px;
   font-family: var(--fuente-titulos);
   font-weight: 600;
-  font-size: 1.0625rem;
+  font-size: clamp(1rem, min(4.6vw, 2.6dvh), 1.25rem);
   line-height: 1.15;
   text-align: center;
   text-wrap: balance;
@@ -1063,44 +1144,89 @@
   border-color: var(--color-tinta);
 }
 
-/* Diseno ancho (>= 600 px): modos en lista de casillas */
-@media (min-width: 600px) {
-  #instrucciones-modos {
-    grid-template-columns: minmax(0, 1fr);
+/* Movil de pie alto (390 x 844): hay sitio para la frase y un poco mas de aire */
+@media (max-width: 699px) and (orientation: portrait) and (min-height: 760px) {
+  #instrucciones-membrete {
+    font-size: 0.8125rem;
   }
 
-  .modo label {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      "caja nom"
-      "caja desc";
-    align-items: center;
-    column-gap: 10px;
-    row-gap: 0;
-    padding: 4px 10px;
-    text-align: left;
+  #instrucciones-aviso {
+    font-size: 0.8125rem;
   }
 
-  .modo label::before {
-    grid-area: caja;
-  }
-
-  .modo-nombre {
-    grid-area: nom;
-    font-size: 1rem;
-  }
-
-  .modo-desc {
-    grid-area: desc;
+  .ejemplo-texto {
+    font-size: 1.25rem;
   }
 }
 
-/* Horizontal ancho: la carpeta se abre con dos paginas de igual alto y lomo central */
-@media (min-width: 600px) and (orientation: landscape) {
+/* Movil de pie bajo (360 x 640, 375 x 667): la frase se omite y todo se apreta (R19, R20).
+   El objetivo es que quepa sin desplazar la carpeta; el scroll interno queda solo como reserva */
+@media (max-height: 759px) and (max-width: 699px) and (orientation: portrait) {
+  #instrucciones-frase {
+    display: none;
+  }
+
+  .carpeta-pestana {
+    padding-block: 1px;
+  }
+
+  #instrucciones-pasos {
+    line-height: 1.2;
+  }
+
+  #instrucciones-aviso-caja {
+    padding-block: 4px;
+  }
+
+  .aviso-titulo {
+    font-size: 0.875rem;
+  }
+
+  #instrucciones-aviso {
+    line-height: 1.15;
+  }
+
+  #instrucciones-ejemplo {
+    padding: 4px 10px 6px;
+    gap: 2px var(--espacio-2);
+  }
+
+  .ejemplo-texto {
+    padding-block: 0;
+    line-height: 1.1;
+  }
+
+  .pagina {
+    gap: 3px;
+    padding-block: 6px;
+  }
+
+  #instrucciones-modos {
+    gap: 5px;
+  }
+}
+
+/* Dos paginas: horizontal desde 600 px o cualquier orientacion desde 700 px. Lomo central y clip */
+@media (min-width: 600px) and (orientation: landscape), (min-width: 700px) {
+  #pantalla-instrucciones:not([hidden]) {
+    max-width: 80rem;
+  }
+
+  .carpeta-pestana {
+    margin-left: clamp(16px, 3vw, 40px);
+    padding: 4px 16px 3px;
+    font-size: 0.875rem;
+  }
+
   .carpeta {
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
     grid-template-rows: minmax(min-content, 1fr);
+    padding: clamp(8px, 1.6dvh, 16px) clamp(8px, 1.4vw, 20px);
+  }
+
+  .pagina {
+    gap: clamp(8px, 1.6dvh, 18px);
+    padding: clamp(14px, 2.6dvh, 32px) clamp(20px, 3vw, 44px);
   }
 
   #instrucciones-briefing {
@@ -1113,88 +1239,286 @@
     border-radius: 0 var(--radio-1) var(--radio-1) 0;
     box-shadow: inset 16px 0 14px -12px rgba(0, 0, 0, 0.45);
   }
-}
 
-/* Mas alto: el texto de la hoja crece */
-@media (min-height: 761px) {
-  #instrucciones-pasos,
-  #instrucciones-firma,
-  #instrucciones-aviso {
-    font-size: 1rem;
+  .carpeta-clip {
+    display: block;
+  }
+
+  /* Pagina izquierda: membrete, titulo, frase, linea discontinua, pasos repartidos y firma al pie */
+  #instrucciones-membrete {
+    font-size: 0.875rem;
+  }
+
+  #instrucciones-titulo {
+    font-size: clamp(3rem, min(6vw, 10dvh), 5.5rem);
   }
 
   #instrucciones-frase {
-    font-size: 1.0625rem;
+    font-size: clamp(1.125rem, 1.4vw, 1.25rem);
   }
 
-  #instrucciones-membrete {
+  #instrucciones-pasos {
+    flex: 1 1 auto;
+    justify-content: space-evenly;
+    gap: clamp(12px, 1.2vw, 16px);
+    padding-top: clamp(10px, 2dvh, 20px);
+    font-size: clamp(1rem, 1.4vw, 1.25rem);
+    line-height: 1.3;
+  }
+
+  #instrucciones-pasos li {
+    padding-left: 1.75rem;
+  }
+
+  #instrucciones-firma {
+    padding-top: 6px;
+    font-size: clamp(1rem, 1.3vw, 1.125rem);
+  }
+
+  /* Pagina derecha */
+  #instrucciones-modos legend,
+  #instrucciones-reglas h3 {
+    padding-right: 2.5rem;
+    font-size: 0.875rem;
+  }
+
+  .modo label {
+    column-gap: 16px;
+    padding: 6px 18px;
+  }
+
+  .modo label::before {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .modo-nombre {
+    font-size: clamp(1.25rem, 2vw, 1.625rem);
+  }
+
+  .modo-desc {
+    font-size: clamp(0.875rem, 1.1vw, 1rem);
+  }
+
+  #instrucciones-aviso-caja {
+    column-gap: 14px;
+    padding: 10px 14px;
+  }
+
+  .aviso-icono {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .aviso-titulo {
+    font-size: clamp(1.125rem, 1.5vw, 1.375rem);
+  }
+
+  #instrucciones-aviso {
+    font-size: clamp(0.9375rem, 1.1vw, 1rem);
+    line-height: 1.3;
+  }
+
+  .ejemplo-etiqueta {
+    font-size: 0.875rem;
+    letter-spacing: 0.14em;
+  }
+
+  #instrucciones-ejemplo {
+    margin-block: 8px;
+    padding: 12px 18px 16px;
+    gap: 8px var(--espacio-3);
+  }
+
+  .ejemplo-texto {
+    font-size: clamp(1.3125rem, 1.8vw, 1.5rem);
+    line-height: 1.2;
+  }
+
+  .ejemplo-marca {
+    font-size: 0.75rem;
+  }
+
+  .ejemplo-boton {
+    min-height: 2.75rem;
+    font-size: 1.25rem;
+  }
+}
+
+/* Dos paginas pero de poco alto (800 x 600, 1024 x 600): letra intermedia */
+@media ((min-width: 600px) and (orientation: landscape)) and (max-height: 700px), ((min-width: 700px) and (max-height: 700px)) {
+  #instrucciones-titulo {
+    font-size: clamp(2.5rem, min(6vw, 9dvh), 4rem);
+  }
+
+  #instrucciones-frase {
+    font-size: 1rem;
+  }
+
+  #instrucciones-pasos {
+    gap: 8px;
+    font-size: 0.875rem;
+    line-height: 1.25;
+  }
+
+  #instrucciones-firma {
+    font-size: 0.875rem;
+  }
+
+  .pagina {
+    gap: 6px;
+  }
+
+  .aviso-icono {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .aviso-titulo {
+    font-size: 1rem;
+  }
+
+  #instrucciones-aviso {
     font-size: 0.8125rem;
+    line-height: 1.2;
+  }
+
+  #instrucciones-aviso-caja {
+    padding-block: 6px;
+  }
+
+  .ejemplo-texto {
+    font-size: 1.125rem;
+  }
+
+  .modo-nombre {
+    font-size: 1.125rem;
   }
 
   .modo-desc {
     font-size: 0.8125rem;
   }
-
-  .ejemplo-texto {
-    font-size: 1.25rem;
-  }
 }
 
-@media (min-width: 900px) and (min-height: 560px) and (orientation: landscape) {
-  #pantalla-instrucciones:not([hidden]) {
-    max-width: 64rem;
-  }
-
-  #instrucciones-pasos,
-  #instrucciones-firma,
-  #instrucciones-aviso {
-    font-size: 1rem;
-  }
-}
-
-/* Horizontal bajo (640 x 360): la frase se omite, el resto de la hoja se apreta */
+/* Horizontal bajo (640 x 360): dos paginas con letra pequena; sin frase ni pestana */
 @media (orientation: landscape) and (max-height: 420px) {
-  #instrucciones-frase {
+  #instrucciones-frase,
+  .carpeta-pestana,
+  .carpeta-clip {
     display: none;
   }
 
+  .carpeta {
+    border-radius: var(--radio-2);
+    padding-block: 4px;
+  }
+
   .pagina {
-    padding: 6px 12px;
+    gap: 4px;
+    padding: 5px 12px;
+  }
+
+  #instrucciones-membrete {
+    font-size: 0.6875rem;
+    padding-bottom: 1px;
+  }
+
+  #instrucciones-titulo {
+    font-size: 1.75rem;
+  }
+
+  #instrucciones-pasos {
+    gap: 4px;
+    padding-top: 4px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  #instrucciones-pasos li {
+    padding-left: 1.25rem;
+  }
+
+  #instrucciones-firma {
+    padding-top: 2px;
+    font-size: 0.75rem;
   }
 
   #instrucciones-modos legend,
   #instrucciones-reglas h3 {
-    margin-bottom: 2px;
+    margin-bottom: 1px;
+    padding-right: 0;
+    font-size: 0.6875rem;
   }
-}
 
-/* Vertical bajo (360 x 640, 375 x 667): R19 con los textos en ingles y en espanol. Sin cambiar el tamano de
-   letra (los pasos siguen en 14 px), se aprieta el interlineado, los huecos y la ficha de ejemplo */
-@media (max-width: 599px) and (max-height: 700px) {
-  #instrucciones-pasos,
-  #instrucciones-frase {
-    line-height: 1.2;
+  #instrucciones-modos {
+    gap: 4px;
+  }
+
+  .modo label {
+    column-gap: 10px;
+    padding: 2px 10px;
+  }
+
+  .modo label::before {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+
+  .modo-nombre {
+    font-size: 0.9375rem;
+  }
+
+  .modo-desc {
+    font-size: 0.6875rem;
+  }
+
+  #instrucciones-aviso-caja {
+    column-gap: 8px;
+    padding: 3px 8px;
+  }
+
+  .aviso-icono {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .aviso-titulo {
+    font-size: 0.8125rem;
   }
 
   #instrucciones-aviso {
-    padding-block: 4px;
+    font-size: 0.6875rem;
     line-height: 1.15;
   }
 
   #instrucciones-ejemplo {
-    padding: 4px 10px 6px;
+    margin-block: 2px;
+    padding: 4px 8px 5px;
     gap: 2px var(--espacio-2);
+  }
+
+  .ejemplo-etiqueta {
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
   }
 
   .ejemplo-texto {
     padding-block: 0;
-    font-size: 1rem;
+    font-size: 0.8125rem;
     line-height: 1.1;
   }
 
-  .pagina {
-    gap: 3px;
-    padding-block: 6px;
+  .ejemplo-marca {
+    font-size: 0.625rem;
+  }
+
+  .ejemplo-boton {
+    min-height: 1.5rem;
+    font-size: 0.75rem;
+  }
+
+  #instrucciones-accion > .boton {
+    font-size: 1.0625rem;
   }
 }
 
