@@ -1,6 +1,7 @@
 // npm run lanzamiento [-- AAAA-MM-DD | -- --sin-fecha]
 // Muestra o cambia la fecha de lanzamiento (spec 4.2.1) [D-95, D-96, D-116].
-// Migra una sola vez el calendario 3 -> 4 y el banco 2 -> 3, y reparte data/facts/ por mes.
+// Migra una sola vez el calendario 3 -> 4 y el banco 2 -> 3, y reparte data/facts/ (versión 2) por mes.
+// Acepta un calendario de la versión 4 o 5 sin cambiar su versión [4.21].
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +18,16 @@ import { unirMeses, repartirPorMes, leerAfirmacionesMensuales, escribirAfirmacio
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const json = (obj) => JSON.stringify(obj, null, 2) + '\n';
 const leerJson = (ruta) => JSON.parse(fs.readFileSync(ruta, 'utf8'));
+
+// La versión 5 se valida con validarCalendario; la 4 (sin español, a la espera de --reimportar) solo en lo que toca la herramienta.
+function calendarioLanzable(c) {
+  if (c?.version === 5) return validarCalendario(c);
+  if (c?.version !== 4 || !c || typeof c !== 'object' || !Array.isArray(c.dias)) return false;
+  return (
+    (c.lanzamiento === null || typeof c.lanzamiento === 'string') &&
+    c.dias.every((d, k) => d && d.n === k + 1 && Array.isArray(d.pruebas) && d.pruebas.length === 5)
+  );
+}
 
 // Ejecuta la herramienta sobre una raíz de proyecto. Devuelve {codigo, mensajes}; no llama a process.exit.
 export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date()) } = {}) {
@@ -54,7 +65,7 @@ export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date())
   if (args.accion === 'mostrar') {
     const lanz = bruto?.lanzamiento ?? null;
     const nImg = Array.isArray(bruto?.dias) ? bruto.dias.length : 0;
-    decir(`Lanzamiento: ${lanz ?? 'sin fecha'}${bruto?.version === 4 ? '' : ` (calendario de la versión ${bruto?.version}: conviértelo con npm run lanzamiento -- ${lanz ?? '--sin-fecha'})`}`);
+    decir(`Lanzamiento: ${lanz ?? 'sin fecha'}${[4, 5].includes(bruto?.version) ? '' : ` (calendario de la versión ${bruto?.version}: conviértelo con npm run lanzamiento -- ${lanz ?? '--sin-fecha'})`}`);
     const ultimo = (n) => (lanz && n > 0 ? ` (último día: ${fechaDelDia(lanz, n)})` : '');
     decir(`Images: ${nImg} días${ultimo(nImg)}`);
     decir(`Fact or Fake: ${diasFacts.length} días en ${archivos.length} archivos mensuales${ultimo(diasFacts.length)}`);
@@ -65,8 +76,8 @@ export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date())
   const migrado = migrarCalendario(bruto);
   if (migrado.errores.length > 0) return fallo(migrado.errores);
   const calendarioActual = migrado.calendario;
-  if (!validarCalendario(calendarioActual)) {
-    return fallo('data/calendario.json no cumple la estructura de la versión 4 (ejecuta npm run validar).');
+  if (!calendarioLanzable(calendarioActual)) {
+    return fallo(`data/calendario.json no cumple la estructura de la versión ${calendarioActual?.version} (ejecuta npm run validar).`);
   }
 
   const nuevo = args.accion === 'quitar' ? null : args.fecha;

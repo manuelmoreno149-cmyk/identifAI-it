@@ -1,46 +1,51 @@
-# identifAI-it: especificación técnica, versión 2.1 · 3. Módulos JS
+# identifAI-it: especificación técnica, versión 3.0 · 3. Módulos JS
 
-Parte de la especificación 2.1 (índice en `docs/ESPECIFICACION.md`) [D-120]. Los cambios de la 2.1 (Fact or Fake en lugar de Headlines) van marcados con **[2.1]**; lo marcado [2.0] sigue vigente con los nombres nuevos. Lo no marcado sigue como en la 1.3. Qué partes del código ya escrito hay que adaptar está en `9-tareas.md` (9.4.1).
+Parte de la especificación 3.0 (índice en `docs/ESPECIFICACION.md`) [D-151]. Los cambios de la 3.0 (portada nueva, `instrucciones` y dos idiomas) van marcados con **[3.0]**; lo marcado [2.1] o [2.0] sigue vigente. Qué hay que adaptar del código actual está en `9-tareas.md` (9.7).
 
 ## 3. Módulos JS
 
-Módulos ES sin dependencias. Las funciones **puras** no tocan el DOM, `window`, `localStorage`, `Date.now()`, `performance.now()` ni `Math.random()` (salvo como valor por defecto de un `aleatorio` inyectable) y se prueban con `node --test`. `TextEncoder`, `TextDecoder`, `btoa`, `atob` y `URLSearchParams` son globales en el navegador y en Node 20.
+Módulos ES sin dependencias. Las funciones **puras** no tocan el DOM, `window`, `navigator`, `location`, `localStorage`, `Date.now()`, `performance.now()` ni `Math.random()` (salvo como valor por defecto de un `aleatorio` inyectable) y se prueban con `node --test`. `TextEncoder`, `TextDecoder`, `btoa`, `atob` y `URLSearchParams` son globales en el navegador y en Node 20.
 
 Grafo de importaciones, sin ciclos:
 - `main.js` importa todos. `almacen.js` y `juego.js` importan `diario.js`. `compartir.js`, `temporizador.js`, `diario.js` y `textos.js` no importan nada.
-- Herramientas:
-  - `temas.mjs` no importa nada.
-  - [2.1] `afirmaciones.mjs` (antes `titulares.mjs`) importa `./temas.mjs` (`analizarCarpeta`, `contienePalabraProhibida`), `../js/diario.js` (`validarAfirmaciones`, `mesDeNumero`, `MES_PATRON`, `fechaDelDia`, `diasEntre`, `temaValido`, `DETALLES_MAX`, `AFIRMACION_MAX_BYTES`, `ACLARACION_MAX_BYTES`) y, solo para sus dos funciones de archivo, `node:fs` y `node:path`.
-  - [2.1] `creditos.mjs` importa `../js/textos.js` y nada de Fact or Fake (la sección es fija, D-129).
-  - `importar.mjs` como en la 1.3 (sin `LANZAMIENTO`) [D-95]; [2.1] ignora `facts.txt`, `facts.en.txt`, `datos.txt` y `datos.original.txt` (4.4.1) [D-139].
-  - [2.1] `importar-afirmaciones.mjs` importa `../js/diario.js` (`ofuscar`, `desofuscar`, `ofuscarAfirmacion`, `ofuscarAclaracion`, `desofuscarAfirmacion`, `validarAfirmaciones`, `validarCalendario`, `fechaDelDia`, `mesDeNumero`), `./temas.mjs` (`barajar`, `avisosMezcla`) y `./afirmaciones.mjs`. No lee ni escribe ningún banco [D-131].
-  - `lanzamiento.mjs` importa `../js/diario.js`, `./temas.mjs` y [2.1] `./afirmaciones.mjs` (lectura, unión, reparto y escritura de `data/facts/`).
-  - `validar.mjs` importa además `./afirmaciones.mjs` y lee todos los archivos de `data/facts/` (sin banco de Fact or Fake, D-131).
+- Herramientas: como en la 2.1 (`temas.mjs` no importa nada; `afirmaciones.mjs` importa `temas.mjs` y `diario.js`; `importar.mjs`, `importar-afirmaciones.mjs`, `lanzamiento.mjs`, `creditos.mjs` y `validar.mjs`, sus módulos). [3.0] `importar.mjs`, `validar.mjs` y `creditos.mjs` leen `TEXTOS.en` y `TEXTOS.es` de `js/textos.js`; las funciones de idioma (`IDIOMAS`, `idiomaValido`) vienen de `js/diario.js`.
 
 ### 3.1 js/textos.js (cronista)
 
-`export const TEXTOS = {...}`, en inglés americano [D-93]. [2.1] Se eliminan el grupo `titulares` y las claves `portada.reto_titulares`, `portada.regla_titulares`, `como_jugar.pasos_titulares`, `compartir.plantilla_titulares`, `creditos.noticias`, `creditos.noticias_intro`, `creditos.sin_noticias` y `creditos.ficcion`. Los valores entre comillas marcados como **exactos** no se cambian sin permiso; el resto son propuestas que el cronista puede pulir y el usuario aprueba (tarea 82).
+[3.0, D-155] `export const TEXTOS = { en: {...}, es: {...} }`: **dos árboles con exactamente las mismas claves** (mismos grupos, mismas claves, mismos arrays con la misma longitud y los mismos marcadores `{x}` en cada plantilla). `en` en inglés americano, tono de novela negra [D-93]; `es` en español de España, mismo tono, tuteo. Todo consumidor usa `TEXTOS[idioma]`.
+
+Los valores marcados **exactos** no se cambian sin permiso; el resto son propuestas del cronista que aprueba el usuario (tarea 91).
+
+**Claves que cambian en la 3.0** (las demás siguen como en la 2.1, ahora dentro de `TEXTOS.en`, y con su traducción en `TEXTOS.es`):
 
 | Grupo | Claves |
 |---|---|
-| `portada` | Las de la 1.3 y la 2.0 (`elige_reto`, `reto_imagenes` **"Images"** exacto, `estado_pendiente`, `estado_jugado`, `estado_en_curso` **"In another tab"**, `estado_sin_caso`, `boton_ver_informe`) y [2.1] `reto_afirmaciones` (**"Fact or Fake"**, exacto) y `regla_afirmaciones` (mismo valor aprobado que la antigua `regla_titulares`: **"No timer. Leave for more than a few seconds and it's a miss."**). [2.1] `lema`, común a los dos retos: **"Two cases a day. Spot the fake."** (exacto; sustituye a "Five pieces of evidence. One shot. Real or AI?") [D-133]. |
-| `como_jugar` | `titulo`, `pasos` (Images, exactamente 4) y [2.1] `pasos_afirmaciones` (exactamente 4): dos retos al día con un intento cada uno; leer la afirmación y decidir FACT o FAKE sin prisa; salir de la página **más de unos segundos** antes de responder cuenta como fallo; tras responder, la verdad y los detalles. Propuesta: "Two challenges a day, one try each. This one is Fact or Fake.", "Read the claim, then call it: FACT or FAKE. No timer.", "Leave the page for more than a few seconds and it counts as a miss.", "After you answer, you get the truth and the details." |
-| `cargando`, `cuenta_atras` | Sin cambios. |
-| `partida` | Sin cambios. Fact or Fake reutiliza `caso_del_dia`, `marcador`, `boton_siguiente` y `boton_ver_resultado` (los votos tienen sus propias claves). |
-| `afirmaciones` | [2.1] `etiqueta_prueba` ("Claim {i}/5"); `boton_autentica` (**"FACT"**, exacto) y `boton_generada` (**"FAKE"**, exacto); `sello_autentica` (**"FACT"**, exacto) y `sello_generada` (**"FAKE"**, exacto); `marca` (**"identifAI-it · Fact or Fake?"**, exacto, U+00B7) [D-128]; `oculta` (array de 2 o más; pueden quedarse los tres valores aprobados de `titulares.oculta`, que no nombran el reto); `aviso_oculta` (**"Leaving the page for more than a few seconds counts as a miss."**, exacto) [D-115]; `no_disponible` (si una afirmación no se descifra; propuesta: "This file can't be read. Try reloading the page."); `aclaracion_no_disponible` (si la aclaración no se descifra; propuesta: "The record on this claim got lost in the paperwork."); `estado_prueba` ("Claim {i}: {estado}"). |
-| `veredictos` | Sin cambios. |
-| `confesion`, `ficha`, `fichas` | Sin cambios (solo Images, salvo `ficha.cerrar`, común). |
-| `final` | Los de la 1.3 y la 2.0 (`reto`, `boton_volver`). [2.1] **Mensajes por reto** [D-134]: `mensajes` es **solo de Images** (6 cadenas, índice = aciertos de 0 a 5; valores actuales sin cambios) y `mensajes_afirmaciones` es **de Fact or Fake** (6 cadenas, índice = aciertos de 0 a 5, tono policíaco, sin hablar de IA ni de imágenes). `mensajes_afirmaciones` está **aprobado por el usuario y es exacto** [D-138], en este orden: (0) "The paperwork beat you. Not one call survived. The file goes in the drawer, face down.", (1) "One call held up. The other lies were sharper than you. Check the sources.", (2) "Two right calls. A fake in a good suit got past you. Check the source before you sign.", (3) "Three right calls. Solid instincts, but two lies still slipped past your desk.", (4) "Four right calls. One lie got away. Read every claim like a suspect's alibi.", (5) "Every fact confirmed, every fake exposed. No loose ends in this file." Cómo se elige el conjunto: `mensajesDelReto` (3.3). |
-| `ya_jugado` | Sin cambios (`modo` solo en Images). |
-| `sin_casos` | `texto` y `sin_lanzamiento` (2.0). |
-| `errores` | Sin cambios. |
-| `avisos` | Los de la 1.3 y `prueba` (2.0). |
-| `prueba` | Sin cambios. |
-| `compartir` | `boton`, `copiado`, `manual`, `plantilla` (Images) y [2.1] `plantilla_afirmaciones`, exactamente las de la sección 7 [D-128]. |
-| `creditos` | Los de la 1.3 y [2.1] `afirmaciones` ("Fact or Fake") y `afirmaciones_texto`, **exacto**: "Claims are written for this game from public sources. The fakes are invented and always debunked after you answer." (114 caracteres) [D-129, D-132]. |
+| `portada` | **Nuevas**: `abrir` (**"Open file" + icono de flecha**, exacto), `pie` (**"New cases every day at midnight."**, exacto), `sello_ilustracion` ("AI?"), `idioma` (nombre accesible del grupo del selector: "Language"). **Siguen**: `titulo`, `lema` (exacto en inglés, D-133), `elige_reto` (**"Choose your case file"**, exacto), `reto_imagenes` (**"Images"**), `reto_afirmaciones` (**"Fact or Fake"**), `estado_*`, `modo_*`, `desc_*` (descripción del modo en la casilla), `etiqueta_caso`, `enlace_creditos`, `expediente_*`, `desc_reto_*` (la frase de la tarjeta). **Retiradas**: `boton_empezar`, `boton_ver_informe`, `regla_afirmaciones`, `elige_modo`, `tema`, `racha`, `empezar_*`, `informe_*`, `tiempo_*`. |
+| `instrucciones` | **[3.0] Grupo nuevo**: `volver` (**"All case files"**, exacto), `membrete` (**"Briefing · Case #{n} · {tema}"**, exacto; mayúsculas por CSS), `frase_imagenes`, `frase_afirmaciones` (una frase), `pasos_imagenes` y `pasos_afirmaciones` (exactamente 4 cada uno, estilo informe a máquina, 80 caracteres como máximo; en Fact or Fake uno de ellos dice que salir de la página más de unos segundos es fallo), `firma` (**"One try per day. — The Chief"**, exacto, con raya U+2014), `metodo` (**"METHOD OF INVESTIGATION"**, exacto), `reglas` (**"HOUSE RULES"**, exacto), `ejemplo_etiqueta` ("Example"), `ejemplo` (afirmación inventada de muestra, una frase de 100 caracteres como máximo, que no sea ninguna afirmación de los datos y cumpla la norma de contenido), `boton_empezar` (**"Open the case"**, exacto). |
+| `como_jugar` | **[3.0] Retirado entero** (`titulo`, `pasos`, `pasos_afirmaciones`): los pasos pasan a `instrucciones.pasos_*`. |
+| `prueba` | `etiqueta` (nombre accesible del desplegable, "Test day") y `opcion` (texto de cada día, con `{n}` y `{tema}` disponibles; propuesta: "{tema}"). **Retirada**: `boton`. |
+| `fichas` | `autentica` (**"Real photograph"** / **"Fotografía real"**, exactos: los usan el importador y `validar`). **Retirada**: `sin_prompt` (los prompts son obligatorios, D-157). |
+| `afirmaciones`, `partida`, `revelacion`, `veredictos`, `confesion`, `ficha`, `final`, `resultado`, `ya_jugado`, `sin_casos`, `errores`, `avisos`, `compartir`, `creditos`, `cargando`, `cuenta_atras` | Sin cambios de claves. `creditos` añade **`otro_idioma`** (texto del enlace a la otra página de créditos: "Español" en `en`, "English" en `es`) [D-161]. |
+
+**Valores exactos en español** [D-155] (los decidió el usuario o se derivan sin margen de los exactos ingleses):
+
+| Clave | `en` | `es` |
+|---|---|---|
+| `portada.reto_imagenes` | Images | **Imágenes** |
+| `portada.reto_afirmaciones` | Fact or Fake | **¿Dato o Bulo?** |
+| `partida.boton_autentica` / `boton_generada` / `sello_*` | REAL / AI | **REAL / IA** |
+| `afirmaciones.boton_autentica` / `boton_generada` / `sello_*` | FACT / FAKE | **DATO / BULO** |
+| `portada.modo_investigador` / `modo_normal` / `modo_perro` | Investigator / Normal / Bloodhound | **Investigador / Normal / Sabueso** |
+| `afirmaciones.marca` | identifAI-it · Fact or Fake? | **identifAI-it · ¿Dato o Bulo?** |
+| `fichas.autentica` | Real photograph | **Fotografía real** |
+| `compartir.plantilla` | (sección 7) | (4c-idiomas.md, 4.24) |
+| `compartir.plantilla_afirmaciones` | (sección 7) | (4c-idiomas.md, 4.24) |
+| `creditos.otro_idioma` | Español | **English** |
+
+**Propuestas en español** (las fija el cronista y las aprueba el usuario): el lema (p. ej. "Dos casos al día. Caza el bulo."), `portada.abrir` ("Abrir expediente →"), `portada.pie` ("Casos nuevos cada día a medianoche."), `portada.elige_reto` ("Elige tu expediente"), `portada.sello_ilustracion` ("¿IA?"), `portada.etiqueta_caso` ("Caso n.º {n}"), `instrucciones.volver` ("Todos los expedientes"), `instrucciones.membrete` ("Informe · Caso n.º {n} · {tema}"), `instrucciones.firma` ("Un intento al día. — El Jefe"), `instrucciones.metodo` ("MÉTODO DE INVESTIGACIÓN"), `instrucciones.reglas` ("NORMAS DE LA CASA"), `instrucciones.boton_empezar` ("Abrir el caso"), `afirmaciones.aviso_oculta` ("Salir de la página más de unos segundos cuenta como fallo."), `partida.marca` ("identifAI-it · ¿Real o IA?"), los 6 + 6 mensajes finales, `creditos.afirmaciones_texto` y el resto. Una vez aprobados, el lema, el aviso de ausencia, `creditos.afirmaciones_texto` y los mensajes finales en español pasan a ser exactos (se anotan en DECISIONES como ajuste menor).
 
 Reglas:
-- [D-118] **Cómo se mide**: en puntos de código (`[...s].length`) sobre el texto **ya rellenado** con los valores de relleno de esta tabla. Los tests definen una constante con exactamente estos valores; un marcador que no esté aquí hace fallar el test.
+- [D-118] **Cómo se mide**: `[...s].length` sobre el texto **ya rellenado**, por idioma, con los valores de relleno de cada idioma:
 
   | Marcador | Valor de relleno |
   |---|---|
@@ -48,125 +53,112 @@ Reglas:
   | `{n}`, `{caso}`, `{racha}` | `'999'` |
   | `{s}` | `'9'` |
   | `{tiempo}` | `'00:00:00'` |
-  | `{tema}` | 30 caracteres (`'x'.repeat(30)`) |
-  | `{fecha}` | `'Nov 30, 2026'` |
-  | `{modo}` | el más largo de `portada.modo_*` |
-  | `{reto}` | el más largo de `portada.reto_*` |
-  | `{estado}` | el más largo de `final.estados.*` |
-  | `{sello}` | [2.1] el más largo de `partida.sello_*` y `afirmaciones.sello_*` |
+  | `{tema}` | 30 caracteres |
+  | `{fecha}` | `'Nov 30, 2026'` (`en`), `'30 nov 2026'` (`es`) |
+  | `{modo}`, `{reto}`, `{estado}`, `{sello}`, `{voto}` | el más largo de su grupo **en ese idioma** |
 
-  ([2.1] Desaparece `{medio}`.)
-- **Límite general**: toda cadena de `TEXTOS`, rellenada, mide **90** como máximo (también cada `final.mensajes_afirmaciones`, y los 6 aprobados lo cumplen). Excepciones: `fichas.*` (510 bytes UTF-8); `como_jugar.pasos` y `como_jugar.pasos_afirmaciones` (80 cada uno); `compartir.plantilla` y `compartir.plantilla_afirmaciones` (exactas, no se miden); [2.1] `creditos.afirmaciones_texto` (120).
-- Límites de la 1.3 que siguen: `portada.modo_*` 14; `portada.desc_*` 26; `partida.sobre_texto` 16; `confesion.titulo` 30; `confesion.leer_entera` 24; `ficha.cerrar` 16; `prueba.opcion` 50.
-- Límites de la 2.0 que siguen: `portada.reto_*` 12; `portada.estado_*` 18; `portada.boton_ver_informe` y `final.boton_volver` 16; `avisos.prueba` 70. [2.1] `portada.regla_afirmaciones` 70; `afirmaciones.etiqueta_prueba` 16; `afirmaciones.boton_*` y `afirmaciones.sello_*` 12; `afirmaciones.marca` 40; cada `afirmaciones.oculta` 90; `afirmaciones.aviso_oculta` exacto (62).
-- Valores exactos que el cronista no puede cambiar: `portada.reto_imagenes`, `portada.reto_afirmaciones`, [2.1] `portada.lema`, `afirmaciones.boton_*`, `afirmaciones.sello_*`, `afirmaciones.marca`, `afirmaciones.aviso_oculta`, `compartir.plantilla`, `compartir.plantilla_afirmaciones`, [2.1] `creditos.afirmaciones_texto`, [2.1] `final.mensajes_afirmaciones` (los 6, en su orden) [D-138], además de los de la 1.3.
-- Los textos de Fact or Fake que hablan de salir de la página dicen "more than a few seconds" (o equivalente), nunca que cualquier salida es fallo [D-115].
-- Ningún texto de Fact or Fake nombra una persona, una institución ni un medio, ni afirma nada sobre el contenido de un día.
-- [2.1] `final.mensajes_afirmaciones` no habla de IA, imágenes ni fotos (y `final.mensajes` sigue siendo solo de Images) [D-134].
+- **Límite general**: 90 en los dos idiomas. Excepciones de la 2.1 (`fichas.*` 510 bytes, plantillas de compartir, `creditos.afirmaciones_texto` 120) y [3.0] `instrucciones.pasos_*` (80 cada uno), `instrucciones.ejemplo` (100), `creditos.afirmaciones_texto` (120 también en español).
+- Límites particulares de la 2.1 en los dos idiomas, con estos cambios [3.0]: `portada.reto_*` **14** (antes 12, por "¿Dato o Bulo?", 13); `portada.abrir` 24; `portada.pie` 48; `portada.idioma` 20; `instrucciones.volver` 24; `instrucciones.membrete` 70; `instrucciones.frase_*` 70; `instrucciones.firma` 40; `instrucciones.metodo` y `instrucciones.reglas` 30; `instrucciones.boton_empezar` 20; `prueba.opcion` 50. `afirmaciones.aviso_oculta` en español: 70.
+- Los textos de Fact or Fake que hablan de salir de la página dicen "more than a few seconds" / "más de unos segundos", nunca que cualquier salida es fallo [D-115].
+- `final.mensajes_afirmaciones` (los dos idiomas) no habla de IA, imágenes ni fotos [D-134].
+- Ningún texto de `es` contiene "IA" como palabra suelta salvo `partida.boton_generada`, `partida.sello_generada`, `partida.voto_generada`, `portada.sello_ilustracion`, `revelacion.resumen_generada`, `partida.marca`, `confesion.*` y los mensajes de Images (como en inglés con "AI").
 
 ### 3.2 js/diario.js (agente-de-campo)
 
-Siguen, sin cambios, `fechaLocal`, `sumarDias`, `diasEntre`, `formatearFecha`, `numeroCaso`, `msHastaMedianoche`, `formatearCuentaAtras`, `temaValido`, `rutaPrueba`, `ofuscar`, `desofuscar`, `HOSTS_LOCALES`, `fechaPrevisualizada`, `pruebaActiva`, `FICHA_BLOQUE`, `FICHA_MAX_BYTES`, `flujoFicha`, `ofuscarFicha`, `desofuscarFicha`, `cargarCalendario`, `precargar` y, de la 2.0, `FECHA_BASE_PRUEBA`, `numeroDelDia`, `fechaDelDia`, `validarCalendario` (versión 4), `casoDelDia`, `casoDeNumero`, `flujoBytes`, `ofuscarBloque`, `desofuscarBloque`, `MES_PATRON`, `mesDeFecha`, `mesDeNumero` y `diaDePrueba` (firmas y comportamiento de la 2.0; ver `git show` de la tarea 63).
+Siguen, sin cambios, `fechaLocal`, `sumarDias`, `diasEntre`, `numeroCaso`, `msHastaMedianoche`, `formatearCuentaAtras`, `temaValido`, `rutaPrueba`, `ofuscar`, `desofuscar`, `HOSTS_LOCALES`, `fechaPrevisualizada`, `pruebaActiva`, `FICHA_BLOQUE`, `FICHA_MAX_BYTES`, `cargarCalendario`, `precargar`, `FECHA_BASE_PRUEBA`, `numeroDelDia`, `fechaDelDia`, `flujoBytes`, `ofuscarBloque`, `desofuscarBloque`, `MES_PATRON`, `mesDeFecha`, `mesDeNumero`, `diaDePrueba`, `AFIRMACION_*`, `ACLARACION_*`, `DETALLES_MAX`, `AFIRMACIONES_CARPETA`, `rutaAfirmaciones`, `afirmacionesDelMes`, `cargarAfirmaciones`, `cargarAfirmacionesPrueba`.
 
-**[2.1] Se retiran** (código de la tarea 62 que hay que borrar con sus tests): `TEXTO_BLOQUE`, `TEXTO_MAX_BYTES`, `NOTICIA_BLOQUE`, `NOTICIA_MAX_BYTES`, `ofuscarTexto`, `desofuscarTexto`, `ofuscarNoticia`, `desofuscarNoticia`, `urlFuenteValida` y `medioDeUrl`.
-
-**Afirmaciones y aclaraciones** [2.1, D-124] (algoritmo en 4.8):
+**Idiomas** [3.0, D-154]:
 
 | Función | Tipo | Parámetros → retorno | Notas |
 |---|---|---|---|
-| `AFIRMACION_BLOQUE`, `AFIRMACION_MAX_BYTES` | constantes | | `512` y `510`. |
-| `ACLARACION_BLOQUE`, `ACLARACION_MAX_BYTES` | constantes | | `512` y `510`. |
-| `DETALLES_MAX` | constante | | `3`. |
-| `ofuscarAfirmacion(texto, clave, n, indice, aleatorio = Math.random)` | pura | → 684 caracteres | Contenido UTF-8 de `texto`; semilla `` `${clave}|${n}|${indice}|afirmacion` ``. `TypeError` si `texto` no es una cadena no vacía o contiene `\n`; `RangeError` si pasa de 510 bytes. |
-| `desofuscarAfirmacion(cadena, clave, n, indice)` | pura, nunca lanza | → `string \| null` | `null` si el bloque no se descifra, no es UTF-8 válido, está vacío o contiene `\n`. |
-| `ofuscarAclaracion({aclaracion, detalles}, clave, n, indice, aleatorio = Math.random)` | pura | → 684 caracteres | Contenido UTF-8 de `[aclaracion, ...detalles].join('\n')`; semilla `` `${clave}|${n}|${indice}|aclaracion` ``. `detalles` es un array de 0 a 3 cadenas (por defecto `[]`). `TypeError` si `aclaracion` o algún detalle no es una cadena no vacía, contiene `\n`, o hay más de 3 detalles; `RangeError` si pasa de 510 bytes. |
-| `desofuscarAclaracion(cadena, clave, n, indice)` | pura, nunca lanza | → `{aclaracion, detalles} \| null` | Parte por `\n`: la primera parte es la aclaración y el resto, los detalles (array, posiblemente vacío). `null` si no se descifra, no es UTF-8 válido, alguna parte está vacía o hay más de 4 partes. |
+| `IDIOMAS` | constante | | `Object.freeze(['en', 'es'])`. |
+| `IDIOMA_POR_DEFECTO` | constante | | `'en'`. |
+| `LOCALES` | constante | | `Object.freeze({en: 'en-US', es: 'es-ES'})`. |
+| `idiomaValido(x)` | pura | → `boolean` | `IDIOMAS.includes(x)` (solo cadenas exactas en minúsculas). |
+| `idiomaDeUrl(search)` | pura | `string` → `'en' \| 'es' \| null` | Parámetro `lang` de `URLSearchParams(search)`, en minúsculas; `null` si falta o no es válido (`'ES'` → `'es'`; `'es-ES'`, `'fr'`, `''` → `null`). |
+| `idiomaDelNavegador(lenguas)` | pura | `string[] \| undefined` → `'en' \| 'es'` | Mira **solo el primer** elemento que sea una cadena: `'es'` si, en minúsculas, es `'es'` o empieza por `'es-'`; en cualquier otro caso (también lista vacía o no array), `'en'`. |
+| `elegirIdioma({search, guardado, lenguas})` | pura | → `{idioma, origen}` | Orden: `idiomaDeUrl(search)` (`origen: 'url'`), si no `guardado` válido (`'guardado'`), si no `idiomaDelNavegador(lenguas)` (`'navegador'`). |
+| `formatearFecha(fechaISO, idioma = 'en')` | pura | → `string` | [3.0] Con `LOCALES[idioma]` (`'Nov 30, 2026'` / `'30 nov 2026'`); idioma no válido → `en`. |
 
-**Archivos mensuales de Fact or Fake** [2.1, D-116, D-117, D-124] (formato y reglas en 4.7; carga en 4.7.2). Son las funciones de la 2.0 renombradas; el comportamiento no cambia salvo la carpeta y `validarAfirmaciones`:
+**Semillas por idioma** [3.0, D-157, D-158] (detalle en 4c-idiomas.md, 4.17). Todas las funciones de ficha, afirmación y aclaración reciben `idioma` como **último** parámetro, con valor por defecto `'en'`, para que las llamadas y vectores de la 2.1 sigan valiendo:
 
-| Función | Antes (2.0) | Notas |
+| Función | Firma 3.0 | Semilla |
 |---|---|---|
-| `AFIRMACIONES_CARPETA` | `TITULARES_CARPETA` | `'data/facts/'`. |
-| `rutaAfirmaciones(mes)` | `rutaTitulares` | `` `data/facts/${mes}.json` `` si `MES_PATRON` lo acepta; si no, `null`. |
-| `afirmacionesVacias(mes)` | `titularesVacios` | `{version: 1, mes, dias: []}`. |
-| `validarAfirmaciones(obj, mes)` | `validarTitulares` | Claves exactas `version` (=== 1), `mes`, `dias`; `MES_PATRON`; `obj.mes === mes` si se pasa; al menos un día; cada día con claves exactas `n`, `tema`, `clave`, `textos`, `fichas`; `n` entero ≥ 1 y consecutivo dentro del archivo; `temaValido`; clave de 5 bytes; **`textos` y `fichas`: 5 cadenas `/^[A-Za-z0-9+/]{683}=$/` cada uno** (en la 2.0, las fichas eran de 1368). No descifra nada. |
-| `afirmacionesDelDia(datos, lanzamiento, fechaISO)` | `titularesDelDia` | → `{n, fecha, tema, clave, textos, fichas} \| null`. |
-| `afirmacionesDeNumero(datos, lanzamiento, n)` | `titularesDeNumero` | Modo prueba. |
-| `afirmacionesDelMes(meses, mes)` | `titularesDelMes` | |
-| `cargarAfirmaciones(fechaISO, pedir = fetch)` | `cargarTitulares` | Pide solo `rutaAfirmaciones(mesDeFecha(fechaISO))`; 404 → `afirmacionesVacias(mes)`. |
-| `cargarAfirmacionesPrueba(lanzamiento, pedir = fetch)` | `cargarTitularesPrueba` | Sondeo en serie de 4.7.2. |
+| `flujoFicha` | `(clave, n, indice, idioma = 'en')` | `en`: `` `${clave}|${n}|${indice}` `` (sin cambios); `es`: `` `${clave}|${n}|${indice}|es` `` |
+| `ofuscarFicha` | `(texto, clave, n, indice, aleatorio = Math.random, idioma = 'en')` | la de `flujoFicha` |
+| `desofuscarFicha` | `(cadena, clave, n, indice, idioma = 'en')` | la de `flujoFicha` |
+| `ofuscarAfirmacion` | `(texto, clave, n, indice, aleatorio = Math.random, idioma = 'en')` | `…|afirmacion` y, en `es`, `…|afirmacion|es` |
+| `desofuscarAfirmacion` | `(cadena, clave, n, indice, idioma = 'en')` | igual |
+| `ofuscarAclaracion` | `({aclaracion, detalles}, clave, n, indice, aleatorio = Math.random, idioma = 'en')` | `…|aclaracion` y, en `es`, `…|aclaracion|es` |
+| `desofuscarAclaracion` | `(cadena, clave, n, indice, idioma = 'en')` | igual |
 
-**Modo prueba** [2.0, D-110, D-117]:
+Con un `idioma` no válido, las de ofuscar lanzan `TypeError` y las de desofuscar devuelven `null` (nunca lanzan).
 
-| Función | Tipo | Notas |
-|---|---|---|
-| `diasDePrueba(calendario, meses)` | pura | [2.1] → `[{n, temaImagenes, temaAfirmaciones}]` (antes `temaTitulares`), ordenado por `n`, con la unión de los `n` del calendario y de todos los meses; usa `validarAfirmaciones`. El resto, como en la 2.0. |
-| `diaDePrueba(search, dias, nHoy)` | pura | Sin cambios. |
+**Calendario versión 5 y archivos mensuales versión 2** [3.0, D-157, D-158] (formatos en 4c-idiomas.md):
+
+| Función | Cambio |
+|---|---|
+| `validarCalendario(obj)` | Solo acepta `version: 5`. Cada día con claves exactas `n`, `tema`, `pruebas`, `clave`, `fichas`; `tema` = objeto con claves exactas `en` y `es`, las dos `temaValido`; `fichas` = objeto con claves exactas `en` y `es`, cada una 5 cadenas `/^[A-Za-z0-9+/]{683}=$/`. Lo demás, como la v4. |
+| `casoDelDia(calendario, fechaISO)`, `casoDeNumero(calendario, n)` | Devuelven `{n, fecha, tema: {en, es}, pruebas, clave, fichas: {en, es}}` (copias; nunca el objeto del calendario). |
+| `afirmacionesVacias(mes)` | `{version: 2, mes, dias: []}`. |
+| `validarAfirmaciones(obj, mes)` | Solo `version: 2`. Día con claves exactas `n`, `tema`, `clave`, `textos`, `fichas`; `tema` como en el calendario; `textos` y `fichas` = objetos `{en, es}` con 5 bloques de 684 caracteres cada uno. |
+| `afirmacionesDelDia(datos, lanzamiento, fechaISO)`, `afirmacionesDeNumero(datos, lanzamiento, n)` | Devuelven `{n, fecha, tema: {en, es}, clave, textos: {en, es}, fichas: {en, es}}`. |
+| `diasDePrueba(calendario, meses)` | `[{n, temaImagenes, temaAfirmaciones}]` con cada tema `{en, es}` o `null`. |
+| `temaDelDia(dia, idioma)` | **Nueva**, pura: el tema de un elemento de `diasDePrueba` en `idioma` (`temaImagenes[idioma]`; si los dos existen y difieren, unidos por " / "; si solo hay uno, ese; si ninguno, `''`). La usa main.js para las opciones del desplegable. |
 
 ### 3.3 js/juego.js (agente-de-campo)
 
-Siguen `MODOS`, `MODO_POR_DEFECTO`, `modoValido`, `VOTOS`, `corregir`, `contarAciertos`, `estadoDeCodigo`, `elegirVariante`, `mensajeFinal`, `recortarFicha`, `RETO_POR_DEFECTO`, `retoValido`, `retoDePrueba`, `OCULTA_MAX_MS`, `ocultacionEsFallo` y `medirOculta`. Cambios:
+Siguen `MODOS`, `MODO_POR_DEFECTO`, `modoValido`, `VOTOS`, `corregir`, `contarAciertos`, `estadoDeCodigo`, `elegirVariante`, `mensajeFinal`, `recortarFicha`, `RETOS`, `RETO_POR_DEFECTO`, `retoValido`, `OCULTA_MAX_MS`, `ocultacionEsFallo`, `medirOculta`, `mensajesDelReto`, `votoDicho`, `etiquetaResultado`. **[3.0] Se retira `retoDePrueba`** (el modo prueba ya no usa `&reto=`, D-152). Cambios:
 
 | Exportación | Tipo | Descripción |
 |---|---|---|
-| `RETOS` | constante | [2.1] `Object.freeze(['imagenes', 'afirmaciones'])` [D-121]. |
-| `TECLAS` | constante | [2.1] `Object.freeze({imagenes: Object.freeze({r: 'autentica', i: 'generada'}), afirmaciones: Object.freeze({f: 'autentica', k: 'generada'})})` [D-122]. |
-| `votoDeTecla(reto, tecla)` | pura | [2.1] El voto de `TECLAS[reto][tecla.toLowerCase()]`, o `null` si el reto no es válido, `tecla` no es una cadena de un carácter o no está en la tabla. main.js no la llama si hay Ctrl, Alt o Meta. |
-| `teclaDeVoto(reto, voto)` | pura | [2.1] La tecla en mayúscula (`'R'`, `'I'`, `'F'`, `'K'`) para el `kbd` y `aria-keyshortcuts`; `null` si no hay. |
-| `mensajesDelReto(reto, final)` | pura | [2.1, D-134] Devuelve el conjunto de mensajes finales del reto: `final.mensajes_afirmaciones` si `reto === 'afirmaciones'`, `final.mensajes` si `reto === 'imagenes'`, y `null` si el reto no es válido (`retoValido`) o `final` no es un objeto. No copia ni valida el array (lo comprueba el test de textos). Uso: `mensajeFinal(aciertos, mensajesDelReto(reto, TEXTOS.final))`. `mensajeFinal(aciertos, mensajes)` no cambia (lanza `RangeError` fuera de 0..5). |
-| `estadoInicial({modo, reto})` | pura | Estado de 1.2 con `retos: {imagenes, afirmaciones}`. |
-| `transicion(estado, evento)` | pura | Tabla 1.3. [2.1] Donde la 2.0 decía `'titulares'`, ahora `'afirmaciones'`. Eventos sin cambios (`VOLVIO {ocultoMs, indice}` incluido; `OCULTA` no existe). |
+| `TECLAS` | constante | [3.0, D-156] Congelada en profundidad: `{en: {imagenes: {r: 'autentica', i: 'generada'}, afirmaciones: {f: 'autentica', k: 'generada'}}, es: {imagenes: {r: 'autentica', i: 'generada'}, afirmaciones: {d: 'autentica', b: 'generada'}}}`. |
+| `votoDeTecla(reto, tecla, idioma = 'en')` | pura | [3.0] `TECLAS[idioma][reto][tecla.toLowerCase()]`, o `null` si el idioma o el reto no son válidos, `tecla` no es una cadena de un carácter o no está en la tabla. main.js no la llama con Ctrl, Alt o Meta. |
+| `teclaDeVoto(reto, voto, idioma = 'en')` | pura | [3.0] La tecla en mayúscula (`'R'`, `'I'`, `'F'`, `'K'`, `'D'`, `'B'`); `null` si no hay. |
+| `estadoInicial({modo, reto, idioma})` | pura | [3.0] Añade `idioma` (validado; por defecto `'en'`). |
+| `transicion(estado, evento)` | pura | [3.0] Tabla de 1.3: eventos nuevos `ABRIR_RETO {reto}` y `CAMBIAR_IDIOMA {idioma}`; `ELEGIR_MODO` y `EMPEZAR` solo en `instrucciones`; `VOLVER_PORTADA` también desde `instrucciones`; `OTRA_PESTANA` y `MEDIANOCHE` con `instrucciones`; `ELEGIR_RETO` retirado (devuelve el mismo objeto). |
 
-Detalles [2.1]:
-- `VOTO` y `VOLVIO` (cuando es fallo) en Fact or Fake: `revelada = desofuscar(clave, n, indice)` y `ficha = desofuscarAclaracion(fichas[indice], clave, n, indice)`.
-- `EMPEZAR` y `SIGUIENTE` en Fact or Fake: `texto = desofuscarAfirmacion(textos[indice], clave, n, indice)` (una cadena o `null`).
-- `VOLVIO` devuelve el mismo objeto en Images, fuera de `caso/pregunta`, con `activo === false`, con `evento.indice !== estado.indice` o si `!ocultacionEsFallo(evento.ocultoMs)`.
-- `CARGADO` recibe `retos` ya preparado por main.js: `{imagenes: {caso, jugado}, afirmaciones: {caso, jugado}}`.
+Detalles [3.0]:
+- `VOTO` y `VOLVIO` (fallo): Images `ficha = desofuscarFicha(fichas[idioma][indice], clave, n, indice, idioma)`; Fact or Fake `ficha = desofuscarAclaracion(fichas[idioma][indice], clave, n, indice, idioma)`. `revelada = desofuscar(clave, n, indice)` (común a los dos idiomas).
+- `EMPEZAR` y `SIGUIENTE` en Fact or Fake: `texto = desofuscarAfirmacion(textos[idioma][indice], clave, n, indice, idioma)`.
+- Si `fichas` o `textos` no tienen el idioma (datos corruptos que pasaran la validación), `ficha`/`texto` = `null` (main.js muestra `no_disponible`); nunca lanza.
+- `CARGADO` conserva `estado.idioma`. `ABRIR_RETO` copia el caso como hacía `ELEGIR_RETO` (`n`, `tema`, `pruebas`, `textos`, `clave`, `fichas`).
 
 ### 3.4 js/temporizador.js
 
-Sin cambios. Fact or Fake solo usa `esperarPintado` (para `PINTADA`).
+Sin cambios.
 
-### 3.5 js/almacen.js (agente-de-campo) [2.0, D-109]
+### 3.5 js/almacen.js (agente-de-campo)
 
-Como en la 2.0, con [2.1] `afirmaciones` en lugar de `titulares` [D-121]:
+Como en la 2.1 (`identifaiit.v3`, por reto, sin cambios de forma ni de versión) [D-109, D-154]. El idioma **no** va en `identifaiit.v3`: ni en `ajustes` ni en las partidas. [3.0] Preferencia de idioma en una clave aparte:
 
 | Función | Tipo | Descripción |
 |---|---|---|
-| `CLAVE`, `VERSION` | constantes | `'identifaiit.v3'` y `3` (sin cambio de versión: la v3 nunca se publicó). |
-| `datosIniciales()` | pura | `{version: 3, ajustes: {modo: 'normal', reto: 'imagenes'}, retos: {imagenes: {partidas: {}, racha: 0, mejorRacha: 0}, afirmaciones: {partidas: {}, racha: 0, mejorRacha: 0}}}`. |
-| `leer(almacen)` | efecto, nunca lanza | Lee solo `identifaiit.v3`; JSON inválido, `version !== 3` o estructura incompleta → datos iniciales (rellenando lo que falte; un `retos.titulares` que hubiera quedado de una prueba local se ignora y desaparece al guardar). |
-| `guardar`, `leerConRespaldo`, `guardarConRespaldo`, `actualizar`, `crearAlmacenMemoria`, `conAjustes`, `partidaDe`, `registrarInicio`, `registrarPrueba`, `registrarFin`, `cerrarAbandonada`, `calcularRacha` | | Sin cambios de firma; `reto` es `imagenes` o `afirmaciones` (en Fact or Fake, `modo: null`). |
+| `CLAVE_IDIOMA` | constante | `'identifaiit.idioma'`. Valor: la cadena `en` o `es`, sin JSON. |
+| `leerIdioma(almacen)` | efecto, nunca lanza | `almacen.getItem(CLAVE_IDIOMA)` si es `idiomaValido`; si no, si falta o si lanza, `null`. |
+| `guardarIdioma(almacen, idioma)` | efecto, nunca lanza | Si `idiomaValido(idioma)`, `setItem` y `true`; si no es válido o lanza, `false` sin escribir. |
 
-- Con un `reto` que no es `imagenes` ni `afirmaciones` (también `titulares`), las funciones devuelven `datos` sin cambios y `partidaDe` devuelve `null`; nunca lanzan.
-- Nunca se guardan la verdad, el voto, la ficha, la afirmación, `tapada`, `motivo`, el tema, el mensaje final ni los instantes o duraciones de una ausencia.
+- main.js usa **siempre** `localStorage` real para esta clave, también en previsualización y modo prueba (es una preferencia, no progreso); si falla, el idioma vive solo en memoria y no se muestra ningún aviso por ello.
+- `datosIniciales`, `leer`, `guardar`, `registrar*`, `cerrarAbandonada` y `calcularRacha` no cambian. `ajustes.reto` se sigue guardando (en `ABRIR_RETO`) y `ajustes.modo` (en `ELEGIR_MODO`).
 
 ### 3.6 js/compartir.js
 
-Sin cambios de funciones. `textoCompartir({plantilla, n, nombreModo, resultados, racha, url})`: `nombreModo` es opcional (la plantilla de Fact or Fake no tiene `{modo}`). El mensaje final no entra en el texto compartido.
+Sin cambios de funciones. main.js pasa `plantilla` y `nombreModo` de `TEXTOS[idioma]` (4c-idiomas.md, 4.24). `urlDelJuego` sigue quitando `search` (el texto compartido nunca lleva `?lang=`).
 
 ### 3.7 js/main.js (agente-de-campo)
 
-Lo de la 1.3 y la 2.0, con [2.1] estos cambios (el `main.js` actual es aún el de la 1.3: la tarea 77 está pendiente):
+Lo de la 2.1 (cargas, ausencia, otras pestañas, previsualización, ficha, compartir, resultado), con estos cambios [3.0]:
 
-1. **Arranque**: decidir previsualización y modo prueba; `leer()`; `estadoInicial({modo, reto})` con `ajustes` validados (en modo prueba, `reto = retoDePrueba(location.search) ?? RETO_POR_DEFECTO`); rellenar textos; marcar los radios; registrar los oyentes de bloqueo de copia en `#afirmacion`; cargar los datos:
-   - **Juego normal y previsualización**: en paralelo, `cargarCalendario()` y `cargarAfirmaciones(hoy)` (fecha efectiva).
-   - **Modo prueba**: primero `cargarCalendario()`; después `meses = await cargarAfirmacionesPrueba(lanzamiento)`; `dias = diasDePrueba(calendario, meses)`; `dia = diaDePrueba(location.search, dias, nHoy)`; archivo del día `afirmacionesDelMes(meses, mesDeNumero(lanzamiento, dia.n))`.
-   - Si falla cualquier carga, `ERROR_CALENDARIO` (un 404 no es fallo).
-2. **Caso de cada reto**: juego normal, `casoDelDia(calendario, hoy)` y `afirmacionesDelDia(datos, calendario.lanzamiento, hoy)`; modo prueba, `casoDeNumero` y `afirmacionesDeNumero(...)`. `cerrarAbandonada` de cada reto con partida `en_curso`; `jugado` = hay partida `terminada`. `CARGADO {retos, reto}`.
-3. **`render`**: `data-reto` en `#app`; portada (lema común, estados, tema, modos o regla, racha, Start, pasos); en `caso`: textos y teclas de los votos según el reto (`teclaDeVoto`, 2.3); imagen y sobre, o `#afirmacion` (`estado.texto`) y `#caso-aviso` (solo en la pregunta de la prueba 1 de Fact or Fake); veredicto (sello, `data-verdad`, `afirmaciones.oculta` si `motivo === 'oculta'`, aclaración y detalles en Fact or Fake, confesión en Images); resultado (miniaturas o botones numerados, `#resultado-reto`, y `#resultado-mensaje` = `mensajeFinal(aciertos, mensajesDelReto(estado.reto, TEXTOS.final))` [D-134]); ya jugado (`#ya-jugado-reto`, modo oculto en Fact or Fake); `#sin-casos-texto`.
+1. **Arranque**: decidir previsualización y modo prueba; `{idioma, origen} = elegirIdioma({search: location.search, guardado: leerIdioma(localStorage), lenguas: navigator.languages ?? [navigator.language]})`; si `origen === 'url'`, `guardarIdioma(localStorage, idioma)` (DP-70); `document.documentElement.lang = idioma`; `leer()`; `estadoInicial({modo, reto, idioma})`; rellenar `[data-texto]` y `[data-texto-aria]`; registrar los oyentes de bloqueo de copia; cargar los datos como en la 2.1. El repintado inicial ocurre antes de quitar `hidden` a la primera pantalla, para que nunca se vean textos del otro idioma.
+2. **Caso de cada reto**: como en la 2.1 con las funciones de 3.2 (tema y bloques `{en, es}`); `CARGADO {retos, reto: ajustes.reto}`.
+3. **`render`**: `data-reto` en `#app`; `aria-pressed` del selector; portada (tarjetas con su estado y `disabled`, `#portada-caso`, `#portada-tema` o el desplegable de prueba, `href` de `#portada-creditos`); `instrucciones` (membrete, pasos, `hidden` de `#instrucciones-modos` / `#instrucciones-reglas`, radio del modo); `caso` (textos y teclas con `teclaDeVoto(reto, voto, idioma)`); resultado, `ya-jugado` y `sin-casos` en el idioma activo. Todos los textos de `TEXTOS[estado.idioma]`.
 4. **Efectos**:
-   - `ELEGIR_RETO` → `conAjustes({reto})` y guardar.
-   - `EMPEZAR` en Fact or Fake → `sesion`, `registrarInicio(datos, 'afirmaciones', {fecha, n, modo: null, sesion})` y guardar **antes** de pintar la primera afirmación; comprobar la `sesion` (D-51).
-   - Cada prueba de Fact or Fake: rellenar `#afirmacion-texto`, `await esperarPintado()` y, si sigue en la misma prueba y en `pregunta`, `PINTADA`. Tras `PINTADA` de la prueba 1, el anuncio de `afirmaciones.aviso_oculta`; se vacía en `SIGUIENTE`.
-   - Tras cada veredicto (por `VOTO` o por `VOLVIO`) y al terminar, `registrarPrueba` y `registrarFin` con `estado.reto`.
-   - `VOLVER_PORTADA` → recalcular los estados de la portada desde el almacén.
-   - `MEDIANOCHE` → `iniciando` y repetir el punto 1 completo.
-5. **Entrada**: delegación como en la 1.3, más `change` en `input[name=reto]` → `ELEGIR_RETO` y `volver-portada` → `VOLVER_PORTADA`. [2.1] Teclado: en `caso/pregunta`, si no hay Ctrl, Alt ni Meta, `voto = votoDeTecla(estado.reto, evento.key)` y, si no es `null`, `VOTO {voto}`; Enter como en la 1.3. Mientras `dialog#ficha` está abierto, ningún atajo del juego.
-6. **`visibilitychange`** [D-115]: como en la 2.0 con `estado.reto === 'afirmaciones'` (variable de módulo `ausencia`, `medirOculta`, `VOLVIO {ocultoMs, indice}`, sin `setTimeout`, `blur`, `pagehide` ni `freeze`).
-7. **Otras pestañas** [D-51]: por reto.
-8. **Compartir**: `compartir.plantilla` con `nombreModo` (Images) o `compartir.plantilla_afirmaciones`, con la partida y la racha del reto mostrado.
-9. **Previsualización** [D-68]: sin cambios; carga solo el mes de `?fecha=`.
-10. **Modo prueba** [D-70, D-110, D-117]: `PRUEBAS_ABIERTAS` sin cambios; selector con `diasDePrueba(calendario, meses)` (opción con el tema del día; si los dos temas difieren, unidos por " / "); `abrir-prueba` navega a `?prueba=1&dia={n}&reto={estado.reto}`; almacenes en memoria.
-11. **Ficha** [D-88, D-126]: `abrirFicha(i, {conImagen})` como en la 1.3 en Images; en Fact or Fake, solo desde `resultado`, rellena el diálogo según 2.3 descifrando en ese momento `desofuscarAfirmacion` y `desofuscarAclaracion`, sin guardarlos.
-12. [2.1] **Sin enlaces**: Fact or Fake no tiene enlaces ni hace ninguna petición al responder.
+   - `ABRIR_RETO` → `conAjustes({reto})` y guardar.
+   - `ELEGIR_MODO` → `conAjustes({modo})` y guardar.
+   - `CAMBIAR_IDIOMA` → `guardarIdioma(localStorage, idioma)`, `document.documentElement.lang`, `history.replaceState` si la URL lleva `lang` (con el nuevo valor), repintar `[data-texto]`/`[data-texto-aria]` y la pantalla. No toca el almacén de progreso ni las partidas.
+   - `EMPEZAR` en Fact or Fake: como en la 2.1 (intento gastado antes de pintar la primera afirmación).
+   - `MEDIANOCHE` → `iniciando` y repetir el punto 1 con el idioma actual (sin volver a elegirlo).
+5. **Entrada**: delegación de clics por `data-accion`: `abrir-reto` → `ABRIR_RETO {reto: data-reto-boton}`; `idioma` → `CAMBIAR_IDIOMA {idioma: data-idioma}`; `volver-portada` → `VOLVER_PORTADA` (y `MEDIANOCHE` si cambió el día, D-145); `empezar` → `EMPEZAR {fecha}`; `change` en `input[name=modo]` → `ELEGIR_MODO`; en modo prueba, `change` en `#selector-prueba-dia` → `location.assign('?prueba=1&dia=' + n)`. Teclado en `caso/pregunta`: `votoDeTecla(estado.reto, evento.key, estado.idioma)`. Desaparecen los manejadores de `abrir-ayuda`, `cerrar-ayuda`, `abrir-prueba`, `input[name=reto]` y `dialog#como-jugar`.
+6. **`visibilitychange`**, **otras pestañas**, **ficha** y **previsualización**: como en la 2.1, con `instrucciones` en la lista de pantallas donde se relee el almacén al volver y en el evento `storage`.
+7. **Compartir**: `textoCompartir({plantilla: TEXTOS[idioma].compartir.plantilla | plantilla_afirmaciones, n, nombreModo: TEXTOS[idioma].portada.modo_{modo}, resultados, racha, url})`.
+8. **Modo prueba**: sin `&reto=`; el desplegable de 2.3 sustituye a `#selector-prueba`; `diasDePrueba` + `temaDelDia(dia, idioma)` para las opciones.

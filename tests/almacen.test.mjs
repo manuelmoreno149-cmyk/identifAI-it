@@ -357,3 +357,55 @@ test('32b. lo guardado de Fact or Fake tampoco contiene datos prohibidos', () =>
   assert.deepEqual(Object.keys(partidaDe_r(d, T, F)).sort(), ['aciertos', 'estado', 'modo', 'n', 'resultados', 'sesion']);
   assert.equal(/tapada|motivo|voto|verdad|ficha|texto|ausencia/i.test(JSON.stringify(d)), false);
 });
+
+// ---- Preferencia de idioma [3.0, D-154] ----
+
+import { CLAVE_IDIOMA, leerIdioma, guardarIdioma } from '../js/almacen.js';
+
+test('idioma: CLAVE_IDIOMA es aparte de identifaiit.v3', () => {
+  assert.equal(CLAVE_IDIOMA, 'identifaiit.idioma');
+  assert.notEqual(CLAVE_IDIOMA, CLAVE);
+});
+
+test('idioma: ida y vuelta, valores no válidos y almacén que falla', () => {
+  const a = crearAlmacenMemoria();
+  assert.equal(guardarIdioma(a, 'es'), true);
+  assert.equal(a.getItem(CLAVE_IDIOMA), 'es');
+  assert.equal(leerIdioma(a), 'es');
+  assert.equal(guardarIdioma(a, 'en'), true);
+  assert.equal(leerIdioma(a), 'en');
+  for (const malo of ['fr', 'ES', '', null, undefined, 5]) {
+    assert.equal(guardarIdioma(a, malo), false, String(malo));
+    assert.equal(a.getItem(CLAVE_IDIOMA), 'en', 'no escribe si no es válido');
+  }
+  a.setItem(CLAVE_IDIOMA, '"es"');
+  assert.equal(leerIdioma(a), null, 'JSON o basura no valen');
+  const roto = {
+    getItem() {
+      throw new Error('bloqueado');
+    },
+    setItem() {
+      throw new Error('bloqueado');
+    }
+  };
+  assert.equal(leerIdioma(roto), null);
+  assert.equal(guardarIdioma(roto, 'es'), false);
+  assert.equal(leerIdioma(undefined), null);
+  assert.equal(guardarIdioma(undefined, 'es'), false);
+});
+
+test('idioma: no entra en identifaiit.v3 y cambiarlo no toca el progreso', () => {
+  const a = crearAlmacenMemoria();
+  let d = registrarInicio(datosIniciales(), { fecha: '2026-11-03', n: 3, modo: 'normal', sesion: 's' });
+  d = registrarFin(registrarPrueba(d, '2026-11-03', 0, 'A', 's'), '2026-11-03', '2026-11-03', 's');
+  guardar(d, a);
+  const antes = a.getItem(CLAVE);
+  guardarIdioma(a, 'es');
+  guardarIdioma(a, 'en');
+  assert.equal(a.getItem(CLAVE), antes);
+  assert.equal(antes.includes('idioma'), false);
+  assert.equal('idioma' in d.ajustes, false);
+  assert.deepEqual(Object.keys(datosIniciales().ajustes).sort(), ['modo', 'reto']);
+  // leer() sigue devolviendo lo mismo con cualquier idioma guardado.
+  assert.deepEqual(leer(a).datos, leer(a).datos);
+});

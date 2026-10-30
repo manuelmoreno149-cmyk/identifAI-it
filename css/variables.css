@@ -22,6 +22,17 @@
   --color-tinta-suave: #4a3f2a;  /* sobre papel: 7:1 */
   --color-nota: #625a49;         /* gris de notas sobre papel: 5:1 (sustituye a #6b6352, que daba 4,4:1) */
 
+  --color-tinta-azul: #1c2a63;   /* tinta de la firma sobre papel: 11:1 */
+  --color-papel-claro: #f2e9d2;  /* ficha de muestra sobre papel */
+
+  /* Carpeta de carton (solo adorno: el texto va en las paginas de papel) */
+  --color-carton: #a07c4c;
+  --color-carton-oscuro: #7d5d33;
+
+  /* Botones de muestra apagados (no son botones) */
+  --color-gris-muestra: #c4bfae;
+  --color-gris-muestra-texto: #3d392f; /* sobre el gris de muestra: 6:1 */
+
   /* Luz ambar de flexo */
   --color-ambar: #f2a93b;
   --color-ambar-suave: rgba(242, 169, 59, 0.16);

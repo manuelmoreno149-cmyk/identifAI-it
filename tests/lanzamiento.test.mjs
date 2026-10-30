@@ -9,17 +9,28 @@ import { validarAfirmaciones, ofuscarAfirmacion, ofuscarAclaracion } from '../js
 // Todas las pruebas usan carpetas temporales del SO; nunca los datos reales.
 const HOY = '2026-10-26';
 const B = 'A'.repeat(683) + '=';
-const diaImg = (n, fecha) => ({
-  n, ...(fecha ? { fecha } : {}), tema: `Tema ${n}`, pruebas: [1, 2, 3, 4, 5].map((i) => `id${n}x${i}aaaa`.slice(0, 10)),
-  clave: 'Mpb9Ycc=', fichas: Array(5).fill(B)
+const diaImg = (n, fecha, v5 = false) => ({
+  n, ...(fecha ? { fecha } : {}), tema: v5 ? { en: `Topic ${n}`, es: `Tema ${n}` } : `Tema ${n}`, pruebas: [1, 2, 3, 4, 5].map((i) => `id${n}x${i}aaaa`.slice(0, 10)),
+  clave: 'Mpb9Ycc=', fichas: v5 ? { en: Array(5).fill(B), es: Array(5).fill(B) } : Array(5).fill(B)
 });
 const CLAVE_F = 'Q7m1Xa0=';
 const diaFact = (n) => ({
-  n, tema: 'Space', clave: CLAVE_F,
-  textos: [0, 1, 2, 3, 4].map((i) => ofuscarAfirmacion(`Claim ${n} number ${i}.`, CLAVE_F, n, i, () => 0.5)),
-  fichas: [0, 1, 2, 3, 4].map((i) => ofuscarAclaracion({ aclaracion: `Truth ${n} number ${i}.`, detalles: ['Detail one.'] }, CLAVE_F, n, i, () => 0.5))
+  n, tema: { en: 'Space', es: 'Espacio' }, clave: CLAVE_F,
+  textos: {
+    en: [0, 1, 2, 3, 4].map((i) => ofuscarAfirmacion(`Claim ${n} number ${i}.`, CLAVE_F, n, i, () => 0.5, 'en')),
+    es: [0, 1, 2, 3, 4].map((i) => ofuscarAfirmacion(`Afirmación ${n} número ${i}.`, CLAVE_F, n, i, () => 0.5, 'es'))
+  },
+  fichas: {
+    en: [0, 1, 2, 3, 4].map((i) => ofuscarAclaracion({ aclaracion: `Truth ${n} number ${i}.`, detalles: ['Detail one.'] }, CLAVE_F, n, i, () => 0.5, 'en')),
+    es: [0, 1, 2, 3, 4].map((i) => ofuscarAclaracion({ aclaracion: `Verdad ${n} número ${i}.`, detalles: ['Un detalle.'] }, CLAVE_F, n, i, () => 0.5, 'es'))
+  }
 });
-const mesFact = (mes, de, hasta) => ({ version: 1, mes, dias: Array.from({ length: hasta - de + 1 }, (_, i) => diaFact(de + i)) });
+const mesFact = (mes, de, hasta) => ({ version: 2, mes, dias: Array.from({ length: hasta - de + 1 }, (_, i) => diaFact(de + i)) });
+// Archivo de la versión 1 (solo inglés): lanzamiento se detiene con el mensaje de unirMeses.
+const mesFactV1 = (mes, de, hasta) => ({
+  version: 1, mes,
+  dias: Array.from({ length: hasta - de + 1 }, (_, i) => ({ n: de + i, tema: 'Space', clave: CLAVE_F, textos: diaFact(de + i).textos.en, fichas: diaFact(de + i).fichas.en }))
+});
 const json = (o) => JSON.stringify(o, null, 2) + '\n';
 
 function proyecto(fn, { calendario, banco, facts = [] } = {}) {
@@ -41,6 +52,7 @@ function proyecto(fn, { calendario, banco, facts = [] } = {}) {
 
 const cal3 = () => ({ version: 3, lanzamiento: '2099-01-01', dias: [1, 2, 3].map((n) => diaImg(n, `2099-01-0${n}`)) });
 const cal4 = (lanzamiento = null) => ({ version: 4, lanzamiento, dias: [1, 2, 3].map((n) => diaImg(n)) });
+const cal5 = (lanzamiento = null) => ({ version: 5, lanzamiento, dias: [1, 2, 3].map((n) => diaImg(n, undefined, true)) });
 const banco2 = () => ({ version: 2, imagenes: [{ id: 'abcdefghij', dia: 1, fecha: '2099-01-01', tipo: 'autentica' }] });
 const snap = (r) => JSON.stringify(r.lista().map((n) => [n, fs.readFileSync(r.ruta('data', 'facts', n), 'utf8')]));
 
@@ -172,4 +184,40 @@ test('sin archivos de Fact or Fake no crea ni borra nada', () => {
     assert.deepEqual(p.lista(), []);
     assert.equal(p.lee('data', 'calendario.json').lanzamiento, '2026-12-15');
   }, { calendario: cal4(null) });
+});
+
+test('4.21 acepta un calendario v5 (y uno v4) sin cambiar su versión; solo cambia el lanzamiento', () => {
+  for (const [cal, version] of [[cal5(null), 5], [cal4(null), 4]]) {
+    proyecto((p) => {
+      const antes = p.lee('data', 'calendario.json');
+      const r = p.ejecutar('2026-12-15');
+      assert.equal(r.codigo, 0, r.mensajes.join('\n'));
+      const despues = p.lee('data', 'calendario.json');
+      assert.equal(despues.version, version);
+      assert.equal(despues.lanzamiento, '2026-12-15');
+      assert.deepEqual({ ...despues, lanzamiento: null }, antes);
+      assert.deepEqual(p.lista(), ['2026-12.json', '2027-01.json']);
+      assert.ok(p.lista().every((n) => validarAfirmaciones(p.lee('data', 'facts', n), n.replace('.json', ''))), 'versión 2');
+      assert.equal(p.lee('data', 'facts', '2027-01.json').version, 2);
+      assert.deepEqual(p.lee('data', 'facts', '2027-01.json').dias[0], diaFact(18));
+      const mostrar = p.ejecutar();
+      assert.doesNotMatch(mostrar.mensajes.join('\n'), /conviértelo con npm run lanzamiento/);
+    }, { calendario: cal, facts: [mesFact('2000-01', 1, 31), mesFact('2000-02', 32, 40)] });
+  }
+  // Un calendario v5 con la estructura rota se rechaza.
+  proyecto((p) => {
+    assert.equal(p.ejecutar('2026-12-15').codigo, 1);
+  }, { calendario: { ...cal5(null), dias: [{ ...diaImg(1, undefined, true), tema: 'Solo inglés' }] } });
+});
+
+test('4.21 archivos de Fact or Fake de la versión 1 detienen la herramienta con el mensaje de unirMeses y sin escribir', () => {
+  proyecto((p) => {
+    const antes = snap(p);
+    const r = p.ejecutar('2026-12-15');
+    assert.equal(r.codigo, 1);
+    assert.match(r.mensajes.join('\n'), /data\/facts\/2000-01\.json es de la versión 1 \(solo inglés\): rehazlo con npm run afirmaciones -- --reimportar --confirmar --revisado\./);
+    assert.equal(snap(p), antes);
+    assert.equal(p.lee('data', 'calendario.json').lanzamiento, null);
+    assert.equal(p.ejecutar().codigo, 1, 'ni siquiera muestra');
+  }, { calendario: cal5(null), facts: [mesFactV1('2000-01', 1, 31)] });
 });

@@ -1,6 +1,7 @@
 // Funciones puras del importador por temas (spec 4.6). No importa nada.
 
-export const PALABRAS_PROHIBIDAS = ['real', 'ia', 'ai', 'fake'];
+// [D-160] Lista ampliada con las palabras españolas que delatarían la respuesta.
+export const PALABRAS_PROHIBIDAS = ['real', 'ia', 'ai', 'fake', 'dato', 'bulo', 'falso', 'falsa', 'verdadero', 'verdadera'];
 
 export const UMBRAL_PESO = 0.25;
 
@@ -8,7 +9,9 @@ const RE_CARPETA = /^(\d{2,})-([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)$/u;
 const EXT_IMAGEN = /\.(jpe?g|png|webp)$/i;
 const EXT_FICHA = /\.txt$/i;
 // [2.1, D-139] Archivos de la raíz de la carpeta del día que Images ignora y nunca abre (nombres exactos, en minúsculas).
-export const ARCHIVOS_IGNORADOS_RAIZ = ['facts.txt', 'facts.en.txt', 'datos.txt', 'datos.original.txt'];
+// [3.0, 4.20] facts.es.txt también; tema.es.txt es un archivo conocido (no ignorado): planificar lo exige.
+export const ARCHIVOS_IGNORADOS_RAIZ = ['facts.txt', 'facts.en.txt', 'facts.es.txt', 'datos.txt', 'datos.original.txt'];
+export const ARCHIVO_TEMA_ES = 'tema.es.txt';
 const EXT_FICHA_EN = /\.en\.txt$/i; // [D-93] X.en.txt es el prompt en inglés de X.jpg; X.txt es el original en español.
 
 // ---------- Fechas (Date.UTC, sin importar nada) ----------
@@ -70,6 +73,21 @@ export function analizarCarpeta(nombre) {
 
 export function temaDeCarpeta(nombre) {
   return analizarCarpeta(nombre).tema;
+}
+
+// [4.19, D-159] Contenido de tema.es.txt: UTF-8 (con o sin BOM), una sola línea no vacía (se admite un salto final).
+// Devuelve {tema, error}; el tema se valida con `temaValido` (le llega de fuera para no importar nada aquí).
+export function analizarTemaEs(texto, temaValido = () => true) {
+  if (typeof texto !== 'string') return { tema: null, error: 'no es UTF-8 válido' };
+  let t = texto.charCodeAt(0) === 0xfeff ? texto.slice(1) : texto;
+  t = t.replace(/\r\n?/g, '\n').normalize('NFC');
+  const lineas = t.replace(/\n$/, '').split('\n');
+  if (lineas.length !== 1 || lineas[0].trim() === '') return { tema: null, error: 'debe tener una sola línea no vacía' };
+  const tema = lineas[0];
+  if (!temaValido(tema)) return { tema: null, error: 'no es un tema válido (1 a 30 caracteres, sin espacios en los extremos y con mayúscula inicial)' };
+  const prohibida = contienePalabraProhibida(tema);
+  if (prohibida) return { tema: null, error: `contiene la palabra prohibida "${prohibida}"` };
+  return { tema, error: null };
 }
 
 // ---------- Fuentes ----------
@@ -136,7 +154,7 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
   const pendientes = [];
   hijos.forEach((a, i) => {
     if (!sinImagenes(a)) return;
-    const raiz = (a.c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s));
+    const raiz = (a.c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s) && s !== ARCHIVO_TEMA_ES);
     if (raiz.length > 0) errores.push(`${a.c.nombre} contiene archivos o carpetas no admitidos: ${raiz.join(', ')}.`);
     if (i > ultimaConImagenes) pendientes.push(a.n);
     else errores.push(`${a.c.nombre} no tiene imágenes (ia/ y real/) pero hay carpetas posteriores que sí: hueco en Images.`);
@@ -169,7 +187,7 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
       estructuraOk = false;
       errores.push(`${nom} debe contener exactamente las subcarpetas ia/ y real/ (tiene: ${subs.join(', ') || 'ninguna'}).`);
     }
-    const sueltos = (c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s));
+    const sueltos = (c.sueltos ?? []).filter((s) => !ARCHIVOS_IGNORADOS_RAIZ.includes(s) && s !== ARCHIVO_TEMA_ES);
     if (sueltos.length > 0) {
       errores.push(`${nom} contiene archivos o carpetas no admitidos: ${sueltos.join(', ')}.`);
     }
@@ -192,6 +210,15 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
     const prohibida = contienePalabraProhibida(tema);
     if (prohibida) {
       errores.push(`El tema de ${nom} ("${tema}") contiene la palabra prohibida "${prohibida}". Cambia el nombre de la carpeta.`);
+    }
+    // [4.19, 4.20] tema.es.txt es obligatorio en toda carpeta con imágenes. El importador lo lee (c.temaEs) y aquí se valida.
+    let temaEs = null;
+    if (!(c.sueltos ?? []).includes(ARCHIVO_TEMA_ES)) {
+      errores.push(`${nom}: falta ${ARCHIVO_TEMA_ES}.`);
+    } else {
+      const r = analizarTemaEs(c.temaEs ?? null, temaValido);
+      if (r.error) errores.push(`${nom}/${ARCHIVO_TEMA_ES}: ${r.error}.`);
+      else temaEs = r.tema;
     }
 
     const imagenes = [];
@@ -241,28 +268,24 @@ export function planificar({ carpetas, ultimoDia, hoyISO, lanzamiento, sumarDias
         const ruta = `${nom}/${dir}/${archivo}`;
         try {
           const { fuente, licencia } = fuenteDeArchivo(ruta, tipo);
-          let ficha = null;
-          let sinIngles = false;
+          // [4.19] Los dos prompts (.txt en español y .en.txt en inglés) son obligatorios en las generadas.
+          let fichas = null;
           if (tipo === 'generada') {
             const b = baseDe(archivo);
             const propia = porBase.get(b) === archivo;
-            if (propia && fichaEnDe.has(b)) {
-              ficha = `${nom}/ia/${fichaEnDe.get(b)}`;
-            } else if (propia && fichaDe.has(b)) {
-              ficha = `${nom}/ia/${fichaDe.get(b)}`;
-              sinIngles = true;
-              avisos.push(`${ruta}: falta la versión en inglés (${b}.en.txt); se usa el .txt original.`);
-            } else {
-              avisos.push(`${ruta} no tiene ficha (${b}.en.txt ni ${b}.txt); su confesión será la de «sin confesión».`);
-            }
+            const en = propia && fichaEnDe.has(b) ? `${nom}/ia/${fichaEnDe.get(b)}` : null;
+            const es = propia && fichaDe.has(b) ? `${nom}/ia/${fichaDe.get(b)}` : null;
+            if (!en) errores.push(`${ruta}: falta el prompt en inglés (${b}.en.txt).`);
+            if (!es) errores.push(`${ruta}: falta el prompt en español (${b}.txt).`);
+            fichas = { en, es };
           }
-          imagenes.push({ ruta, tipo, fuente, licencia, ficha, sinIngles });
+          imagenes.push({ ruta, tipo, fuente, licencia, fichas });
         } catch (e) {
           errores.push(e.message);
         }
       }
     }
-    nuevos.push({ n, fecha, tema, carpeta: nom, imagenes });
+    nuevos.push({ n, fecha, tema, temaEs, carpeta: nom, imagenes });
   }
 
   return { nuevos, omitidos, pendientes, errores, avisos };
@@ -286,13 +309,13 @@ export function normalizarFicha(texto, maxBytes) {
   return { texto: puntos.join('').trimEnd() + '…', vacia: false, truncada: true, bytesOriginales };
 }
 
-// [2.0] Acepta las versiones 2, 3 y 4. El lanzamiento es una fecha ISO válida (o null, solo en la 4).
+// [2.0, 4.20] Acepta las versiones 2 a 5. El lanzamiento es una fecha ISO válida (o null, solo en la 4 y la 5).
 // Las versiones 2 y 3 llevan fecha en cada día; la 4 no.
 export function calendarioAnteriorValido(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-  if (obj.version !== 2 && obj.version !== 3 && obj.version !== 4) return false;
+  if (![2, 3, 4, 5].includes(obj.version)) return false;
   if (obj.lanzamiento === null) {
-    if (obj.version !== 4) return false;
+    if (obj.version < 4) return false;
   } else if (!esFechaISO(obj.lanzamiento)) {
     return false;
   }
@@ -303,7 +326,7 @@ export function calendarioAnteriorValido(obj) {
       typeof d === 'object' &&
       Number.isInteger(d.n) &&
       d.n >= 1 &&
-      (obj.version === 4 || esFechaISO(d.fecha)) &&
+      (obj.version >= 4 || esFechaISO(d.fecha)) &&
       Array.isArray(d.pruebas) &&
       d.pruebas.length === 5 &&
       d.pruebas.every((id) => typeof id === 'string')
@@ -474,7 +497,8 @@ const sinFecha = ({ fecha, ...resto }) => resto;
 // Versión 3 -> 4: comprueba cada fecha y la quita. No muta.
 export function migrarCalendario(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return { calendario: null, errores: ['El calendario no es un objeto.'] };
-  if (obj.version === 4) return { calendario: obj, errores: [] };
+  // [4.21] La 4 y la 5 se aceptan sin cambiar su versión; solo se migra la 3 a la 4.
+  if (obj.version === 4 || obj.version === 5) return { calendario: obj, errores: [] };
   if (obj.version !== 3) {
     return { calendario: null, errores: [`No sé migrar un calendario de la versión ${obj.version}; solo de la 3 a la 4.`] };
   }

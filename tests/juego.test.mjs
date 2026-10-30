@@ -18,7 +18,6 @@ import {
   RETOS,
   RETO_POR_DEFECTO,
   retoValido,
-  retoDePrueba,
   OCULTA_MAX_MS,
   ocultacionEsFallo,
   medirOculta,
@@ -31,12 +30,17 @@ import { ofuscar, ofuscarFicha, ofuscarAfirmacion, ofuscarAclaracion } from '../
 
 const VERDADES = [0, 1, 1, 0, 1];
 const CLAVE = ofuscar(VERDADES, 3, () => 0.3);
-const TEXTOS_FICHA = ['Real photograph', 'An astronaut dog', 'A cat in the fog', 'Real photograph', 'ñandú 🐕'];
-const FICHAS = TEXTOS_FICHA.map((t, i) => ofuscarFicha(t, CLAVE, 3, i, () => 0.25));
+const TEXTOS_FICHA = {
+  en: ['Real photograph', 'An astronaut dog', 'A cat in the fog', 'Real photograph', 'ñandú 🐕'],
+  es: ['Fotografía real', 'Un perro astronauta', 'Un gato en la niebla', 'Fotografía real', 'ñandú 🐶']
+};
+const FICHAS = Object.fromEntries(
+  ['en', 'es'].map((l) => [l, TEXTOS_FICHA[l].map((t, i) => ofuscarFicha(t, CLAVE, 3, i, () => 0.25, l))])
+);
 const CASO = {
   n: 3,
   fecha: '2026-11-03',
-  tema: 'Gente comiendo',
+  tema: { en: 'Dogs', es: 'Perros' },
   pruebas: ['a1', 'b2', 'c3', 'd4', 'e5'],
   clave: CLAVE,
   fichas: FICHAS
@@ -45,22 +49,25 @@ const CASO = {
 // Fact or Fake
 const VERDADES_T = [1, 0, 0, 1, 0];
 const CLAVE_T = ofuscar(VERDADES_T, 7, () => 0.6);
-const TEXTOS_T = [0, 1, 2, 3, 4].map((i) => 'Afirmación ñ ' + i);
-const FICHAS_T = [0, 1, 2, 3, 4].map((i) =>
-  ofuscarAclaracion(
-    { aclaracion: 'Verdad ' + i, detalles: i % 2 === 0 ? ['Detalle ñ ' + i, 'Otro ' + i] : [] },
-    CLAVE_T,
-    7,
-    i,
-    () => 0.4
-  )
+const TEXTOS_T = {
+  en: [0, 1, 2, 3, 4].map((i) => 'Claim ' + i),
+  es: [0, 1, 2, 3, 4].map((i) => 'Afirmación ñ ' + i)
+};
+const ACLARACION = (l, i) => ({
+  aclaracion: (l === 'es' ? 'Verdad ' : 'Truth ') + i,
+  detalles: i % 2 === 0 ? [(l === 'es' ? 'Detalle ñ ' : 'Detail ') + i, 'Otro ' + i] : []
+});
+const FICHAS_T = Object.fromEntries(
+  ['en', 'es'].map((l) => [l, [0, 1, 2, 3, 4].map((i) => ofuscarAclaracion(ACLARACION(l, i), CLAVE_T, 7, i, () => 0.4, l))])
 );
 const CASO_T = {
   n: 7,
   fecha: '2026-12-07',
-  tema: 'Mercados',
+  tema: { en: 'Markets', es: 'Mercados' },
   clave: CLAVE_T,
-  textos: TEXTOS_T.map((t, i) => ofuscarAfirmacion(t, CLAVE_T, 7, i, () => 0.2)),
+  textos: Object.fromEntries(
+    ['en', 'es'].map((l) => [l, TEXTOS_T[l].map((t, i) => ofuscarAfirmacion(t, CLAVE_T, 7, i, () => 0.2, l))])
+  ),
   fichas: FICHAS_T
 };
 
@@ -75,9 +82,19 @@ function cargado(caso = CASO, { afirmaciones = CASO_T, reto, jugados = {} } = {}
   };
 }
 
-function enAfirmaciones(indice = 0) {
-  let e = ir(estadoInicial({ reto: 'afirmaciones' }), cargado(CASO, { reto: 'afirmaciones' }));
-  e = ir(e, { tipo: 'EMPEZAR', fecha: CASO_T.fecha });
+const abrir = (reto) => ({ tipo: 'ABRIR_RETO', reto });
+
+// Portada con los dos casos cargados.
+function portada(opciones = {}, carga = {}) {
+  return ir(estadoInicial(opciones), cargado(CASO, carga));
+}
+
+function enInstrucciones(reto = 'imagenes', opciones = {}) {
+  return ir(portada(opciones), abrir(reto));
+}
+
+function enAfirmaciones(indice = 0, idioma = 'en') {
+  let e = ir(enInstrucciones('afirmaciones', { idioma }), { tipo: 'EMPEZAR', fecha: CASO_T.fecha });
   for (let i = 0; i < indice; i++) e = ir(e, 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
   return e;
 }
@@ -92,9 +109,9 @@ function ir(estado, ...eventos) {
   return eventos.reduce((e, ev) => transicion(e, typeof ev === 'string' ? { tipo: ev } : ev), estado);
 }
 
-function enPregunta(indice = 0, modo = 'normal', caso = CASO) {
-  let e = estadoInicial({ modo });
-  e = ir(e, cargado(caso), 'EMPEZAR');
+function enPregunta(indice = 0, modo = 'normal', caso = CASO, idioma = 'en') {
+  let e = estadoInicial({ modo, idioma });
+  e = ir(e, cargado(caso), abrir('imagenes'), 'EMPEZAR');
   e = ir(e, 'PRECARGA_OK', { tipo: 'FIN_CUENTA', fecha: CASO.fecha });
   for (let i = 0; i < indice; i++) {
     e = ir(e, 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
@@ -116,21 +133,33 @@ test('141. constantes y modos', () => {
   assert.equal(estadoInicial({}).modo, 'normal');
   assert.equal(estadoInicial().modo, 'normal');
   assert.equal(estadoInicial({ modo: 'perro' }).modo, 'perro');
-  const portada = ir(estadoInicial({}), cargado());
-  assert.equal(transicion(portada, { tipo: 'ELEGIR_MODO', modo: 'dificil' }), portada);
-  assert.equal(transicion(portada, { tipo: 'ELEGIR_MODO', modo: 'toString' }), portada);
-  assert.equal(ir(portada, { tipo: 'ELEGIR_MODO', modo: 'investigador' }).modo, 'investigador');
+  // El modo se elige solo en instrucciones de Images.
+  const ins = enInstrucciones();
+  assert.equal(transicion(ins, { tipo: 'ELEGIR_MODO', modo: 'dificil' }), ins);
+  assert.equal(transicion(ins, { tipo: 'ELEGIR_MODO', modo: 'toString' }), ins);
+  assert.equal(transicion(ins, { tipo: 'ELEGIR_MODO', modo: 'normal' }), ins, 'el mismo modo no cambia nada');
+  assert.equal(ir(ins, { tipo: 'ELEGIR_MODO', modo: 'investigador' }).modo, 'investigador');
+  assert.equal(ir(ins, { tipo: 'ELEGIR_MODO', modo: 'investigador' }).pantalla, 'instrucciones');
+  const p = portada();
+  assert.equal(transicion(p, { tipo: 'ELEGIR_MODO', modo: 'perro' }), p, 'no en portada');
+  const insAfirm = enInstrucciones('afirmaciones');
+  assert.equal(transicion(insAfirm, { tipo: 'ELEGIR_MODO', modo: 'perro' }), insAfirm, 'no en Fact or Fake');
+  const caso = enPregunta();
+  assert.equal(transicion(caso, { tipo: 'ELEGIR_MODO', modo: 'perro' }), caso);
 });
 
-test('estado inicial: campos de la 1.3', () => {
+test('estado inicial: campos de la 1.3 y el idioma', () => {
   const e = estadoInicial({});
   assert.equal(e.pantalla, 'iniciando');
   assert.equal(e.tema, null);
   assert.equal(e.fichas, null);
   assert.equal(e.tapada, false);
   assert.equal(e.ficha, null);
+  assert.equal(e.idioma, 'en');
   assert.equal('volverA' in e, false);
   assert.equal('vistoComoJugar' in e, false);
+  assert.equal(estadoInicial({ idioma: 'es' }).idioma, 'es');
+  for (const malo of ['fr', 'ES', undefined, null, 5]) assert.equal(estadoInicial({ idioma: malo }).idioma, 'en', String(malo));
 });
 
 test('11. transicion no muta el estado (estado y evento congelados)', () => {
@@ -145,12 +174,17 @@ test('11. transicion no muta el estado (estado y evento congelados)', () => {
     { tipo: 'SIGUIENTE' },
     { tipo: 'MEDIANOCHE' },
     { tipo: 'OTRA_PESTANA', reto: 'imagenes' },
+    { tipo: 'ABRIR_RETO', reto: 'afirmaciones' },
+    { tipo: 'CAMBIAR_IDIOMA', idioma: 'es' },
     { tipo: 'ELEGIR_RETO', reto: 'afirmaciones' },
     { tipo: 'VOLVER_PORTADA' },
     { tipo: 'VOLVIO', ocultoMs: 9000, indice: 0 }
   ];
   const estados = [
     estadoInicial({}),
+    portada(),
+    enInstrucciones(),
+    enInstrucciones('afirmaciones'),
     enPregunta(),
     ir(enPregunta(), 'PINTADA'),
     ir(enPregunta(), 'PINTADA', 'AGOTADO'),
@@ -169,13 +203,14 @@ test('11. transicion no muta el estado (estado y evento congelados)', () => {
   }
 });
 
-test('12. EMPEZAR lleva siempre a cargando y no existen VER_COMO_JUGAR ni ENTENDIDO', () => {
-  const portada = ir(estadoInicial({}), cargado());
-  assert.equal(portada.pantalla, 'portada');
-  assert.equal(ir(portada, 'EMPEZAR').pantalla, 'cargando');
-  assert.equal(transicion(portada, { tipo: 'VER_COMO_JUGAR' }), portada);
-  assert.equal(transicion(portada, { tipo: 'ENTENDIDO' }), portada);
-  const cargando = ir(portada, 'EMPEZAR');
+test('12. EMPEZAR solo existe en instrucciones; nunca desde la portada', () => {
+  const p = portada();
+  assert.equal(p.pantalla, 'portada');
+  assert.equal(transicion(p, { tipo: 'EMPEZAR', fecha: '2026-11-03' }), p);
+  assert.equal(transicion(p, { tipo: 'VER_COMO_JUGAR' }), p);
+  assert.equal(transicion(p, { tipo: 'ENTENDIDO' }), p);
+  assert.equal(ir(enInstrucciones(), 'EMPEZAR').pantalla, 'cargando');
+  const cargando = ir(enInstrucciones(), 'EMPEZAR');
   assert.equal(transicion(cargando, { tipo: 'EMPEZAR' }), cargando);
 });
 
@@ -203,7 +238,7 @@ test('14. VOTO corrige, revela la verdad y descifra la ficha, con tapada o sin e
         assert.equal(r.revelada, VERDADES[i]);
         assert.equal(r.activo, false);
         assert.equal(r.tapada, false);
-        assert.equal(r.ficha, TEXTOS_FICHA[i]);
+        assert.equal(r.ficha, TEXTOS_FICHA.en[i]);
       }
     }
   }
@@ -295,11 +330,10 @@ test('16. SIGUIENTE avanza y en la prueba 5 lleva a resultado', () => {
 
 test('17. CARGADO: partida terminada, sin casos y portada con fichas', () => {
   for (const modo of ['investigador', 'normal', 'perro']) {
-    const terminada = { estado: 'terminada', modo, resultados: 'AAAAA' };
-    const e = ir(estadoInicial({ modo: 'perro' }), cargado(CASO, { reto: 'imagenes', jugados: { imagenes: terminada.estado === 'terminada' } }));
+    const e = ir(estadoInicial({ modo }), cargado(CASO, { reto: 'imagenes', jugados: { imagenes: true } }));
     assert.equal(e.pantalla, 'portada');
     assert.equal(e.retos.imagenes.jugado, true);
-    assert.equal(ir(e, 'EMPEZAR').pantalla, 'ya-jugado');
+    assert.equal(ir(e, abrir('imagenes')).pantalla, 'ya-jugado');
   }
   const sin = ir(estadoInicial({}), cargado(null, { afirmaciones: null }));
   assert.equal(sin.pantalla, 'sin-casos');
@@ -307,7 +341,7 @@ test('17. CARGADO: partida terminada, sin casos y portada con fichas', () => {
   const p = ir(estadoInicial({}), cargado());
   assert.equal(p.pantalla, 'portada');
   assert.equal(p.n, 3);
-  assert.equal(p.tema, 'Gente comiendo');
+  assert.deepEqual(p.tema, { en: 'Dogs', es: 'Perros' });
   assert.deepEqual(p.pruebas, CASO.pruebas);
   assert.deepEqual(p.fichas, FICHAS);
   const jugada = enPregunta(2);
@@ -338,7 +372,7 @@ test('errores, reintentos, otra pestaña y medianoche', () => {
   assert.equal(e.error, 'calendario');
   assert.equal(ir(e, 'REINTENTAR').pantalla, 'iniciando');
 
-  let c = ir(estadoInicial({}), cargado(), 'EMPEZAR', 'PRECARGA_ERROR');
+  let c = ir(estadoInicial({}), cargado(), abrir('imagenes'), 'EMPEZAR', 'PRECARGA_ERROR');
   assert.equal(c.pantalla, 'error');
   assert.equal(c.error, 'imagenes');
   c = ir(c, 'REINTENTAR');
@@ -349,12 +383,15 @@ test('errores, reintentos, otra pestaña y medianoche', () => {
   assert.equal(sellada.pantalla, 'ya-jugado');
   assert.equal(sellada.tapada, false);
   assert.equal(sellada.ficha, null);
-  const portada = ir(estadoInicial({}), cargado());
-  assert.equal(ir(portada, { tipo: 'OTRA_PESTANA', reto: 'imagenes' }).pantalla, 'ya-jugado');
-  assert.equal(ir(portada, 'MEDIANOCHE').pantalla, 'iniciando');
+  const p = portada();
+  // En portada, otra pestaña solo marca el reto como jugado (la tarjeta muestra el estado nuevo).
+  const marcada = ir(p, { tipo: 'OTRA_PESTANA', reto: 'imagenes' });
+  assert.equal(marcada.pantalla, 'portada');
+  assert.equal(marcada.retos.imagenes.jugado, true);
+  assert.equal(ir(enInstrucciones(), { tipo: 'OTRA_PESTANA', reto: 'imagenes' }).pantalla, 'ya-jugado');
+  assert.equal(ir(p, 'MEDIANOCHE').pantalla, 'iniciando');
   assert.equal(ir(enPregunta(), 'MEDIANOCHE').pantalla, 'caso');
-  assert.equal(ir(portada, { tipo: 'ELEGIR_MODO', modo: 'perro' }).modo, 'perro');
-  assert.equal(transicion(portada, { tipo: 'NO_EXISTE' }), portada);
+  assert.equal(transicion(p, { tipo: 'NO_EXISTE' }), p);
 });
 
 test('FIN_CUENTA fija la fecha y deja la prueba 1 sin activar ni tapar', () => {
@@ -401,12 +438,8 @@ test('140. recortarFicha', () => {
 // ---- Dos retos [D-98 a D-101, D-115] ----
 
 const VOTO_BIEN = (i) => (VERDADES_T[i] === 1 ? 'generada' : 'autentica');
-const FICHA_ESPERADA = (i) => ({
-  aclaracion: 'Verdad ' + i,
-  detalles: i % 2 === 0 ? ['Detalle ñ ' + i, 'Otro ' + i] : []
-});
 
-test('157. RETOS, retoValido, retoDePrueba y estadoInicial con reto', () => {
+test('157. RETOS, retoValido y estadoInicial con reto', () => {
   assert.deepEqual([...RETOS], ['imagenes', 'afirmaciones']);
   assert.equal(Object.isFrozen(RETOS), true);
   assert.equal(RETO_POR_DEFECTO, 'imagenes');
@@ -415,11 +448,6 @@ test('157. RETOS, retoValido, retoDePrueba y estadoInicial con reto', () => {
   for (const malo of ['otro', 'toString', '__proto__', undefined, null, 1]) assert.equal(retoValido(malo), false);
   assert.equal(estadoInicial({ reto: 'x' }).reto, 'imagenes');
   assert.equal(estadoInicial({ reto: 'afirmaciones' }).reto, 'afirmaciones');
-  assert.equal(retoDePrueba('?reto=afirmaciones'), 'afirmaciones');
-  assert.equal(retoDePrueba('?prueba=1&dia=3&reto=imagenes'), 'imagenes');
-  assert.equal(retoDePrueba('?reto=x'), null);
-  assert.equal(retoDePrueba(''), null);
-  assert.equal(retoDePrueba(undefined), null);
   const e = estadoInicial({});
   assert.equal(e.textos, null);
   assert.equal(e.texto, null);
@@ -437,10 +465,12 @@ test('158. CARGADO elige reto y copia el caso', () => {
   const ambos = ir(estadoInicial({}), cargado(CASO, { reto: 'afirmaciones' }));
   assert.equal(ambos.reto, 'afirmaciones');
   assert.equal(ambos.n, 7);
-  assert.equal(ambos.tema, 'Mercados');
+  assert.deepEqual(ambos.tema, { en: 'Markets', es: 'Mercados' });
   assert.equal(ambos.pruebas, null);
   assert.deepEqual(ambos.textos, CASO_T.textos);
   assert.deepEqual(ambos.fichas, FICHAS_T);
+  // CARGADO conserva el idioma
+  assert.equal(ir(estadoInicial({ idioma: 'es' }), cargado(CASO, { reto: 'afirmaciones' })).idioma, 'es');
   assert.equal(ambos.clave, CLAVE_T);
   const defecto = ir(estadoInicial({}), cargado(CASO));
   assert.equal(defecto.reto, 'imagenes');
@@ -454,34 +484,139 @@ test('158. CARGADO elige reto y copia el caso', () => {
   assert.equal(jugado.retos.imagenes.jugado, false);
 });
 
-test('159. ELEGIR_RETO copia el caso del reto', () => {
-  const p = ir(estadoInicial({}), cargado(CASO));
-  const t = transicion(p, { tipo: 'ELEGIR_RETO', reto: 'afirmaciones' });
-  assert.equal(t.pantalla, 'portada');
+test('159. ABRIR_RETO lleva a instrucciones con el caso del reto, sin gastar el intento', () => {
+  const p = portada();
+  const t = transicion(p, abrir('afirmaciones'));
+  assert.equal(t.pantalla, 'instrucciones');
   assert.equal(t.reto, 'afirmaciones');
   assert.equal(t.n, 7);
-  assert.equal(t.tema, 'Mercados');
+  assert.deepEqual(t.tema, { en: 'Markets', es: 'Mercados' });
   assert.equal(t.pruebas, null);
   assert.deepEqual(t.textos, CASO_T.textos);
   assert.deepEqual(t.fichas, FICHAS_T);
-  const vuelta = transicion(t, { tipo: 'ELEGIR_RETO', reto: 'imagenes' });
-  assert.deepEqual(vuelta.pruebas, CASO.pruebas);
-  assert.equal(vuelta.textos, null);
-  assert.equal(vuelta.n, 3);
-  assert.equal(transicion(p, { tipo: 'ELEGIR_RETO', reto: 'imagenes' }), p);
-  assert.equal(transicion(p, { tipo: 'ELEGIR_RETO', reto: 'otro' }), p);
+  assert.equal(t.clave, CLAVE_T);
+  for (const k of ['fase', 'fecha', 'texto', 'revelada', 'ficha', 'motivo']) assert.equal(t[k], null, k);
+  assert.equal(t.activo, false);
+  assert.equal(t.retos.afirmaciones.jugado, false, 'ver las instrucciones no gasta el intento');
+  const im = transicion(p, abrir('imagenes'));
+  assert.equal(im.pantalla, 'instrucciones');
+  assert.deepEqual(im.pruebas, CASO.pruebas);
+  assert.equal(im.textos, null);
+  assert.equal(im.n, 3);
+  // reto no válido, evento fuera de portada
+  assert.equal(transicion(p, abrir('otro')), p);
+  assert.equal(transicion(p, abrir(undefined)), p);
+  assert.equal(transicion(p, { tipo: 'ABRIR_RETO' }), p);
+  assert.equal(transicion(t, abrir('imagenes')), t, 'solo desde portada');
   const caso = enPregunta();
-  assert.equal(transicion(caso, { tipo: 'ELEGIR_RETO', reto: 'afirmaciones' }), caso);
+  assert.equal(transicion(caso, abrir('afirmaciones')), caso);
+  // reto sin caso: la tarjeta está disabled
   const sinAfirm = ir(estadoInicial({}), cargado(CASO, { afirmaciones: null }));
-  const vacio = transicion(sinAfirm, { tipo: 'ELEGIR_RETO', reto: 'afirmaciones' });
-  assert.equal(vacio.reto, 'afirmaciones');
-  assert.equal(vacio.n, null);
-  assert.equal(vacio.textos, null);
-  assert.equal(transicion(vacio, { tipo: 'EMPEZAR', fecha: '2026-12-07' }), vacio);
+  assert.equal(transicion(sinAfirm, abrir('afirmaciones')), sinAfirm);
+  // reto jugado: va directo a ya-jugado con su caso
+  const jugado = portada({}, { jugados: { afirmaciones: true } });
+  const yj = transicion(jugado, abrir('afirmaciones'));
+  assert.equal(yj.pantalla, 'ya-jugado');
+  assert.equal(yj.reto, 'afirmaciones');
+  assert.equal(yj.n, 7);
+  // ELEGIR_RETO ya no existe
+  assert.equal(transicion(p, { tipo: 'ELEGIR_RETO', reto: 'afirmaciones' }), p);
+});
+
+test('CAMBIAR_IDIOMA: solo en portada e instrucciones, solo idiomas válidos y distintos', () => {
+  const p = portada();
+  const es = transicion(p, { tipo: 'CAMBIAR_IDIOMA', idioma: 'es' });
+  assert.equal(es.idioma, 'es');
+  assert.equal(es.pantalla, 'portada');
+  assert.deepEqual({ ...es, idioma: 'en' }, p, 'solo cambia el idioma');
+  assert.equal(transicion(p, { tipo: 'CAMBIAR_IDIOMA', idioma: 'en' }), p);
+  for (const malo of ['fr', 'ES', '', undefined, null, 3]) {
+    assert.equal(transicion(p, { tipo: 'CAMBIAR_IDIOMA', idioma: malo }), p, String(malo));
+  }
+  const ins = enInstrucciones('afirmaciones');
+  const insEs = transicion(ins, { tipo: 'CAMBIAR_IDIOMA', idioma: 'es' });
+  assert.equal(insEs.idioma, 'es');
+  assert.equal(insEs.pantalla, 'instrucciones');
+  assert.equal(insEs.reto, 'afirmaciones');
+  // Fuera de portada e instrucciones no se puede cambiar.
+  const fuera = [
+    estadoInicial({}),
+    enPregunta(),
+    ir(enPregunta(), 'PINTADA'),
+    enAfirmaciones(),
+    ir(enAfirmaciones(), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }),
+    ir(enAfirmaciones(4), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE'),
+    ir(enInstrucciones(), 'EMPEZAR'),
+    ir(enInstrucciones(), 'EMPEZAR', 'PRECARGA_OK'),
+    ir(portada({}, { jugados: { imagenes: true } }), abrir('imagenes')),
+    ir(estadoInicial({}), cargado(null, { afirmaciones: null })),
+    ir(estadoInicial({}), 'ERROR_CALENDARIO')
+  ];
+  for (const e of fuera) assert.equal(transicion(e, { tipo: 'CAMBIAR_IDIOMA', idioma: 'es' }), e, e.pantalla);
+});
+
+test('el idioma elegido se conserva en todo el recorrido y decide qué texto se descifra', () => {
+  let e = ir(enInstrucciones('afirmaciones'), { tipo: 'CAMBIAR_IDIOMA', idioma: 'es' });
+  e = ir(e, { tipo: 'EMPEZAR', fecha: CASO_T.fecha });
+  assert.equal(e.idioma, 'es');
+  assert.equal(e.texto, TEXTOS_T.es[0]);
+  e = ir(e, 'PINTADA', { tipo: 'VOTO', voto: 'autentica' });
+  assert.deepEqual(e.ficha, ACLARACION('es', 0));
+  e = ir(e, 'SIGUIENTE');
+  assert.equal(e.texto, TEXTOS_T.es[1]);
+  assert.equal(e.idioma, 'es');
+  // La verdad es la misma en los dos idiomas.
+  const en = ir(enAfirmaciones(0, 'en'), 'PINTADA', { tipo: 'VOTO', voto: 'generada' });
+  const es = ir(enAfirmaciones(0, 'es'), 'PINTADA', { tipo: 'VOTO', voto: 'generada' });
+  assert.equal(en.revelada, es.revelada);
+  assert.equal(en.resultados, es.resultados);
+  assert.deepEqual(en.ficha, ACLARACION('en', 0));
+  assert.deepEqual(es.ficha, ACLARACION('es', 0));
+  assert.equal(en.idioma, 'en');
+  // Images: la ficha sale del idioma del estado.
+  for (let i = 0; i < 5; i++) {
+    for (const l of ['en', 'es']) {
+      const v = ir(enPregunta(i, 'normal', CASO, l), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' });
+      assert.equal(v.ficha, TEXTOS_FICHA[l][i], l + i);
+    }
+  }
+  // Con un idioma sin datos (corruptos), ficha y texto son null y no lanza.
+  const sinEs = { ...CASO_T, textos: { en: CASO_T.textos.en }, fichas: { en: CASO_T.fichas.en } };
+  const roto = ir(
+    estadoInicial({ idioma: 'es' }),
+    cargado(CASO, { afirmaciones: sinEs, reto: 'afirmaciones' }),
+    abrir('afirmaciones'),
+    { tipo: 'EMPEZAR', fecha: 'x' }
+  );
+  assert.equal(roto.texto, null);
+  const rotoVoto = ir(roto, 'PINTADA', { tipo: 'VOTO', voto: 'autentica' });
+  assert.equal(rotoVoto.ficha, null);
+  assert.equal(rotoVoto.fase, 'veredicto');
+});
+
+test('intento común a los dos idiomas: cambiar de idioma no deja volver a jugar', () => {
+  for (const idioma of ['en', 'es']) {
+    const p = portada({ idioma }, { jugados: { imagenes: true, afirmaciones: true } });
+    assert.equal(transicion(p, abrir('imagenes')).pantalla, 'ya-jugado');
+    assert.equal(transicion(p, abrir('afirmaciones')).pantalla, 'ya-jugado');
+    const cambiado = transicion(p, { tipo: 'CAMBIAR_IDIOMA', idioma: idioma === 'en' ? 'es' : 'en' });
+    assert.equal(cambiado.retos.imagenes.jugado, true);
+    assert.equal(transicion(cambiado, abrir('imagenes')).pantalla, 'ya-jugado');
+  }
+  // Tras terminar una partida en español, cambiar a inglés en la portada la sigue dando por jugada.
+  const fin = ir(enAfirmaciones(4, 'es'), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE', 'VOLVER_PORTADA');
+  assert.equal(fin.pantalla, 'portada');
+  assert.equal(fin.retos.afirmaciones.jugado, true);
+  const enIngles = ir(fin, { tipo: 'CAMBIAR_IDIOMA', idioma: 'en' });
+  assert.equal(enIngles.retos.afirmaciones.jugado, true);
+  assert.equal(transicion(enIngles, abrir('afirmaciones')).pantalla, 'ya-jugado');
+  // Carrera con otra pestaña estando en instrucciones -> ya-jugado.
+  const carrera = ir(enInstrucciones('afirmaciones'), { tipo: 'OTRA_PESTANA', reto: 'afirmaciones' });
+  assert.equal(carrera.pantalla, 'ya-jugado');
 });
 
 test('160. EMPEZAR por reto', () => {
-  const p = ir(estadoInicial({ reto: 'afirmaciones' }), cargado(CASO, { reto: 'afirmaciones' }));
+  const p = enInstrucciones('afirmaciones');
   const e = transicion(p, { tipo: 'EMPEZAR', fecha: '2026-12-01' });
   assert.equal(e.pantalla, 'caso');
   assert.equal(e.fase, 'pregunta');
@@ -490,13 +625,15 @@ test('160. EMPEZAR por reto', () => {
   assert.equal(e.fecha, '2026-12-01');
   assert.equal(e.resultados, '-----');
   assert.equal(e.motivo, null);
-  assert.equal(e.texto, TEXTOS_T[0]);
+  assert.equal(e.texto, TEXTOS_T.en[0]);
   assert.equal(e.tapada, false);
-  const jugado = ir(estadoInicial({}), cargado(CASO, { reto: 'afirmaciones', jugados: { afirmaciones: true } }));
-  assert.equal(transicion(jugado, { tipo: 'EMPEZAR', fecha: 'x' }).pantalla, 'ya-jugado');
-  const imgJugado = ir(estadoInicial({}), cargado(CASO, { jugados: { imagenes: true } }));
-  assert.equal(transicion(imgJugado, { tipo: 'EMPEZAR' }).pantalla, 'ya-jugado');
-  assert.equal(ir(estadoInicial({}), cargado(CASO), 'EMPEZAR').pantalla, 'cargando');
+  const jugado = ir(portada({}, { jugados: { afirmaciones: true } }), abrir('afirmaciones'));
+  assert.equal(jugado.pantalla, 'ya-jugado');
+  assert.equal(transicion(jugado, { tipo: 'EMPEZAR', fecha: 'x' }), jugado);
+  // Carrera: el reto pasa a jugado estando en instrucciones y se pulsa Empezar.
+  const medio = { ...p, retos: { ...p.retos, afirmaciones: { ...p.retos.afirmaciones, jugado: true } } };
+  assert.equal(transicion(medio, { tipo: 'EMPEZAR', fecha: 'x' }).pantalla, 'ya-jugado');
+  assert.equal(ir(enInstrucciones(), 'EMPEZAR').pantalla, 'cargando');
   const tit = ir(e, 'PINTADA');
   assert.equal(transicion(tit, { tipo: 'AGOTADO' }), tit);
   assert.equal(transicion(p, { tipo: 'PRECARGA_OK' }), p);
@@ -510,7 +647,7 @@ test('161. VOLVIO en Fact or Fake: más de 3000 ms es fallo', () => {
       assert.equal(v.fase, 'veredicto');
       assert.equal(v.resultados[i], 'F');
       assert.equal(v.revelada, VERDADES_T[i]);
-      assert.deepEqual(v.ficha, FICHA_ESPERADA(i));
+      assert.deepEqual(v.ficha, ACLARACION('en', i));
       assert.equal(v.motivo, 'oculta');
       assert.equal(v.activo, false);
     }
@@ -539,10 +676,10 @@ test('161. VOLVIO en Fact or Fake: más de 3000 ms es fallo', () => {
 test('162. VOTO y SIGUIENTE en Fact or Fake', () => {
   const v = ir(enAfirmaciones(), 'PINTADA', { tipo: 'VOTO', voto: 'generada' });
   assert.equal(v.resultados[0], 'A');
-  assert.deepEqual(v.ficha, FICHA_ESPERADA(0));
+  assert.deepEqual(v.ficha, ACLARACION('en', 0));
   assert.equal(v.motivo, null);
   const s = ir(v, 'SIGUIENTE');
-  assert.equal(s.texto, TEXTOS_T[1]);
+  assert.equal(s.texto, TEXTOS_T.en[1]);
   assert.equal(s.ficha, null);
   assert.equal(s.revelada, null);
   assert.equal(s.motivo, null);
@@ -557,13 +694,13 @@ test('162. VOTO y SIGUIENTE en Fact or Fake', () => {
 test('163. nunca hay más de una afirmación descifrada', () => {
   let e = enAfirmaciones();
   for (let i = 0; i < 5; i++) {
-    assert.equal(e.texto, TEXTOS_T[i]);
+    assert.equal(e.texto, TEXTOS_T.en[i]);
     assert.equal(e.indice, i);
     e = ir(e, 'PINTADA');
-    assert.equal(e.texto, TEXTOS_T[i]);
+    assert.equal(e.texto, TEXTOS_T.en[i]);
     e = ir(e, { tipo: 'VOTO', voto: VOTO_BIEN(i) });
     assert.equal(e.resultados[i], 'A');
-    assert.equal(e.texto, TEXTOS_T[i]);
+    assert.equal(e.texto, TEXTOS_T.en[i]);
     e = ir(e, 'SIGUIENTE');
   }
   assert.equal(e.pantalla, 'resultado');
@@ -572,7 +709,7 @@ test('163. nunca hay más de una afirmación descifrada', () => {
   assert.equal(e.resultados, 'AAAAA');
 });
 
-test('164. VOLVER_PORTADA', () => {
+test('164. VOLVER_PORTADA desde instrucciones, resultado y ya-jugado', () => {
   const resultado = ir(enAfirmaciones(4), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
   const p = transicion(resultado, { tipo: 'VOLVER_PORTADA' });
   assert.equal(p.pantalla, 'portada');
@@ -582,18 +719,26 @@ test('164. VOLVER_PORTADA', () => {
   assert.equal(p.resultados, '-----');
   assert.equal(p.retos.afirmaciones.jugado, true);
   assert.deepEqual(p.textos, CASO_T.textos);
-  assert.equal(transicion(p, { tipo: 'EMPEZAR', fecha: 'x' }).pantalla, 'ya-jugado');
-  const yj = ir(estadoInicial({}), cargado(CASO, { jugados: { imagenes: true } }), 'EMPEZAR');
+  assert.equal(transicion(p, abrir('afirmaciones')).pantalla, 'ya-jugado');
+  const yj = ir(portada({}, { jugados: { imagenes: true } }), abrir('imagenes'));
   assert.equal(yj.pantalla, 'ya-jugado');
   const p2 = transicion(yj, { tipo: 'VOLVER_PORTADA' });
   assert.equal(p2.pantalla, 'portada');
   assert.equal(p2.reto, 'imagenes');
   assert.deepEqual(p2.pruebas, CASO.pruebas);
+  // Desde instrucciones: vuelve a la portada con el mismo reto y sin gastar nada.
+  const ins = enInstrucciones('afirmaciones');
+  const dePortada = transicion(ins, { tipo: 'VOLVER_PORTADA' });
+  assert.equal(dePortada.pantalla, 'portada');
+  assert.equal(dePortada.reto, 'afirmaciones');
+  assert.equal(dePortada.retos.afirmaciones.jugado, false);
+  // El idioma se conserva.
+  assert.equal(transicion(ir(ins, { tipo: 'CAMBIAR_IDIOMA', idioma: 'es' }), { tipo: 'VOLVER_PORTADA' }).idioma, 'es');
   for (const e of [estadoInicial({}), enPregunta(), enAfirmaciones(), ir(enAfirmaciones(), 'PINTADA')]) {
     assert.equal(transicion(e, { tipo: 'VOLVER_PORTADA' }), e);
   }
-  const portada = ir(estadoInicial({}), cargado(CASO));
-  assert.equal(transicion(portada, { tipo: 'VOLVER_PORTADA' }), portada);
+  const base = portada();
+  assert.equal(transicion(base, { tipo: 'VOLVER_PORTADA' }), base);
 });
 
 test('165. OTRA_PESTANA por reto', () => {
@@ -667,24 +812,51 @@ test('OCULTA (evento retirado) no tiene efecto, tampoco en Fact or Fake', () => 
   for (const e of [enAfirmaciones(), ir(enAfirmaciones(), 'PINTADA')]) assert.equal(transicion(e, { tipo: 'OCULTA' }), e);
 });
 
-test('TECLAS, votoDeTecla y teclaDeVoto [D-122]', () => {
-  assert.deepEqual(TECLAS, { imagenes: { r: 'autentica', i: 'generada' }, afirmaciones: { f: 'autentica', k: 'generada' } });
+test('TECLAS, votoDeTecla y teclaDeVoto por idioma [D-122, D-156]', () => {
+  assert.deepEqual(TECLAS, {
+    en: { imagenes: { r: 'autentica', i: 'generada' }, afirmaciones: { f: 'autentica', k: 'generada' } },
+    es: { imagenes: { r: 'autentica', i: 'generada' }, afirmaciones: { d: 'autentica', b: 'generada' } }
+  });
   assert.equal(Object.isFrozen(TECLAS), true);
-  assert.equal(Object.isFrozen(TECLAS.imagenes), true);
-  assert.equal(Object.isFrozen(TECLAS.afirmaciones), true);
+  for (const idioma of ['en', 'es']) {
+    assert.equal(Object.isFrozen(TECLAS[idioma]), true);
+    assert.equal(Object.isFrozen(TECLAS[idioma].imagenes), true);
+    assert.equal(Object.isFrozen(TECLAS[idioma].afirmaciones), true);
+  }
+  // Images: R e I en los dos idiomas, y por defecto en inglés.
+  for (const idioma of ['en', 'es']) {
+    assert.equal(votoDeTecla('imagenes', 'r', idioma), 'autentica');
+    assert.equal(votoDeTecla('imagenes', 'I', idioma), 'generada');
+    assert.equal(teclaDeVoto('imagenes', 'autentica', idioma), 'R');
+    assert.equal(teclaDeVoto('imagenes', 'generada', idioma), 'I');
+  }
   assert.equal(votoDeTecla('imagenes', 'r'), 'autentica');
-  assert.equal(votoDeTecla('imagenes', 'I'), 'generada');
-  assert.equal(votoDeTecla('afirmaciones', 'f'), 'autentica');
-  assert.equal(votoDeTecla('afirmaciones', 'K'), 'generada');
-  for (const [reto, tecla] of [['imagenes', 'f'], ['imagenes', 'k'], ['afirmaciones', 'r'], ['afirmaciones', 'i']]) {
-    assert.equal(votoDeTecla(reto, tecla), null, reto + tecla);
+  // Fact or Fake: F y K en inglés; D y B en español.
+  assert.equal(votoDeTecla('afirmaciones', 'f', 'en'), 'autentica');
+  assert.equal(votoDeTecla('afirmaciones', 'K', 'en'), 'generada');
+  assert.equal(votoDeTecla('afirmaciones', 'd', 'es'), 'autentica');
+  assert.equal(votoDeTecla('afirmaciones', 'B', 'es'), 'generada');
+  assert.equal(votoDeTecla('afirmaciones', 'f'), 'autentica', 'inglés por defecto');
+  assert.equal(teclaDeVoto('afirmaciones', 'autentica', 'en'), 'F');
+  assert.equal(teclaDeVoto('afirmaciones', 'generada', 'en'), 'K');
+  assert.equal(teclaDeVoto('afirmaciones', 'autentica', 'es'), 'D');
+  assert.equal(teclaDeVoto('afirmaciones', 'generada', 'es'), 'B');
+  assert.equal(teclaDeVoto('afirmaciones', 'generada'), 'K');
+  // Las teclas del otro idioma y del otro reto no valen.
+  for (const [reto, tecla, idioma] of [
+    ['afirmaciones', 'f', 'es'], ['afirmaciones', 'k', 'es'], ['afirmaciones', 'd', 'en'], ['afirmaciones', 'b', 'en'],
+    ['imagenes', 'f', 'en'], ['imagenes', 'k', 'en'], ['imagenes', 'd', 'es'], ['imagenes', 'b', 'es'],
+    ['afirmaciones', 'r', 'en'], ['afirmaciones', 'i', 'es']
+  ]) {
+    assert.equal(votoDeTecla(reto, tecla, idioma), null, reto + tecla + idioma);
   }
   for (const t of ['Enter', '', 'rr', undefined, null, 5, 'constructor']) assert.equal(votoDeTecla('imagenes', t), null, String(t));
   for (const r of ['x', undefined, null, 'toString', '__proto__']) assert.equal(votoDeTecla(r, 'r'), null, String(r));
-  assert.equal(teclaDeVoto('imagenes', 'autentica'), 'R');
-  assert.equal(teclaDeVoto('imagenes', 'generada'), 'I');
-  assert.equal(teclaDeVoto('afirmaciones', 'autentica'), 'F');
-  assert.equal(teclaDeVoto('afirmaciones', 'generada'), 'K');
+  for (const idioma of ['fr', 'ES', null, 'toString', '__proto__', 5]) {
+    assert.equal(votoDeTecla('imagenes', 'r', idioma), null, String(idioma));
+    assert.equal(teclaDeVoto('imagenes', 'autentica', idioma), null, String(idioma));
+  }
+  for (const t of ['constructor', 'toString', '__proto__']) assert.equal(votoDeTecla('imagenes', t, 'es'), null);
   for (const [r, v] of [['x', 'autentica'], ['imagenes', 'otro'], ['imagenes', undefined], ['imagenes', 3]]) {
     assert.equal(teclaDeVoto(r, v), null);
   }
@@ -714,4 +886,26 @@ test('etiquetaResultado: une con " · " y salta partes vacías', () => {
   assert.equal(etiquetaResultado(['Fact or Fake', 'Case #7', '', null]), 'Fact or Fake · Case #7');
   assert.equal(etiquetaResultado(['Images', undefined, '  ', 'Normal']), 'Images · Normal');
   assert.equal(etiquetaResultado([]), '');
+});
+
+import * as juegoModulo from '../js/juego.js';
+
+test('retoDePrueba se retira en la 3.0 y ELEGIR_RETO ya no existe', () => {
+  assert.equal(juegoModulo.retoDePrueba, undefined);
+  const p = portada();
+  assert.equal(transicion(p, { tipo: 'ELEGIR_RETO', reto: 'afirmaciones' }), p);
+});
+
+test('anti-trampas: ni el estado de instrucciones ni el de portada llevan la verdad ni textos descifrados', () => {
+  for (const reto of ['imagenes', 'afirmaciones']) {
+    const e = enInstrucciones(reto);
+    assert.equal(e.revelada, null);
+    assert.equal(e.ficha, null);
+    assert.equal(e.texto, null);
+  }
+  assert.equal(portada().texto, null);
+  // El texto descifrado de la afirmación solo existe en caso/pregunta y veredicto de Fact or Fake.
+  const fin = ir(enAfirmaciones(4), 'PINTADA', { tipo: 'VOTO', voto: 'autentica' }, 'SIGUIENTE');
+  assert.equal(fin.texto, null);
+  assert.equal(fin.ficha, null);
 });
