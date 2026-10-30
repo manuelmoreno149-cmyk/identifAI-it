@@ -32,3 +32,8 @@ Lee antes CLAUDE.md y las secciones "Pantallas y estados" y "Contrato HTML/CSS" 
 - Los textos visibles son marcadores ([[titulo_portada]]) o los de js/textos.js si ya existe.
 - Nunca pongas la palabra real/ia/ai en clases o ids ligados a una imagen concreta.
 - Al terminar resume qué archivos tocaste y qué queda pendiente, en 8 líneas como máximo.
+
+## Páginas y SEO (spec 10)
+- index.html ya no es el juego: es la raíz, generada. Editas las plantillas de herramientas/plantillas/*.html (juego.html, páginas, 404, og.html), css/paginas.css e img/og/. Después, `npm run paginas`.
+- Pie de la portada: una fila discreta de 5 enlaces que cabe sin deslizar. Los huecos de anuncio (aside#anuncio-portada y aside#anuncio-resultado) van vacíos, con hidden y sin espacio.
+- Las páginas de contenido pueden deslizar (columna de unos 70 caracteres, cuerpo de al menos 16 px); el juego, no.

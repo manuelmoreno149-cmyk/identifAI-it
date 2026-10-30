@@ -480,3 +480,9 @@ Para cambiar una decisión:
 - D-176: **MODIFICADA por D-187** (direcciones de las guías con excepción exacta).
 - D-179: **AMPLIADA por D-191** (ninguna imagen ya llegada en un día futuro).
 - D-180: **MODIFICADA por D-189** (un solo `cron: '15 12 * * *'`).
+
+### 2026-10-30 · Respuestas del usuario a los textos (fase 2; sin subir versión)
+
+- D-197 · **Fechas de lanzamiento**: la fecha de publicación de las guías y la de la privacidad serán las del día del lanzamiento; quedan como tareas L1 y L2 en `9c-tareas-paginas.md` (9.17).
+- D-198 · **Textos**: guías, títulos acortados, `sessionStorage` en privacidad y cookies aprobados. La racha se describe como "jugaste el caso" / "played the case" (el código no cambia: un caso abandonado cuenta como jugado). Las guías enlazan a EFE Verifica y AFP Factual (es) y a AFP Fact Check y Reuters Fact Check (en), con `https` y `rel="noopener"`; las direcciones se confirman en el lanzamiento (L6).
+- D-199 · **DP-96 resuelta**: `CLAUDE.md` dice "los enlaces y recursos de 404.html". Los cambios de `.claude/` (9.16) están aplicados.

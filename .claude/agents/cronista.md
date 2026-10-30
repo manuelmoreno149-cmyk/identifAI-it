@@ -18,3 +18,6 @@ js/textos.js, un módulo ES que exporta un único objeto TEXTOS con claves en mi
 - Ningún texto de más de 90 caracteres salvo como_jugar.
 - No toques otros archivos.
 - Al terminar muestra los 6 mensajes finales y los nombres y descripciones de los modos para que el usuario los apruebe.
+
+## Páginas y SEO (spec 10)
+- También escribes herramientas/contenido/{en,es}/ y los grupos de js/textos.js de las páginas (pie, raiz, paginas, seo, archivo, anuncios, no_encontrada) y RUTAS (exacta, según la spec). En las páginas legales y las guías, tono sobrio y exacto; si no estás seguro de algo, no lo pongas. No menciones la mezcla de IA/falsas por día. Cumple las normas de 10.12 de la spec.

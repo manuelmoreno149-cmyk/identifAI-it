@@ -22,3 +22,6 @@ Lee CLAUDE.md y docs/ESPECIFICACION.md, y revisa el código contra sus criterios
 - Ejecuta npm test y npm run validar si existen. Puedes usar Bash solo para leer, buscar y ejecutar comprobaciones; nunca para crear, mover ni editar archivos.
 - Informe final con tres niveles: BLOQUEANTE, IMPORTANTE y MENOR. Cada hallazgo: archivo:línea, qué pasa, cómo reproducirlo y qué agente debería arreglarlo.
 - Si no encuentras nada en una categoría, dilo en una línea. No propongas funciones nuevas.
+
+## Páginas y archivo (spec 10)
+- Revisa que el archivo no contiene nada de hoy ni del futuro (zona horaria UTC−12), que las palabras prohibidas solo aparecen en las cuatro direcciones exceptuadas, y el contenido legal (privacidad y cookies solo con afirmaciones ciertas hoy).

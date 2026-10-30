@@ -89,3 +89,12 @@ Texto aprobado y aplicado. Se deja como registro; donde el usuario cambió la pr
 - `agents/cronista.md`: también `herramientas/contenido/` y `RUTAS` (exacta, sin las guías); normas de 10.12 (responsable: solo el correo); grupo `no_encontrada`.
 - `agents/asuntos-internos.md`: revisar el archivo (nada de hoy ni del futuro, ninguna imagen ya jugada en un día futuro) y las páginas (palabras prohibidas en direcciones salvo las cuatro exactas, ninguna dirección de guía en el juego, contenido legal, `404.html`).
 - `commands/nuevo-lote.md` y `commands/publicar.md`: tras importar, `npm run paginas`; el commit incluye `en/credits/index.html` y `es/creditos/index.html` en lugar de `creditos.html` y `creditos.es.html`; si `importar` o `validar` dicen que una imagen "repite" otra de un día ya llegado, se sustituye la imagen del día futuro (nunca se toca el día llegado).
+
+## 9.17 Tareas del lanzamiento (para el día en que se fije la fecha de lanzamiento)
+
+- L1 · Fijar las fechas de publicación y modificación de las dos guías (`publicado` y `modificado` en la cabecera de `herramientas/contenido/{en,es}/guia_*.html`, hoy 2026-11-15 de ejemplo) en la fecha del lanzamiento [D-197].
+- L2 · Fijar la fecha de "Última actualización" de la privacidad (`privacidad.html`, hoy 30 de octubre de 2026) en la fecha del lanzamiento [D-197].
+- L3 · Ejecutar `npm run lanzamiento`, `npm run paginas`, `npm test` y `npm run validar`; comprobar que `sitemap.xml` lista el archivo y que `/en/` y `/es/` dejan de llevar `noindex` al tener casos.
+- L4 · Pedir la indexación de `/en/` y `/es/` en Search Console (DP-83).
+- L5 · Comprobar que el push del bot de la Action dispara el despliegue de Pages y que la protección de `main` no lo bloquea (R27, R34).
+- L6 · Revisar visualmente `404.html` en el sitio publicado (R37) y confirmar las direcciones de los verificadores enlazados en las guías.

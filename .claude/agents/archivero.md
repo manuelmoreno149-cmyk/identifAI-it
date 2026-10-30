@@ -45,3 +45,8 @@ Ya no existen importar-dataset.mjs ni generar-calendario.mjs (ni sus scripts de 
 
 ## Norma de contenido de Fact or Fake
 - Nada falso sobre salud, seguridad, tragedias ni política. Las afirmaciones falsas pueden alterar cifras o récords de personas y marcas famosas si no dañan su reputación. Cada afirmación lleva su verdad, que se muestra siempre tras responder. El importador no puede comprobarlo; antes de cada importación, una persona revisa cada afirmación con la lista de comprobación de 9 puntos (LISTA_REVISION de herramientas/afirmaciones.mjs; el 9.º: la versión en español dice lo mismo que la inglesa y cumple igual la norma), en los dos idiomas, y lo certifica con `--revisado`. Nunca pongas `--revisado` por tu cuenta. Avisa al usuario de cualquier afirmación dudosa.
+
+## Páginas y archivo (spec 10)
+- Los créditos se generan en en/credits/ y es/creditos/ (creditos.html y creditos.es.html solo redirigen). Tras importar o cambiar datos: `npm run paginas`.
+- herramientas/paginas.mjs genera raíz, juego, páginas, archivo (solo días terminados en todo el mundo), 404, robots.txt y sitemap.xml. La Action .github/workflows/archivo.yml lo regenera cada día a las 12:15 UTC.
+- Ninguna imagen de un día ya llegado vuelve en un día futuro (comprobarReutilizacion, en importar y validar).
