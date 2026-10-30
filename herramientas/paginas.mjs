@@ -79,10 +79,6 @@ export const ARCHIVOS_CREDITOS_PAGINA = Object.freeze({ en: 'en/credits/index.ht
 // Recursos que enlazan las páginas y que crean las fases 4 y 5 (perito-visual y agente-de-campo). Mientras no existan,
 // comprobarSitio no los da por error y validar solo avisa (con --estricto, error). Vaciar esta lista al terminar la fase 5.
 export const RECURSOS_PENDIENTES = Object.freeze([
-  'css/paginas.css',
-  'img/ui/icono.svg',
-  'img/og/portada-en.png',
-  'img/og/portada-es.png',
   'js/raiz.js'
 ]);
 

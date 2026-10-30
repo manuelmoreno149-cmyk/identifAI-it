@@ -183,6 +183,26 @@ noscript {
   border-left: 6px solid var(--color-sello);
 }
 
+/* Enlaces del aviso sin JS: tinta azul sobre papel (el ambar no se lee sobre papel) */
+noscript a {
+  color: var(--color-tinta-azul);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+noscript nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1) var(--espacio-4);
+  margin-top: var(--espacio-3);
+}
+
+noscript nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+}
+
 /* Movimiento reducido: sin animaciones decorativas ni sacudidas */
 @media (prefers-reduced-motion: reduce) {
   *,

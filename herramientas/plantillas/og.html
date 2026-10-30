@@ -1,0 +1,79 @@
+<!doctype html>
+<!--
+  Imagen Open Graph (10.11): 1200 x 630 con el estilo del juego. Solo la usa herramientas/og.mjs (Playwright).
+  Idioma: parametro de la URL, og.html?idioma=en u og.html?idioma=es (un script de 3 lineas pone html[data-idioma]).
+  Hay DOS bloques de texto (.og-en y .og-es) y el CSS muestra el del idioma; sin parametro (o sin JS) sale el ingles.
+  Sin imagenes de casos: todo es CSS (fotos de muestra con degradados), no revela nada.
+  Rutas relativas desde herramientas/plantillas/: ../../fonts y ../../css.
+-->
+<html lang="en" data-idioma="en">
+<head>
+<meta charset="utf-8">
+<title>identifAI-it · Open Graph</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="../../css/variables.css">
+<link rel="stylesheet" href="../../css/base.css">
+<script>
+  (function () {
+    var i = new URLSearchParams(location.search).get('idioma');
+    if (i === 'es' || i === 'en') { document.documentElement.setAttribute('data-idioma', i); document.documentElement.lang = i; }
+  })();
+</script>
+<style>
+  html, body { width: 1200px; height: 630px; margin: 0; overflow: hidden; }
+  body { position: relative; background-color: var(--color-fondo); background-image: radial-gradient(ellipse 70% 60% at 30% -10%, rgba(242, 169, 59, 0.28), transparent 70%); }
+
+  /* Un solo idioma a la vez */
+  html[data-idioma="en"] .og-es, html[data-idioma="es"] .og-en { display: none; }
+
+  .og-cinta { position: absolute; left: 0; right: 0; height: 30px; background: repeating-linear-gradient(-45deg, var(--color-cinta) 0 26px, var(--color-cinta-negro) 26px 52px); border-block: 3px solid var(--color-cinta-negro); }
+  .og-cinta-alta { top: 0; }
+  .og-cinta-baja { bottom: 0; }
+
+  .og-texto { position: absolute; left: 64px; top: 130px; width: 610px; }
+  .og-expediente { display: inline-block; margin: 0 0 22px; padding: 2px 14px; font-family: var(--fuente-datos); font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-tinta); background: var(--color-papel); transform: rotate(-2deg); }
+  .og-logo { margin: 0; font-size: 96px; line-height: 1; letter-spacing: 0.02em; color: var(--color-papel); text-shadow: 0 0 40px rgba(242, 169, 59, 0.4); white-space: nowrap; }
+  .og-lema { margin: 26px 0 0; font-family: var(--fuente-datos); font-size: 44px; line-height: 1.25; text-wrap: balance; color: var(--color-ambar); }
+  .og-dominio { position: absolute; left: 70px; bottom: 62px; margin: 0; font-family: var(--fuente-datos); font-size: 28px; letter-spacing: 0.06em; color: var(--color-texto-suave); }
+
+  /* Arte: fotos de muestra y fichas, todo dibujado con CSS */
+  .og-arte { position: absolute; left: 690px; top: 82px; width: 480px; height: 480px; }
+  .og-foto { position: absolute; width: 190px; height: 238px; padding: 14px 14px 0; background: var(--color-papel-claro); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.65); }
+  .og-foto::before { content: ""; display: block; width: 100%; height: 170px; background: var(--imagen); }
+  .og-foto-a { left: 0; top: 40px; transform: rotate(-9deg); --imagen: radial-gradient(circle at 72% 28%, #f2d08a 0 13%, transparent 14%), linear-gradient(#3f6288 0 62%, #24323a 62%); }
+  .og-foto-b { left: 145px; top: 6px; z-index: 2; transform: rotate(3deg); --imagen: linear-gradient(160deg, #1f3a3a, #6d8f6a); }
+  .og-foto-c { left: 290px; top: 46px; transform: rotate(10deg); --imagen: radial-gradient(circle at 35% 45%, #c4572f 0 18%, transparent 19%), linear-gradient(#2a2440, #463a5e); }
+
+  .og-sello { position: absolute; z-index: 5; padding: 0 16px; font-family: var(--fuente-titulos); font-weight: 600; font-size: 60px; line-height: 1.2; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; color: var(--color-sello); background: rgba(242, 233, 210, 0.95); border: 5px solid var(--color-sello); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+  .og-sello-foto { left: 245px; top: 205px; transform: rotate(-9deg); }
+
+  .og-ficha { position: absolute; width: 210px; height: 160px; background: var(--color-papel-claro); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.65); }
+  .og-ficha::before { content: ""; position: absolute; left: 24px; right: 24px; top: 22px; height: 64px; background: repeating-linear-gradient(180deg, #7b715a 0 3px, transparent 3px 12px); }
+  .og-ficha-a { left: 24px; top: 310px; transform: rotate(-5deg); }
+  .og-ficha-b { left: 252px; top: 322px; transform: rotate(6deg); }
+  .og-ficha .og-sello { right: 4px; bottom: 14px; font-size: 40px; border-width: 4px; padding: 0 10px; letter-spacing: 0.04em; }
+  .og-ficha-a .og-sello { color: var(--color-hecho); border-color: var(--color-hecho); transform: rotate(-8deg); }
+  .og-ficha-b .og-sello { transform: rotate(7deg); }
+</style>
+</head>
+<body>
+<div class="og-cinta og-cinta-alta"></div>
+<div class="og-texto">
+  <p class="og-expediente og-en">Daily case file</p>
+  <p class="og-expediente og-es">Expediente diario</p>
+  <h1 class="og-logo">identifAI-it</h1>
+  <p class="og-lema og-en" lang="en">Two cases a day. Spot the fake.</p>
+  <p class="og-lema og-es" lang="es">Dos casos al día. Caza el bulo.</p>
+</div>
+<div class="og-arte" aria-hidden="true">
+  <div class="og-foto og-foto-a"></div>
+  <div class="og-foto og-foto-b"></div>
+  <div class="og-foto og-foto-c"></div>
+  <p class="og-sello og-sello-foto"><span class="og-en">AI?</span><span class="og-es">¿IA?</span></p>
+  <div class="og-ficha og-ficha-a"><p class="og-sello"><span class="og-en">FACT</span><span class="og-es">DATO</span></p></div>
+  <div class="og-ficha og-ficha-b"><p class="og-sello"><span class="og-en">FAKE</span><span class="og-es">BULO</span></p></div>
+</div>
+<p class="og-dominio">identifaiit.com</p>
+<div class="og-cinta og-cinta-baja"></div>
+</body>
+</html>
