@@ -304,69 +304,85 @@ Temas, afirmaciones, aclaraciones, detalles y fichas solo como `textContent` en 
 - `footer#portada-pie`: `p#portada-aviso-dia data-texto="portada.pie"` ("New cases every day at midnight.") y `a#portada-creditos data-texto="portada.enlace_creditos"`, cuyo `href` pone main.js: `creditos.html` en inglés y `creditos.es.html` en español [D-161].
 - **Retirados** [D-152]: `fieldset#portada-retos`, los radios `#reto-{r}` y `.reto-radio`, `.reto-cabecera`, `.reto-accion`, `fieldset#portada-modos` (los radios de modo pasan a `instrucciones`), `#portada-regla`, `#portada-empezar-{r}-texto`, `#portada-racha`, `button.boton-ayuda`, `dialog#como-jugar` (con `#como-jugar-titulo`, `#como-jugar-pasos`, `#como-jugar-cerrar`), `div#selector-prueba` y el botón `abrir-prueba`. La racha ya no se ve en la portada (resultado y `ya-jugado` la muestran) [DP-69].
 
-**Instrucciones** (`#pantalla-instrucciones`) [3.0, D-153]:
+**Instrucciones** (`#pantalla-instrucciones`) [3.0, D-153, D-167]:
 ```html
 <section class="pantalla" id="pantalla-instrucciones" hidden>
   <header class="instrucciones-cabecera">
     <button type="button" class="boton-volver" data-accion="volver-portada">
-      <span aria-hidden="true">←</span><span class="boton-texto" data-texto="instrucciones.volver">[[instrucciones.volver]]</span>
+      <span class="boton-volver-flecha" aria-hidden="true">←</span><span class="boton-texto" data-texto="instrucciones.volver">[[instrucciones.volver]]</span>
     </button>
     <p class="instrucciones-logo" data-texto="portada.titulo">[[portada.titulo]]</p>
     <!-- selector de idioma -->
   </header>
-  <div class="carpeta">
-    <article class="pagina" id="instrucciones-briefing" aria-labelledby="instrucciones-titulo">
-      <p id="instrucciones-membrete"></p>
-      <h2 id="instrucciones-titulo" tabindex="-1" data-foco>
-        <span data-reto-nombre="imagenes" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
-        <span data-reto-nombre="afirmaciones" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
-      </h2>
-      <p id="instrucciones-frase">
-        <span data-reto-nombre="imagenes" data-texto="instrucciones.frase_imagenes">[[instrucciones.frase_imagenes]]</span>
-        <span data-reto-nombre="afirmaciones" data-texto="instrucciones.frase_afirmaciones">[[instrucciones.frase_afirmaciones]]</span>
-      </p>
-      <ol id="instrucciones-pasos"></ol>
-      <p id="instrucciones-firma" data-texto="instrucciones.firma">[[instrucciones.firma]]</p>
-    </article>
-    <div class="pagina" id="instrucciones-accion">
-      <fieldset id="instrucciones-modos">
-        <legend data-texto="instrucciones.metodo">[[instrucciones.metodo]]</legend>
-        <div class="modo">
-          <input type="radio" name="modo" id="modo-investigador" value="investigador">
-          <label for="modo-investigador"><span class="modo-nombre" data-texto="portada.modo_investigador"></span><span class="modo-desc" data-texto="portada.desc_investigador"></span></label>
+  <div class="carpeta-caja">
+    <p class="carpeta-pestana" aria-hidden="true">
+      <span data-reto-nombre="imagenes" data-texto="instrucciones.pestana_imagenes">[[instrucciones.pestana_imagenes]]</span>
+      <span data-reto-nombre="afirmaciones" data-texto="instrucciones.pestana_afirmaciones">[[instrucciones.pestana_afirmaciones]]</span>
+    </p>
+    <div class="carpeta">
+      <article class="pagina" id="instrucciones-briefing" aria-labelledby="instrucciones-titulo">
+        <p id="instrucciones-membrete"></p>
+        <h2 id="instrucciones-titulo" tabindex="-1" data-foco>
+          <span data-reto-nombre="imagenes" data-texto="portada.reto_imagenes">[[portada.reto_imagenes]]</span>
+          <span data-reto-nombre="afirmaciones" data-texto="portada.reto_afirmaciones">[[portada.reto_afirmaciones]]</span>
+        </h2>
+        <p id="instrucciones-frase">
+          <span data-reto-nombre="imagenes" data-texto="instrucciones.frase_imagenes">[[instrucciones.frase_imagenes]]</span>
+          <span data-reto-nombre="afirmaciones" data-texto="instrucciones.frase_afirmaciones">[[instrucciones.frase_afirmaciones]]</span>
+        </p>
+        <ol id="instrucciones-pasos"></ol>
+        <p id="instrucciones-firma" data-texto="instrucciones.firma">[[instrucciones.firma]]</p>
+      </article>
+      <div class="pagina" id="instrucciones-accion">
+        <span class="carpeta-clip" aria-hidden="true"></span>
+        <fieldset id="instrucciones-modos">
+          <legend data-texto="instrucciones.metodo">[[instrucciones.metodo]]</legend>
+          <div class="modo">
+            <input type="radio" name="modo" id="modo-investigador" value="investigador">
+            <label for="modo-investigador"><span class="modo-nombre" data-texto="portada.modo_investigador">[[portada.modo_investigador]]</span><span class="modo-desc" data-texto="portada.desc_investigador">[[portada.desc_investigador]]</span></label>
+          </div>
+          <!-- igual con modo-normal (portada.modo_normal, portada.desc_normal) y modo-perro (portada.modo_perro, portada.desc_perro) -->
+        </fieldset>
+        <div id="instrucciones-reglas">
+          <h3 data-texto="instrucciones.reglas">[[instrucciones.reglas]]</h3>
+          <div id="instrucciones-aviso-caja">
+            <span class="aviso-icono" aria-hidden="true"></span>
+            <p class="aviso-titulo" data-texto="instrucciones.aviso_titulo">[[instrucciones.aviso_titulo]]</p>
+            <p id="instrucciones-aviso" data-texto="afirmaciones.aviso_oculta">[[afirmaciones.aviso_oculta]]</p>
+          </div>
+          <div id="instrucciones-ejemplo" aria-hidden="true">
+            <p class="ejemplo-etiqueta" data-texto="instrucciones.ejemplo_etiqueta">[[instrucciones.ejemplo_etiqueta]]</p>
+            <p class="ejemplo-texto" data-texto="instrucciones.ejemplo">[[instrucciones.ejemplo]]</p>
+            <p class="ejemplo-marca" data-texto="afirmaciones.marca">[[afirmaciones.marca]]</p>
+            <span class="ejemplo-boton" data-texto="afirmaciones.boton_autentica">[[afirmaciones.boton_autentica]]</span>
+            <span class="ejemplo-boton" data-texto="afirmaciones.boton_generada">[[afirmaciones.boton_generada]]</span>
+          </div>
         </div>
-        <!-- igual con modo-normal (portada.modo_normal, portada.desc_normal) y modo-perro (portada.modo_perro, portada.desc_perro) -->
-      </fieldset>
-      <div id="instrucciones-reglas">
-        <h3 data-texto="instrucciones.reglas">[[instrucciones.reglas]]</h3>
-        <p id="instrucciones-aviso" data-texto="afirmaciones.aviso_oculta">[[afirmaciones.aviso_oculta]]</p>
-        <div id="instrucciones-ejemplo" aria-hidden="true">
-          <p class="ejemplo-etiqueta" data-texto="instrucciones.ejemplo_etiqueta"></p>
-          <p class="ejemplo-texto" data-texto="instrucciones.ejemplo"></p>
-          <p class="ejemplo-marca" data-texto="afirmaciones.marca"></p>
-          <span class="ejemplo-boton" data-texto="afirmaciones.boton_autentica"></span>
-          <span class="ejemplo-boton" data-texto="afirmaciones.boton_generada"></span>
-        </div>
+        <button type="button" class="boton boton-primario" data-accion="empezar">
+          <span class="boton-texto" data-texto="instrucciones.boton_empezar">[[instrucciones.boton_empezar]]</span>
+        </button>
       </div>
-      <button type="button" class="boton boton-primario" data-accion="empezar">
-        <span class="boton-texto" data-texto="instrucciones.boton_empezar">[[instrucciones.boton_empezar]]</span>
-      </button>
     </div>
   </div>
 </section>
 ```
-- **Cabecera**: "All case files" (`volver-portada` → `VOLVER_PORTADA`), el logo (texto, no `h1`) y el selector de idioma.
-- **Página izquierda** (briefing, papel mecanografiado, `--fuente-cuerpo` Special Elite):
-  - `#instrucciones-membrete`: `rellenar(instrucciones.membrete, {n, tema: estado.tema[idioma]})` ("Briefing · Case #3 · Dogs"); mayúsculas por CSS.
-  - `#instrucciones-titulo`: nombre del reto (recibe el foco al entrar); `#instrucciones-frase`: una frase del reto.
-  - `#instrucciones-pasos`: main.js pone un `li` sin atributos por paso de `instrucciones.pasos_imagenes` o `instrucciones.pasos_afirmaciones` (exactamente 4), al entrar y al cambiar de idioma. CSS los numera.
-  - `#instrucciones-firma`: "One try per day. — The Chief" (exacto).
-- **Página derecha** (acción):
-  - **Images**: `#instrucciones-modos` visible y `#instrucciones-reglas` con `hidden` (lo pone main.js según `estado.reto`). Los tres modos son casillas de formulario: el `input` real (visualmente oculto pero enfocable, flechas del teclado como radio nativo) y una casilla dibujada por CSS; la elegida lleva un aspa roja (`input:checked + label`). main.js marca el radio de `estado.modo`; `change` → `ELEGIR_MODO {modo}`. Foco visible en la casilla.
-  - **Fact or Fake**: `#instrucciones-reglas` visible y `#instrucciones-modos` con `hidden`. `#instrucciones-aviso` = el aviso de ausencia exacto, en un recuadro rojo de aviso (contraste AA). `#instrucciones-ejemplo`: ficha de muestra con una afirmación **inventada y fija** (`instrucciones.ejemplo`, no es ninguna afirmación de los datos y no lleva respuesta), la marca y los botones FACT y FAKE en gris como `span` (no son botones, no reciben foco ni hacen nada).
-  - Botón rojo "Open the case" (`empezar` → `EMPEZAR {fecha}`).
-- **Composición**: en ancho (≥ 600 px de ancho y horizontal) la carpeta abierta con dos páginas; en móvil vertical, **una sola página** con todo en el orden del DOM (briefing y después acción), sin deslizar (R19).
-- `#instrucciones-ejemplo` no lleva el bloqueo de copia (no es un dato del juego) y no contiene la respuesta de nada.
+- **Cabecera** (`.instrucciones-cabecera`): "All case files" (`volver-portada` → `VOLVER_PORTADA`; botón de borde ámbar discontinuo, 44 px de alto como mínimo; la flecha va en `span.boton-volver-flecha[aria-hidden]`), el logo (`p.instrucciones-logo`, texto, no `h1`; solo desde 480 px de ancho) y el selector de idioma.
+- **Carpeta** [D-167]:
+  - `.carpeta-caja`: envuelve pestaña y carpeta; ocupa el alto libre, ancho máximo 80 rem (1280 px), centrada.
+  - `p.carpeta-pestana` (`aria-hidden`, decorativa): pestaña de cartón sobre la carpeta, a la izquierda, con el texto del reto (`instrucciones.pestana_imagenes` / `instrucciones.pestana_afirmaciones`, uno por `span[data-reto-nombre]`; CSS muestra el del reto activo). Mayúsculas por CSS.
+  - `.carpeta`: el cartón; contiene las dos `.pagina` (papel `img/ui/papel.svg`, `--fuente-datos` Special Elite). Es el único contenedor que puede desplazarse, y solo como reserva (R19).
+  - `span.carpeta-clip` (`aria-hidden`, decorativo, `img/ui/clip.svg`): clip metálico arriba a la derecha de `#instrucciones-accion`; solo se ve con dos páginas.
+- **Página izquierda** (`#instrucciones-briefing`, papel mecanografiado):
+  - `#instrucciones-membrete`: `rellenar(instrucciones.membrete, {n, tema: estado.tema[idioma]})` ("Briefing · Case #3 · Dogs"); mayúsculas por CSS, en rojo de sello, subrayado.
+  - `#instrucciones-titulo`: nombre del reto (recibe el foco al entrar); `#instrucciones-frase`: una frase del reto (se oculta en pantallas bajas, R19).
+  - `#instrucciones-pasos`: main.js pone un `li` sin atributos por paso de `instrucciones.pasos_imagenes` o `instrucciones.pasos_afirmaciones` (exactamente 4), al entrar y al cambiar de idioma. CSS los numera (`counter`, número en rojo) bajo una línea discontinua; con dos páginas se reparten el alto libre. Los pasos no repiten la firma, los modos ni el aviso de ausencia [D-167].
+  - `#instrucciones-firma`: "One try per day. — The Chief" (exacto), al pie, alineada a la derecha.
+- **Página derecha** (`#instrucciones-accion`, acción):
+  - **Images**: `#instrucciones-modos` visible y `#instrucciones-reglas` con `hidden` (lo pone main.js según `estado.reto`). Leyenda `instrucciones.metodo`. Los tres modos son casillas de formulario **en lista** (una por fila; se reparten el alto libre, 44 px como mínimo): el `input` real (transparente y extendido sobre toda la casilla, enfocable, flechas del teclado como radio nativo) y una casilla dibujada por CSS (`label::before`); la elegida lleva un aspa roja (`img/ui/aspa.svg`, `input:checked + label`) y el borde en rojo de sello. Cada `label` lleva `.modo-nombre` (`--fuente-titulos`, mayúsculas) y `.modo-desc` debajo. main.js marca el radio de `estado.modo`; `change` → `ELEGIR_MODO {modo}`. Foco visible en la casilla (`input:focus-visible + label`).
+  - **Fact or Fake**: `#instrucciones-reglas` visible y `#instrucciones-modos` con `hidden`. Título `instrucciones.reglas`. `#instrucciones-aviso-caja`: recuadro rojo de aviso (contraste AA) con `span.aviso-icono` (`aria-hidden`, `img/ui/aviso.svg`), `p.aviso-titulo` (`instrucciones.aviso_titulo`) y `p#instrucciones-aviso` = el aviso de ausencia exacto (`afirmaciones.aviso_oculta`). `#instrucciones-ejemplo` (`aria-hidden`): ficha de muestra que crece hasta llenar el hueco libre y va girada −1,5°, con la etiqueta `instrucciones.ejemplo_etiqueta`, una afirmación **inventada y fija** (`instrucciones.ejemplo`, no es ninguna afirmación de los datos y no lleva respuesta), la marca (`afirmaciones.marca`) y los botones FACT y FAKE en gris como `span` (no son botones, no reciben foco ni hacen nada).
+  - Botón rojo "Open the case" (`empezar` → `EMPEZAR {fecha}`), al final de la página, a todo el ancho; pegado abajo (`sticky`) si la carpeta tuviera que desplazarse.
+- **Composición, puntos de corte y tamaños**: R19 (una hoja hasta 599 px de ancho y en vertical hasta 699 px; dos páginas a partir de ahí; frase, pestaña y clip ocultos en pantallas bajas).
+- `#instrucciones-ejemplo` no contiene la respuesta de nada y no es un dato del juego; lleva `user-select: none` solo por coherencia visual con la tarjeta real.
 
 **Cargando** y **Cuenta atrás**: sin cambios (solo Images).
 
@@ -516,15 +532,15 @@ CSP sin cambios: `default-src 'self'; base-uri 'none'; object-src 'none'; form-a
 
 ### 2.5 Tipografías
 
-Sin cambios [D-29, D-40]. El briefing de `instrucciones` usa `--fuente-cuerpo` (Special Elite, "a máquina"); los nombres de reto, `--fuente-titulos`. La tarea 100 comprueba que los `woff2` incluyen los glifos del español (á é í ó ú ü ñ ¿ ¡ « » —); si faltara alguno, se avisa al usuario antes de cambiar nada (D-29).
+Sin cambios [D-29, D-40]. El briefing de `instrucciones` usa `--fuente-datos` (Special Elite, "a máquina"; `--fuente-cuerpo` es la del sistema); los nombres de reto, `--fuente-titulos`. La tarea 100 comprueba que los `woff2` incluyen los glifos del español (á é í ó ú ü ñ ¿ ¡ « » —); si faltara alguno, se avisa al usuario antes de cambiar nada (D-29).
 
 ### 2.6 Composición sin deslizar [D-84]
 
 Siguen R1 a R18 de la 2.1 con los mismos tamaños garantizados (360 x 640, 640 x 360, 1280 x 720, 390 x 844, 768 x 1024), salvo R8, que se sustituye, y con las reglas nuevas R19 y R20:
 
 - **R8. Portada** [3.0, D-152]: cabecera en una fila (logo y lema a la izquierda, selector a la derecha); "Case #n · tema" en una línea; "Choose your case file"; las dos tarjetas (en horizontal o ≥ 600 px de ancho, en una fila; en vertical estrecho, el perito-visual elige fila o columna mientras quepan sin deslizar a 360 x 640 con los textos en español); pie en una línea. Orden de compresión: primero la ilustración se reduce (hasta 56 px de alto) después el lema puede ocupar dos líneas si cabe, nunca se recorta; si no cabe, R13. Cada tarjeta mide al menos 44 px de alto y muestra entero el nombre (también "¿Dato o Bulo?") y el estado. En modo prueba, el desplegable de día ocupa el sitio del tema y `#aviso-previsualizacion` cabe sin deslizar.
-- **R19. Instrucciones** [3.0, D-153]: en horizontal y ≥ 600 px de ancho, carpeta abierta con dos páginas de papel de igual alto (lomo central); en vertical, una sola página con todo en orden del DOM. A 360 x 640, en los dos idiomas, cabe sin deslizar: cabecera, membrete, nombre, frase (2 líneas como máximo), 4 pasos de 80 caracteres como máximo (14 px como mínimo), firma, y después los tres modos en una fila (Images) o el aviso (2 líneas como máximo) y la ficha de ejemplo compacta (afirmación de 1 o 2 líneas, botones grises de 32 px) (Fact or Fake), y el botón "Open the case" (44 px como mínimo, siempre visible). Si no cupiera (zoom, texto ampliado), R13: la página se desplaza por dentro; el botón nunca.
-- **R20. Español** [3.0]: todas las pantallas y estados de R1–R19 se comprueban también con `lang="es"` y los textos en español más largos de `js/textos.js` (y afirmaciones de 140, aclaraciones de 160 y 3 detalles de 80 caracteres en español). Si un texto en español no cabe, se acorta el texto (cronista), no se encoge la letra por debajo de los mínimos.
+- **R19. Instrucciones** [3.0, D-153, D-167]: carpeta de cartón (`.carpeta-caja`, ancho máximo 80 rem = 1280 px, centrada) con la pestaña encima a la izquierda. **Composición**: una sola hoja (briefing y, colgando de una línea de puntos, la página de acción, en orden del DOM) hasta 599 px de ancho y, en vertical, hasta 699 px; **dos páginas** de igual alto (izquierda 1,3 fr, derecha 1 fr) con lomo central sombreado y clip en la derecha con 600 px o más en horizontal y con 700 px o más en cualquier orientación (768 x 1024 cae en dos páginas). **Qué se oculta**: la frase, en vertical con menos de 760 px de alto (una hoja) y en horizontal con menos de 420 px de alto; la pestaña y el clip, en horizontal con menos de 420 px de alto (640 x 360); el clip, además, siempre en una hoja; el logo de la cabecera, por debajo de 480 px de ancho. Los pasos se reparten el alto libre de la página izquierda (dos páginas) y la firma queda al pie. **Images**: los tres modos van **siempre en lista** (una casilla por fila, nunca en una fila), y las casillas se reparten el alto libre de la página de acción (44 px como mínimo cada una). **Fact or Fake**: título de normas, recuadro de aviso (icono, título, texto) y la ficha de ejemplo, que crece hasta llenar el hueco y va girada −1,5°. "Open the case" al final de la página de acción, a todo el ancho, 44 px como mínimo y siempre visible. **Tamaños** (comprobados): título del reto `clamp(48px, min(6vw, 10dvh), 88px)` en dos páginas (`clamp(40px, min(6vw, 9dvh), 64px)` si el alto es ≤ 700 px; 28 px en 640 x 360; en una hoja `clamp(32px, min(11.5vw, 6.5dvh), 46px)`, unos 41–45 px a 360–390 px de ancho); pasos `clamp(16px, 1.4vw, 20px)` en dos páginas (14 px si el alto es ≤ 700 px; 12 px en 640 x 360; en una hoja `clamp(13px, min(3.7vw, 2.1dvh), 14.4px)`, 13–14,4 px); nombre de modo hasta 26 px (`clamp(20px, 2vw, 26px)` en dos páginas; 18 px si el alto es ≤ 700 px; 15 px en 640 x 360; en una hoja `clamp(16px, min(5vw, 3dvh), 26px)`); afirmación de la ficha de ejemplo `clamp(21px, 1.8vw, 24px)` en dos páginas (18 px si el alto es ≤ 700 px; 13 px en 640 x 360; en una hoja 16–20 px, 20 px a partir de 760 px de alto); botones grises de la ficha 44 px en dos páginas, 32 px en una hoja, 24 px en 640 x 360. **Criterio de aceptación**: en 1920 x 1080, 1280 x 720, 640 x 360, 390 x 844 y 360 x 640, en inglés y en español y con los dos retos, no hay scroll de página ni de la carpeta, ningún texto se corta ni se solapa y "Open the case" se ve entero (capturas de referencia en `capturas/idiomas/instrucciones-*.png`, Chromium y WebKit). **Reserva** (R13; hoy no hace falta en esos tamaños): si no cupiera (zoom, texto ampliado), la que se desplaza por dentro es `.carpeta` (`overflow-y: auto`, `overscroll-behavior: contain`) y el botón queda pegado abajo (`position: sticky`); la pantalla nunca se desplaza.
+- **R20. Español** [3.0, D-167]: todas las pantallas y estados de R1–R19 se comprueban también con `lang="es"` y los textos en español más largos de `js/textos.js` (y afirmaciones de 140, aclaraciones de 160 y 3 detalles de 80 caracteres en español). Si un texto en español no cabe, se acorta el texto (cronista), no se encoge la letra por debajo de los mínimos de cada regla (en `instrucciones`, los de R19). En `instrucciones` la comprobación incluye la pestaña (`instrucciones.pestana_*`), el título del aviso (`instrucciones.aviso_titulo`) y la etiqueta de la ficha de ejemplo, con los dos retos y en los cinco tamaños del criterio de R19. Los pasos de los dos retos no repiten la firma, los modos ni el aviso de ausencia (ya están en la pantalla) [D-167]. Ajuste de composición permitido para el español: quitar el espaciado entre letras (`:lang(es) .modo-nombre { letter-spacing: 0 }`), nunca bajar el tamaño de letra.
 - **R11. Diálogo**: igual.
 
 ### 2.7 creditos.html y creditos.es.html [D-39, D-129, D-161]
