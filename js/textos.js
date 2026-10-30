@@ -248,6 +248,74 @@ export const TEXTOS = {
       ver_licencia: 'license',
       volver: 'Back to the front page',
       otro_idioma: 'Español'
+    },
+
+    pie: {
+      etiqueta: 'Site',
+      sobre: 'About the game',
+      como_jugar: 'How to play',
+      metodo: 'How we pick the cases',
+      guia_imagenes: 'Guide: spotting AI images',
+      guia_desinformacion: 'Guide: spotting fake news',
+      archivo: 'Case archive',
+      preguntas: 'Frequently asked questions',
+      creditos: 'Credits',
+      privacidad: 'Privacy policy',
+      cookies: 'Cookies',
+      contacto: 'Contact',
+      corto_sobre: 'About',
+      corto_como_jugar: 'Rules',
+      corto_archivo: 'Archive',
+      corto_privacidad: 'Privacy',
+      corto_creditos: 'Credits'
+    },
+
+    raiz: {
+      lema: 'Two cases a day: spot the AI images and the fake facts.',
+      jugar: 'Play in English'
+    },
+
+    paginas: {
+      saltar: 'Skip to content',
+      jugar: 'Play the game'
+    },
+
+    seo: {
+      titulo_raiz: 'identifAI-it · Daily AI image and fact game · Juego diario',
+      descripcion_raiz: 'Wordle-style daily game to spot AI images and fake facts. Juego diario tipo Wordle para cazar imágenes de IA y bulos.',
+      titulo_juego: 'identifAI-it: daily game to spot AI images and fake facts',
+      descripcion_juego: 'Real or AI game and daily fact or fake game: spot the AI image and the fake claim. Two cases a day, same for everyone.',
+      titulo_archivo: 'Case archive',
+      descripcion_archivo: 'Every closed case: five images with their answers and prompts, and five claims with their truth. New days join it every day.',
+      titulo_dia: 'Case #{n} · {tema}: answers',
+      descripcion_dia: 'The 5 images and the 5 claims of case #{n} ({tema}), with their answers, confessions and truths.',
+      og_alt: 'identifAI-it: a daily case file with photos and claims to judge.'
+    },
+
+    archivo: {
+      titulo_dia: 'Case #{n} · {tema}',
+      alt_prueba: 'Exhibit {i}, case #{n}',
+      vacio: 'No closed cases yet. Come back when the first one wraps up.',
+      sin_reto: 'No {reto} case for this day.',
+      anterior: 'Previous case',
+      siguiente: 'Next case',
+      indice: 'All closed cases',
+      jugar_hoy: 'Play today\'s case',
+      ejemplos_titulo: 'Recent cases from the archive',
+      ver_dia: 'See case #{n}',
+      meses: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      fecha: '{mes} {d}, {a}',
+      mes: '{mes} {a}'
+    },
+
+    anuncios: {
+      etiqueta: 'Advertisement'
+    },
+
+    no_encontrada: {
+      titulo: 'Page not found',
+      texto: 'This file isn\'t in our records.',
+      enlace: 'Back to the game'
     }
   },
 
@@ -494,6 +562,107 @@ export const TEXTOS = {
       ver_licencia: 'licencia',
       volver: 'Volver a la portada',
       otro_idioma: 'English'
+    },
+
+    pie: {
+      etiqueta: 'Sitio',
+      sobre: 'Sobre el juego',
+      como_jugar: 'Cómo jugar',
+      metodo: 'Cómo elegimos los casos',
+      guia_imagenes: 'Guía: detectar imágenes de IA',
+      guia_desinformacion: 'Guía: detectar un bulo',
+      archivo: 'Archivo de casos',
+      preguntas: 'Preguntas frecuentes',
+      creditos: 'Créditos',
+      privacidad: 'Política de privacidad',
+      cookies: 'Cookies',
+      contacto: 'Contacto',
+      corto_sobre: 'Sobre',
+      corto_como_jugar: 'Normas',
+      corto_archivo: 'Archivo',
+      corto_privacidad: 'Privacidad',
+      corto_creditos: 'Créditos'
+    },
+
+    raiz: {
+      lema: 'Dos casos al día: caza las imágenes de IA y los bulos.',
+      jugar: 'Jugar en español'
+    },
+
+    paginas: {
+      saltar: 'Saltar al contenido',
+      jugar: 'Ir al juego'
+    },
+
+    seo: {
+      titulo_raiz: 'identifAI-it · Daily AI image and fact game · Juego diario',
+      descripcion_raiz: 'Wordle-style daily game to spot AI images and fake facts. Juego diario tipo Wordle para cazar imágenes de IA y bulos.',
+      titulo_juego: 'identifAI-it: juego diario para cazar imágenes de IA y bulos',
+      descripcion_juego: 'Juego para detectar imágenes de IA, ¿real o IA?, y juego diario de bulos: dos casos al día, cinco fotos y cinco afirmaciones.',
+      titulo_archivo: 'Archivo de casos',
+      descripcion_archivo: 'Todos los casos ya cerrados: cinco imágenes con sus respuestas y sus instrucciones, y cinco afirmaciones con su verdad. Cada día se suman más.',
+      titulo_dia: 'Caso n.º {n} · {tema}: soluciones',
+      descripcion_dia: 'Las 5 imágenes y las 5 afirmaciones del caso n.º {n} ({tema}), con sus respuestas, confesiones y verdades.',
+      og_alt: 'identifAI-it: un expediente diario con fotos y afirmaciones que juzgar.'
+    },
+
+    archivo: {
+      titulo_dia: 'Caso n.º {n} · {tema}',
+      alt_prueba: 'Prueba {i} del caso n.º {n}',
+      vacio: 'Todavía no hay casos cerrados. Vuelve cuando termine el primero.',
+      sin_reto: 'Este día no tiene caso de {reto}.',
+      anterior: 'Caso anterior',
+      siguiente: 'Caso siguiente',
+      indice: 'Todos los casos archivados',
+      jugar_hoy: 'Juega el caso de hoy',
+      ejemplos_titulo: 'Casos recientes del archivo',
+      ver_dia: 'Ver el caso n.º {n}',
+      meses: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+      fecha: '{d} de {mes} de {a}',
+      mes: '{mes} de {a}'
+    },
+
+    anuncios: {
+      etiqueta: 'Publicidad'
+    },
+
+    no_encontrada: {
+      titulo: 'Página no encontrada',
+      texto: 'Este expediente no consta en nuestros archivos.',
+      enlace: 'Volver al juego'
     }
   }
 };
+
+// Direcciones de las páginas del juego, relativas a la carpeta del idioma [D-172, D-176, D-187].
+// Las dos guías están en RUTAS_GUIAS (herramientas/paginas.mjs), no aquí: el juego nunca las enlaza.
+export const RUTAS = Object.freeze({
+  en: Object.freeze({
+    juego: '',
+    sobre: 'about/',
+    como_jugar: 'how-to-play/',
+    metodo: 'how-we-pick-cases/',
+    archivo: 'archive/',
+    archivo_dia: 'archive/case-{n}/',
+    preguntas: 'faq/',
+    creditos: 'credits/',
+    privacidad: 'privacy/',
+    cookies: 'cookies/',
+    contacto: 'contact/',
+    aviso_legal: 'legal-notice/'
+  }),
+  es: Object.freeze({
+    juego: '',
+    sobre: 'sobre-el-juego/',
+    como_jugar: 'como-jugar/',
+    metodo: 'como-elegimos-los-casos/',
+    archivo: 'archivo/',
+    archivo_dia: 'archivo/caso-{n}/',
+    preguntas: 'preguntas-frecuentes/',
+    creditos: 'creditos/',
+    privacidad: 'privacidad/',
+    cookies: 'cookies/',
+    contacto: 'contacto/',
+    aviso_legal: 'aviso-legal/'
+  })
+});
