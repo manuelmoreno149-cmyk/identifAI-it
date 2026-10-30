@@ -38,24 +38,27 @@ export const TEXTOS = {
       volver: 'All case files',
       membrete: 'Briefing · Case #{n} · {tema}',
       frase_imagenes: 'Five photos. One call each: real or AI.',
-      frase_afirmaciones: 'Five claims. One call each: fact or fake.',
+      frase_afirmaciones: 'A true fact or a clever lie?',
       pasos_imagenes: [
-        'Each day brings one case: five pieces of evidence, same for everyone.',
-        'Study each image and call it: REAL or AI.',
-        'Time runs out? The evidence gets sealed. Answer at your leisure.',
-        'One attempt a day, whatever the mode. Choose wisely.'
+        'Study them one at a time. Same evidence for everyone.',
+        'Verdict on each: REAL (R) or AI (I).',
+        'Time runs out? The photo gets sealed. Answer when you like.',
+        'Once you answer, the file tells you what it really was.'
       ],
       pasos_afirmaciones: [
-        'Two challenges a day, one try each. This one is Fact or Fake.',
-        'Read the claim, then call it: FACT or FAKE. No timer.',
-        'Leave the page for more than a few seconds and it counts as a miss.',
-        'After you answer, you get the truth and the details.'
+        'Five claims about the day\'s theme, one at a time.',
+        'Make your call on each: FACT or FAKE (keys F and K).',
+        'No timer: take your time.',
+        'Once you answer, you uncover the truth.'
       ],
       firma: 'One try per day. — The Chief',
       metodo: 'METHOD OF INVESTIGATION',
       reglas: 'HOUSE RULES',
-      ejemplo_etiqueta: 'Example',
-      ejemplo: 'Bronze is an alloy of copper and tin.',
+      aviso_titulo: 'Stay on the case',
+      ejemplo_etiqueta: 'EXHIBIT FOR TRAINING PURPOSES',
+      ejemplo: 'Bronze is an alloy of copper and tin, used for tools long before iron.',
+      pestana_imagenes: 'Case file 01 · Images',
+      pestana_afirmaciones: 'Case file 02 · Fact or Fake',
       boton_empezar: 'Open the case'
     },
 
@@ -281,24 +284,27 @@ export const TEXTOS = {
       volver: 'Todos los expedientes',
       membrete: 'Informe · Caso n.º {n} · {tema}',
       frase_imagenes: 'Cinco fotos. Decide cuáles son reales y cuáles hizo una máquina.',
-      frase_afirmaciones: 'Cinco afirmaciones. Una decisión por cada una: dato o bulo.',
+      frase_afirmaciones: '¿Una verdad o una mentira ingeniosa?',
       pasos_imagenes: [
-        'Cada día, un caso: cinco pruebas, las mismas para todo el mundo.',
-        'Estudia cada imagen y decide si es REAL o hecha por una máquina.',
-        '¿Se acaba el tiempo? La prueba se sella. Responde cuando quieras.',
-        'Un intento al día, sea cual sea el modo. Elige con cuidado.'
+        'Estúdialas una a una. Las mismas pruebas para todo el mundo.',
+        'Veredicto por foto: REAL (R) o IA (I).',
+        '¿Se acaba el tiempo? La foto se sella. Responde cuando quieras.',
+        'Al responder, el expediente te dice qué era en realidad.'
       ],
       pasos_afirmaciones: [
-        'Dos expedientes al día, un intento cada uno. Este es ¿Dato o Bulo?',
-        'Lee la afirmación y decide: DATO o BULO. Sin cronómetro.',
-        'Salir de la página más de unos segundos cuenta como fallo.',
-        'Al responder, ves la verdad y sus detalles.'
+        'Cinco afirmaciones sobre el tema del día, una a una.',
+        'Decide en cada una: DATO o BULO (teclas D y B).',
+        'Sin cronómetro: tómate tu tiempo.',
+        'Al responder, descubres la verdad.'
       ],
       firma: 'Un intento al día. — El Jefe',
       metodo: 'MÉTODO DE INVESTIGACIÓN',
       reglas: 'NORMAS DE LA CASA',
-      ejemplo_etiqueta: 'Ejemplo',
-      ejemplo: 'El bronce es una aleación de cobre y estaño.',
+      aviso_titulo: 'No te muevas del caso',
+      ejemplo_etiqueta: 'PRUEBA DE ENTRENAMIENTO',
+      ejemplo: 'El bronce es una aleación de cobre y estaño. Se usó antes que el hierro.',
+      pestana_imagenes: 'Expediente 01 · Imágenes',
+      pestana_afirmaciones: 'Expediente 02 · ¿Dato o Bulo?',
       boton_empezar: 'Abrir el caso'
     },
 

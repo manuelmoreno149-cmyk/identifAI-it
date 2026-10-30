@@ -12,7 +12,7 @@ const CLAVES = {
   ],
   instrucciones: [
     'volver', 'membrete', 'frase_imagenes', 'frase_afirmaciones', 'pasos_imagenes', 'pasos_afirmaciones', 'firma',
-    'metodo', 'reglas', 'ejemplo_etiqueta', 'ejemplo', 'boton_empezar'
+    'metodo', 'reglas', 'ejemplo_etiqueta', 'ejemplo', 'boton_empezar', 'aviso_titulo', 'pestana_imagenes', 'pestana_afirmaciones'
   ],
   cargando: ['texto'],
   cuenta_atras: ['aviso'],
@@ -250,7 +250,9 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado, en cada i
     'portada.estado_pendiente': 18, 'portada.estado_jugado': 18, 'portada.estado_en_curso': 18, 'portada.estado_sin_caso': 18,
     'instrucciones.volver': 24, 'instrucciones.membrete': 70, 'instrucciones.frase_imagenes': 70,
     'instrucciones.frase_afirmaciones': 70, 'instrucciones.firma': 40, 'instrucciones.metodo': 30,
-    'instrucciones.reglas': 30, 'instrucciones.boton_empezar': 20, 'instrucciones.ejemplo': 100,
+    'instrucciones.reglas': 30, 'instrucciones.boton_empezar': 20, 'instrucciones.ejemplo': 80,
+    'instrucciones.aviso_titulo': 30, 'instrucciones.ejemplo_etiqueta': 30,
+    'instrucciones.pestana_imagenes': 30, 'instrucciones.pestana_afirmaciones': 30,
     'final.boton_volver': 16, 'afirmaciones.etiqueta_prueba': 16,
     'afirmaciones.boton_autentica': 12, 'afirmaciones.boton_generada': 12,
     'afirmaciones.sello_autentica': 12, 'afirmaciones.sello_generada': 12,
@@ -262,7 +264,7 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado, en cada i
       const largo = [...valor].length;
       if (ruta.startsWith('instrucciones.pasos_')) assert.ok(largo <= 80, `${idioma}.${ruta} mide ${largo}`);
       else if (ruta === 'creditos.afirmaciones_texto') assert.ok(largo <= 120, `${idioma}.${ruta} mide ${largo}`);
-      else if (ruta === 'instrucciones.ejemplo') assert.ok(largo <= 100, `${idioma}.${ruta} mide ${largo}`);
+      else if (ruta === 'instrucciones.ejemplo') assert.ok(largo <= 80, `${idioma}.${ruta} mide ${largo}`);
       else assert.ok(largo <= 90, `${idioma}.${ruta} mide ${largo}`);
     }
     for (const [ruta, limite] of Object.entries(max)) {
@@ -316,12 +318,13 @@ test('40. las plantillas de compartir son exactamente las de la sección 7, por 
   );
 });
 
-test('180. Fact or Fake dice "more than a few seconds" / "más de unos segundos"; Images no habla de salir de la página', () => {
+test('180. el aviso de salir de Fact or Fake va en aviso_oculta (no en los pasos); Images no habla de salir de la página', () => {
   const frases = { en: /more than a few seconds/i, es: /más de unos segundos/i };
   const salir = { en: /\b(leave|leaving|away|tab|page)\b/i, es: /\b(salir|saliste|fuera|pestaña|página)\b/i };
   for (const idioma of IDIOMAS) {
     const T = TEXTOS[idioma];
-    assert.ok(T.instrucciones.pasos_afirmaciones.some((t) => frases[idioma].test(t)), `${idioma} pasos`);
+    // El aviso se muestra en la página derecha (aviso_oculta); los pasos no lo repiten.
+    assert.equal(T.instrucciones.pasos_afirmaciones.some((t) => frases[idioma].test(t)), false, `${idioma} pasos repite el aviso`);
     for (const t of T.afirmaciones.oculta) assert.ok(frases[idioma].test(t), t);
     assert.ok(frases[idioma].test(T.afirmaciones.aviso_oculta), `${idioma} aviso`);
     const images = [
@@ -330,6 +333,44 @@ test('180. Fact or Fake dice "more than a few seconds" / "más de unos segundos"
     ];
     for (const t of images) assert.equal(salir[idioma].test(t), false, t);
   }
+});
+
+test('180. los pasos no repiten lo de la firma ni los modos (van a la página derecha)', () => {
+  const repite = { en: /\b(a day|one try|attempt|investigator|normal|bloodhound|modes?)\b/i, es: /\b(al día|intento|investigador|sabueso|normal|modos?)\b/i };
+  for (const idioma of IDIOMAS) {
+    for (const k of ['pasos_imagenes', 'pasos_afirmaciones']) {
+      TEXTOS[idioma].instrucciones[k].forEach((t) => assert.equal(repite[idioma].test(t), false, `${idioma}.${k}: ${t}`));
+    }
+  }
+});
+
+test('180. instrucciones: valores exactos (en y es) y teclas de cada idioma en los pasos', () => {
+  const en = TEXTOS.en.instrucciones;
+  const es = TEXTOS.es.instrucciones;
+  assert.equal(en.frase_afirmaciones, 'A true fact or a clever lie?');
+  assert.equal(es.frase_afirmaciones, '¿Una verdad o una mentira ingeniosa?');
+  assert.deepEqual(en.pasos_afirmaciones, [
+    'Five claims about the day\'s theme, one at a time.',
+    'Make your call on each: FACT or FAKE (keys F and K).',
+    'No timer: take your time.',
+    'Once you answer, you uncover the truth.'
+  ]);
+  assert.deepEqual(es.pasos_afirmaciones, [
+    'Cinco afirmaciones sobre el tema del día, una a una.',
+    'Decide en cada una: DATO o BULO (teclas D y B).',
+    'Sin cronómetro: tómate tu tiempo.',
+    'Al responder, descubres la verdad.'
+  ]);
+  assert.match(en.pasos_imagenes[1], /\(R\).*\(I\)/);
+  assert.match(es.pasos_imagenes[1], /\(R\).*\(I\)/);
+  assert.equal(en.aviso_titulo, 'Stay on the case');
+  assert.equal(es.aviso_titulo, 'No te muevas del caso');
+  assert.equal(en.ejemplo_etiqueta, 'EXHIBIT FOR TRAINING PURPOSES');
+  assert.equal(es.ejemplo_etiqueta, 'PRUEBA DE ENTRENAMIENTO');
+  assert.equal(en.pestana_imagenes, 'Case file 01 · Images');
+  assert.equal(es.pestana_imagenes, 'Expediente 01 · Imágenes');
+  assert.equal(en.pestana_afirmaciones, 'Case file 02 · Fact or Fake');
+  assert.equal(es.pestana_afirmaciones, 'Expediente 02 · ¿Dato o Bulo?');
 });
 
 test('final.mensajes_afirmaciones no habla de IA, imágenes ni fotos, y difiere de los de Images (los dos idiomas)', () => {
