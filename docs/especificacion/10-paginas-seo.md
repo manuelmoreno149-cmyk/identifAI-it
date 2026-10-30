@@ -1,16 +1,16 @@
 # identifAI-it: especificación técnica, versión 3.0 · 10. Páginas para buscadores, archivo de casos y hueco de anuncios
 
-Parte de la especificación 3.0 (índice en `docs/ESPECIFICACION.md`) [D-171]. **Anexo sin subir versión**: no cambia las reglas de ningún reto, la tabla de estados y eventos (1.3), los formatos de datos (calendario v5, `data/facts/` v2), el almacén `identifaiit.v3`, las plantillas de compartir ni la ofuscación. Añade páginas estáticas, cambia la dirección del juego (`/en/` y `/es/`) y los efectos de `CAMBIAR_IDIOMA` en main.js, y reserva un hueco vacío para anuncios. Criterios en `8c-criterios-paginas.md` (291–330) y tareas en `9c-tareas-paginas.md` (105–126). Decisiones D-171 a D-185; pendientes DP-72 a DP-95.
+Parte de la especificación 3.0 (índice en `docs/ESPECIFICACION.md`) [D-171]. **Anexo sin subir versión**: no cambia las reglas de ningún reto, la tabla de estados y eventos (1.3), los formatos de datos (calendario v5, `data/facts/` v2), el almacén `identifaiit.v3`, las plantillas de compartir ni la ofuscación. Añade páginas estáticas, cambia la dirección del juego (`/en/` y `/es/`) y los efectos de `CAMBIAR_IDIOMA` en main.js, y reserva un hueco vacío para anuncios. Criterios en `8c-criterios-paginas.md` (291–337) y tareas en `9c-tareas-paginas.md` (105–130). Decisiones D-171 a D-196; las pendientes DP-72 a DP-95 están resueltas (D-186 a D-196); queda DP-96.
 
-**Manda sobre** 0.2 (estructura), 2.1 (efecto del selector), 2.3 (pie de la portada, huecos), 2.4 (cabecera de `index.html`), 2.7 (créditos), 3.7 (arranque y efectos de main.js), 4.5/4.23 (`creditos.mjs`) y los ejemplos de URL de 7 y 4.24, donde difieran. Varias cosas contradicen `CLAUDE.md` (rutas absolutas en metadatos, archivo publicado en claro, estructura, scroll en páginas de contenido): **hasta que el usuario apruebe el texto de 9.15 (requisito P8, DP-72) nadie implementa las fases 3 a 6.**
+**Manda sobre** 0.2 (estructura), 2.1 (efecto del selector), 2.3 (pie de la portada, huecos), 2.4 (cabecera de `index.html`), 2.7 (créditos), 3.7 (arranque y efectos de main.js), 4.4.2 y 4.22 (comprobación de reutilización de imágenes, 10.8.7), 4.5/4.23 (`creditos.mjs`) y los ejemplos de URL de 7 y 4.24, donde difieran. El texto de 9.15 ya está aplicado en `CLAUDE.md` por el usuario (requisito P8, D-186), con la excepción de direcciones de DP-73 y el `404.html` con enlaces absolutos. Falta el cambio de `.claude/` (9.16), necesario antes de delegar la primera tarea de cada agente afectado (9.12).
 
 ---
 
-## 10.1 Mapa del sitio y direcciones [D-172, D-176]
+## 10.1 Mapa del sitio y direcciones [D-172, D-176, D-187]
 
 Dominio: `https://identifaiit.com/` (constante `DOMINIO`, D-170). Todas las direcciones acaban en `/` (carpeta con `index.html`): GitHub Pages redirige `/es` a `/es/`, y las rutas relativas solo funcionan con la barra final.
 
-Las rutas viven en **`RUTAS`**, exportada por `js/textos.js` (la usan main.js y `herramientas/paginas.mjs`), relativas a la carpeta del idioma. Valores **exactos**:
+Las rutas viven en dos constantes, relativas a la carpeta del idioma: **`RUTAS`**, exportada por `js/textos.js` (la usan main.js y `herramientas/paginas.mjs`), con todas las páginas **salvo las dos guías**, y **`RUTAS_GUIAS`**, exportada por `herramientas/paginas.mjs`, con las dos guías (10.1.1). Valores **exactos**:
 
 | Clave (`data-enlace`) | Página | `en/` | `es/` | Indexable |
 |---|---|---|---|---|
@@ -18,8 +18,8 @@ Las rutas viven en **`RUTAS`**, exportada por `js/textos.js` (la usan main.js y 
 | `sobre` | 1. Sobre el juego | `about/` | `sobre-el-juego/` | sí |
 | `como_jugar` | 2. Cómo jugar | `how-to-play/` | `como-jugar/` | sí |
 | `metodo` | 3. Cómo elegimos los casos | `how-we-pick-cases/` | `como-elegimos-los-casos/` | sí |
-| `guia_imagenes` | 4. Guía: imágenes generadas | `spot-generated-images/` | `detectar-imagenes-generadas/` | sí (Article) |
-| `guia_desinformacion` | 5. Guía: detectar un bulo | `spot-misinformation/` | `detectar-desinformacion/` | sí (Article) |
+| `guia_imagenes` | 4. Guía: imágenes generadas (en `RUTAS_GUIAS`) | `how-to-spot-ai-images/` | `como-saber-si-una-imagen-es-ia/` | sí (Article) |
+| `guia_desinformacion` | 5. Guía: detectar un bulo (en `RUTAS_GUIAS`) | `how-to-spot-fake-news/` | `como-detectar-un-bulo/` | sí (Article) |
 | `archivo` | 6. Archivo de casos (índice) | `archive/` | `archivo/` | sí, salvo vacío (noindex) |
 | — | 6. Día archivado | `archive/case-{n}/` | `archivo/caso-{n}/` | sí |
 | `preguntas` | 7. Preguntas frecuentes | `faq/` | `preguntas-frecuentes/` | sí |
@@ -28,24 +28,45 @@ Las rutas viven en **`RUTAS`**, exportada por `js/textos.js` (la usan main.js y 
 | `cookies` | 10. Cookies | `cookies/` | `cookies/` | sí |
 | `contacto` | 11. Contacto | `contact/` | `contacto/` | sí |
 | `aviso_legal` | 12. Aviso legal | `legal-notice/` | `aviso-legal/` | **no se genera** (borrador en `docs/aviso-legal.md`, 10.14) |
+| — | Página no encontrada | `404.html` en la raíz (bilingüe, 10.18) | | **no** (`noindex`) |
 
 ```js
-// js/textos.js (exacto; Object.freeze en profundidad)
+// js/textos.js (exacto; Object.freeze en profundidad). Sin las guías: el juego nunca contiene sus direcciones.
 export const RUTAS = {
   en: { juego: '', sobre: 'about/', como_jugar: 'how-to-play/', metodo: 'how-we-pick-cases/',
-        guia_imagenes: 'spot-generated-images/', guia_desinformacion: 'spot-misinformation/',
         archivo: 'archive/', archivo_dia: 'archive/case-{n}/', preguntas: 'faq/', creditos: 'credits/',
         privacidad: 'privacy/', cookies: 'cookies/', contacto: 'contact/', aviso_legal: 'legal-notice/' },
   es: { juego: '', sobre: 'sobre-el-juego/', como_jugar: 'como-jugar/', metodo: 'como-elegimos-los-casos/',
-        guia_imagenes: 'detectar-imagenes-generadas/', guia_desinformacion: 'detectar-desinformacion/',
         archivo: 'archivo/', archivo_dia: 'archivo/caso-{n}/', preguntas: 'preguntas-frecuentes/', creditos: 'creditos/',
         privacidad: 'privacidad/', cookies: 'cookies/', contacto: 'contacto/', aviso_legal: 'aviso-legal/' }
 };
+
+// herramientas/paginas.mjs (exacto; Object.freeze en profundidad)
+export const RUTAS_GUIAS = {
+  en: { guia_imagenes: 'how-to-spot-ai-images/', guia_desinformacion: 'how-to-spot-fake-news/' },
+  es: { guia_imagenes: 'como-saber-si-una-imagen-es-ia/', guia_desinformacion: 'como-detectar-un-bulo/' }
+};
+export const DIRECCIONES_EXCEPTUADAS = Object.freeze([
+  'en/how-to-spot-ai-images/', 'en/how-to-spot-fake-news/',
+  'es/como-saber-si-una-imagen-es-ia/', 'es/como-detectar-un-bulo/'
+]);
 ```
 
-- **Anti-trampas en las direcciones** [D-176, DP-73]: ningún segmento contiene, como palabra completa (`contienePalabraProhibida`, separadores `-`, `/`, `.`, `_`), `real`, `ia`, `ai`, `fake`, `dato`, `bulo`, `falso`, `falsa`, `verdadero` ni `verdadera`. Por eso las guías no se llaman `guia-ia`, `imagen-ia`, `guia-bulos`, `fake-news` ni `como-saber-si-una-imagen-es-ia`: la palabra clave va en el `title`, el `h1` y la descripción, que son texto, no rutas. Lo comprueban un test de `RUTAS` y `validar` sobre todo el árbol publicado.
+- `rutasDe(idioma)` (paginas.mjs) = `{...RUTAS[idioma], ...RUTAS_GUIAS[idioma]}`: es lo que usan `ruta`, `{{enlace:clave}}`, el pie completo, `hreflang` y el sitemap. main.js solo usa `RUTAS` (el juego no enlaza a las guías).
 - `n` en `case-{n}` / `caso-{n}` es el número del caso (Case #n), estable desde el lanzamiento (no se puede cambiar una vez llegado, 4.2.1).
 - Cada página tiene su pareja en el otro idioma con la misma clave (y el mismo `n` en el archivo); `hreflang` las une (10.7.2).
+
+### 10.1.1 Anti-trampas en las direcciones: lista blanca exacta [D-176, D-187]
+
+Regla general (sin cambios): ningún segmento de ruta de lo publicado contiene, como palabra completa (`contienePalabraProhibida`, separadores `-`, `/`, `.`, `_`), `real`, `ia`, `ai`, `fake`, `dato`, `bulo`, `falso`, `falsa`, `verdadero` ni `verdadera`.
+
+**Única excepción** (`CLAUDE.md`, DP-73): las **cuatro** direcciones de `DIRECCIONES_EXCEPTUADAS`, y nada más. No es un permiso general para "páginas de contenido":
+- `rutaExceptuada(ruta)` (pura, paginas.mjs): `ruta` es una ruta del sitio desde la raíz, sin `/` inicial y sin `?` ni `#`. Devuelve `true` **solo** si `ruta` es exactamente una de las cuatro o esa misma más `index.html` (`'es/como-detectar-un-bulo/index.html'`). Cualquier otra cosa da `false`: subcarpetas o archivos dentro (`es/como-detectar-un-bulo/img.png`), sin barra final (`es/como-detectar-un-bulo`), otro idioma (`en/como-detectar-un-bulo/`), mayúsculas, rutas con `/` inicial, `casos/`, `data/` o el juego. Nunca lanza (un no-`string` da `false`).
+- `palabraProhibidaEnRuta(ruta)` = `contienePalabraProhibida(ruta) && !rutaExceptuada(ruta)`. Se aplica a: (1) la ruta de **cada archivo** publicado (raíz, `404.html`, `en/`, `es/`, `casos/`, `data/`, `css/`, `js/`, `img/`, `fonts/`, redirecciones); (2) **cada URL interna** de cada HTML y XML publicado, una vez resuelta a ruta del sitio (`href` y `src` relativos resueltos desde la carpeta de su página; absolutas de `DOMINIO` sin el dominio): enlaces, `canonical`, `hreflang`, `og:url`, URL del JSON-LD y `<loc>` del sitemap.
+- La excepción **solo** cubre la ruta. En las guías siguen prohibidas las palabras en ids, clases, nombres y valores de `data-*` y `alt` (como en todo el sitio).
+- **Nunca en el juego**: `herramientas/plantillas/juego.html`, `en/index.html`, `es/index.html` y todos los archivos de `js/` no contienen ninguna de las cuatro direcciones (ni sin el prefijo del idioma: se busca la subcadena `how-to-spot-ai-images`, `how-to-spot-fake-news`, `como-saber-si-una-imagen-es-ia` y `como-detectar-un-bulo`). Por eso las guías no están en `RUTAS` (que carga el juego) y el pie de la portada no las enlaza.
+- La lista no se amplía con un cambio de código: `validar` falla si `DIRECCIONES_EXCEPTUADAS` no son exactamente esas cuatro, en ese orden, si no coinciden con `RUTAS_GUIAS` (idioma + valor), si algún valor de `RUTAS` contiene una palabra prohibida, o si una ruta fuera de la lista las lleva. Cambiar una dirección exceptuada exige permiso del usuario y cambiar `CLAUDE.md`.
+- Lo comprueban un test de `RUTAS` y `RUTAS_GUIAS` (293, 331) y `validar` sobre todo el árbol publicado (332).
 
 ## 10.2 Estructura de carpetas publicada [D-172, D-173]
 
@@ -54,6 +75,7 @@ Sustituye a las filas correspondientes de 0.2; lo no citado sigue igual.
 | Ruta | Se publica | Qué es | Quién la escribe |
 |---|---|---|---|
 | `index.html` | sí | **Raíz**: página bilingüe mínima con dos enlaces visibles (English / Español) que redirige con JS (10.3). Ya **no** es el juego. | `paginas.mjs` desde `herramientas/plantillas/raiz.html` |
+| `404.html` | sí | **Página no encontrada**, bilingüe, sin JS, con enlaces y recursos absolutos (10.18). | `paginas.mjs` desde `herramientas/plantillas/404.html` |
 | `en/index.html`, `es/index.html` | sí | **El juego**, con todo el HTML ya en su idioma (10.4). | `paginas.mjs` desde `herramientas/plantillas/juego.html` |
 | `en/{ruta}/index.html`, `es/{ruta}/index.html` | sí | Páginas de contenido 1–5, 7, 9–11 y el índice del archivo. | `paginas.mjs` desde `plantillas/pagina.html` y `herramientas/contenido/{en,es}/*.html` |
 | `en/archive/case-{n}/index.html`, `es/archivo/caso-{n}/index.html` | sí | Días archivados (10.8). | `paginas.mjs` (también la Action) |
@@ -62,10 +84,10 @@ Sustituye a las filas correspondientes de 0.2; lo no citado sigue igual.
 | `robots.txt`, `sitemap.xml` | sí | 10.7.4. | `paginas.mjs` |
 | `img/og/portada-en.png`, `img/og/portada-es.png` | sí | Imagen Open Graph 1200 x 630 (10.11). | `herramientas/og.mjs` (manual) |
 | `img/ui/icono.svg` | sí | Favicon (10.11). | perito-visual |
-| `css/paginas.css` | sí | **Nuevo**: estilos de las páginas de contenido, del archivo, de la raíz y de los créditos. El juego no lo carga. | perito-visual |
+| `css/paginas.css` | sí | **Nuevo**: estilos de las páginas de contenido, del archivo, de la raíz, de los créditos y de `404.html`. El juego no lo carga. | perito-visual |
 | `js/raiz.js` | sí | **Nuevo**: redirección de la raíz (10.3). Único archivo nuevo en `js/` [DP-80]. | agente-de-campo |
 | `herramientas/paginas.mjs`, `herramientas/og.mjs` | sí (repositorio) | Generadores (10.6, 10.11). | archivero |
-| `herramientas/plantillas/` | sí (repositorio) | `juego.html` (lo que hoy es `index.html`), `raiz.html`, `pagina.html`, `archivo-dia.html`, `archivo-indice.html`, `og.html`. Las edita el perito-visual. | perito-visual |
+| `herramientas/plantillas/` | sí (repositorio) | `juego.html` (lo que hoy es `index.html`), `raiz.html`, `pagina.html`, `archivo-dia.html`, `archivo-indice.html`, `404.html`, `og.html`. Las edita el perito-visual. | perito-visual |
 | `herramientas/contenido/{en,es}/{clave}.html` | sí (repositorio) | Cuerpo de cada página de contenido con su cabecera de metadatos (10.6.3). | cronista |
 | `.github/workflows/archivo.yml` | sí (repositorio) | Action diaria del archivo (10.9). | archivero |
 | `CNAME`, `.nojekyll` | sí | Sin cambios (D-170). Con `.nojekyll`, GitHub Pages sirve las carpetas tal cual. | — |
@@ -73,13 +95,13 @@ Sustituye a las filas correspondientes de 0.2; lo no citado sigue igual.
 | `entrada/`, `herramientas/banco*.json`, `lote.json`, `capturas/` | **no** | Sin cambios en `.gitignore`. Ningún generador nuevo lee `entrada/` ni el banco (salvo `creditos.mjs`, como hoy). | — |
 
 - `package.json`: scripts nuevos `"paginas": "node herramientas/paginas.mjs"` y `"og": "node herramientas/og.mjs"`. Sin dependencias nuevas (solo `sharp`).
-- **Profundidad**: raíz 0, juego 1 (`es/`), contenido 2 (`es/como-jugar/`), día archivado 3 (`es/archivo/caso-12/`). El prefijo hasta la raíz es `'../'.repeat(profundidad)`.
-- GitHub Pages con dominio propio: el sitio vive en la raíz del dominio; con todo relativo, también funciona en una subcarpeta (`https://usuario.github.io/identifAI-it/`), salvo los metadatos absolutos de 10.7, que siempre apuntan a `DOMINIO`.
+- **Profundidad**: raíz 0, juego 1 (`es/`), contenido 2 (`es/como-jugar/`), día archivado 3 (`es/archivo/caso-12/`). El prefijo hasta la raíz es `'../'.repeat(profundidad)`. `404.html` no usa prefijo: todo es absoluto (10.18).
+- GitHub Pages con dominio propio: el sitio vive en la raíz del dominio; con todo relativo, también funciona en una subcarpeta (`https://usuario.github.io/identifAI-it/`), salvo los metadatos absolutos de 10.7 y `404.html`, que siempre apuntan a `DOMINIO`.
 
 ## 10.3 Raíz y elección de idioma [D-172, DP-78, DP-80]
 
 **Raíz** (`index.html`, `data-pagina="raiz"`, `lang="en"`, con cada frase en su `lang`):
-- Contenido visible sin JS: logo (`h1` "identifAI-it"), una línea en inglés y otra en español (`TEXTOS.en.raiz.lema`, `TEXTOS.es.raiz.lema`), y dos enlaces grandes: `<a href="en/" hreflang="en" lang="en">` (`TEXTOS.en.raiz.jugar`) y `<a href="es/" hreflang="es" lang="es">` (`TEXTOS.es.raiz.jugar`). Pie con los enlaces de privacidad, cookies y contacto en los dos idiomas.
+- Contenido visible sin JS: logo (`h1` "identifAI-it"), una línea en inglés y otra en español (`TEXTOS.en.raiz.lema`, `TEXTOS.es.raiz.lema`), y dos enlaces grandes: `<a href="en/" hreflang="en" lang="en">` (`TEXTOS.en.raiz.jugar`) y `<a href="es/" hreflang="es" lang="es">` (`TEXTOS.es.raiz.jugar`). Pie con los enlaces de privacidad, cookies y contacto en los dos idiomas. En la plantilla, los textos de un idioma fijo se escriben `[[en:grupo.clave]]` y `[[es:grupo.clave]]` (como en `404.html`, 10.18).
 - `<script type="module" src="js/raiz.js">`: calcula `destino = destinoRaiz({search, hash, guardado: leerIdioma(localStorage), lenguas})` y llama a `location.replace(destino)` (sin entrada nueva en el historial). Puede verse la raíz un instante antes de redirigir (aceptado, DP-80).
 - Cabecera: título bilingüe (`TEXTOS.en.seo.titulo_raiz`), descripción bilingüe, canonical a `DOMINIO`, `hreflang` `en` → `/en/`, `es` → `/es/`, `x-default` → `/`, Open Graph con `portada-en.png`, JSON-LD `WebSite`.
 
@@ -105,10 +127,10 @@ Sustituye a las filas correspondientes de 0.2; lo no citado sigue igual.
 - `index.html` actual pasa a `herramientas/plantillas/juego.html` (mismo marcado de 2.3) con estos marcadores:
   - `<html lang="{{idioma}}">`, `{{cabecera}}` (bloque de 10.7.1), `{{raiz}}` delante de cada ruta de recurso (`{{raiz}}css/variables.css`, `{{raiz}}js/main.js`…). En el juego, `{{raiz}}` = `../`.
   - `[[grupo.clave]]` (ya existen): el generador los sustituye por `TEXTOS[idioma]` escapado. Todo elemento con `data-texto-aria="g.c"` recibe `aria-label` con su valor. Los botones del selector reciben `aria-pressed="true"` el del idioma de la página y `"false"` el otro.
-  - `{{enlace:clave}}`: `href` relativo a una página (`RUTAS[idioma][clave]`, desde la carpeta del idioma).
+  - `{{enlace:clave}}`: `href` relativo a una página (`RUTAS[idioma][clave]`, desde la carpeta del idioma). En el juego solo valen claves de `RUTAS` (nunca `guia_imagenes` ni `guia_desinformacion`: es un error del generador).
   - Las partes dinámicas (`#portada-caso`, `#portada-tema`, estados de las tarjetas, pasos…) quedan vacías: las rellena main.js.
 - main.js sigue repintando `[data-texto]` y `[data-texto-aria]` al arrancar (el resultado es idéntico) y al cambiar de idioma.
-- `<noscript>` en el idioma de la página (ya no bilingüe), con el aviso, el enlace a la otra versión y la lista de enlaces del pie, para que se puedan seguir sin JS.
+- `<noscript>` en el idioma de la página (ya no bilingüe), con el aviso, el enlace a la otra versión y los 5 enlaces del pie de la portada (10.5.1), para que se puedan seguir sin JS. Nunca las guías (10.1.1).
 
 ### 10.4.2 Recursos desde una subcarpeta [D-174]
 
@@ -193,27 +215,28 @@ Como `instrucciones`, el modo elegido y el reto abierto están en memoria, cambi
 ```
 - Sin JS. Los textos fijos (`paginas.*`, `pie.*`) salen de `TEXTOS[idioma]` al generar; los `data-texto` no hacen falta (no hay repintado) y no se escriben.
 - "English" y "Español" son endónimos fijos (como en el selector, 0.1).
-- Enlaces del pie "inspirados en 301juegodiario.com": Sobre el juego (≈ Quiénes somos), Cómo jugar, Cómo elegimos los casos (≈ Fuentes), las dos guías (≈ Estrategias), Archivo (≈ Categorías), Preguntas frecuentes, Créditos, Privacidad, Cookies, Contacto. El aviso legal **no** aparece hasta que exista (10.14).
+- Enlaces del pie "inspirados en 301juegodiario.com": Sobre el juego (≈ Quiénes somos), Cómo jugar, Cómo elegimos los casos (≈ Fuentes), las dos guías (≈ Estrategias), Archivo (≈ Categorías), Preguntas frecuentes, Créditos, Privacidad, Cookies, Contacto. El aviso legal **no** aparece hasta que exista (10.14). Los `href` de las guías son las direcciones exceptuadas (10.1.1), resueltas con `rutasDe`.
 
 ### 10.5.4 Atributos, ids y clases nuevos
 
 | Gancho | Valores | Notas |
 |---|---|---|
-| `data-pagina` en `<body>` | `juego`, `raiz`, `contenido`, `archivo`, `creditos`, `redireccion` | `juego` y `creditos` ya existían. |
-| `data-enlace` en `<a>` del juego | las claves de `RUTAS` | main.js repinta su `href` (10.4.3). Sin palabras prohibidas en ningún valor. |
+| `data-pagina` en `<body>` | `juego`, `raiz`, `contenido`, `archivo`, `creditos`, `redireccion`, `no-encontrada` | `juego` y `creditos` ya existían. `no-encontrada` en `404.html` (10.18). |
+| `data-enlace` en `<a>` del juego | las claves de `RUTAS` | main.js repinta su `href` (10.4.3). Sin palabras prohibidas en ningún valor. Nunca las claves de `RUTAS_GUIAS`. |
 | `#portada-enlaces`, `#anuncio-portada`, `#anuncio-resultado`, `.anuncio` | — | 10.5.1, 10.5.2. |
 | `#contenido`, `.saltar`, `.pagina-cabecera`, `.pagina-logo`, `.pagina-jugar`, `.pagina-idioma`, `.pagina-pie`, `.pagina-pie-correo` | — | Contenido. |
 | `.archivo-*` | `archivo-dia`, `archivo-fecha`, `archivo-pruebas`, `archivo-prueba`, `archivo-sello`, `archivo-confesion`, `archivo-afirmacion`, `archivo-aclaracion`, `archivo-detalles`, `archivo-navegacion`, `archivo-mes`, `archivo-vacio`, `archivo-ejemplos` | Archivo (10.8.4). |
+| `.no-encontrada-idioma` | — | Cada bloque de idioma de `404.html` (10.18). |
 
 - **Sin `data-verdad` ni ninguna clase o atributo que dependa de la respuesta en el archivo** [DP-76]: los sellos del archivo (REAL/AI, FACT/FAKE, DATO/BULO) son texto visible con un estilo **neutro e igual** para los dos valores. Así la excepción de `CLAUDE.md` sobre `data-verdad` no se amplía.
-- Ningún id, clase, `data-*` (nombre o valor), `alt`, nombre de archivo ni ruta de lo publicado contiene palabras prohibidas; lo comprueba `validar` en **todos** los HTML del árbol (10.6.5).
+- Ningún id, clase, `data-*` (nombre o valor), `alt` ni nombre de archivo de lo publicado contiene palabras prohibidas; ninguna ruta tampoco, salvo las cuatro de `DIRECCIONES_EXCEPTUADAS` (10.1.1). Lo comprueba `validar` en **todos** los HTML del árbol (10.6.5).
 
 ## 10.6 Generador `herramientas/paginas.mjs` (archivero) [D-173]
 
 ### 10.6.1 Qué lee y qué escribe
 
 - **Lee**: `herramientas/plantillas/*.html`, `herramientas/contenido/{en,es}/*.html`, `js/textos.js` (`TEXTOS`, `RUTAS`), `js/diario.js` (fechas y desofuscado), `data/calendario.json`, todos los `data/facts/*.json`, la lista de `casos/` (solo para comprobar que existen las imágenes del archivo). **Nunca** lee `entrada/` ni `herramientas/banco*.json`.
-- **Escribe**: `index.html`, `en/` y `es/` (salvo `credits/` y `creditos/`, que son de `creditos.mjs`), `creditos.html`, `creditos.es.html`, `robots.txt` y `sitemap.xml`. Borra las páginas de días de archivo que ya no correspondan (solo dentro de `en/archive/` y `es/archivo/`).
+- **Escribe**: `index.html`, `404.html`, `en/` y `es/` (salvo `credits/` y `creditos/`, que son de `creditos.mjs`), `creditos.html`, `creditos.es.html`, `robots.txt` y `sitemap.xml`. Borra las páginas de días de archivo que ya no correspondan (solo dentro de `en/archive/` y `es/archivo/`).
 - **Determinista** byte a byte para las mismas entradas y el mismo `ultimoDiaArchivable`: UTF-8 sin BOM, saltos LF, orden fijo, sin fechas de generación. **Las fechas visibles no usan `Intl`** (cambia entre versiones de Node y daría diferencias entre el equipo del usuario y la Action): usa `TEXTOS[idioma].archivo.meses` (12 nombres) y `TEXTOS[idioma].archivo.fecha` (`'{mes} {d}, {a}'` / `'{d} de {mes} de {a}'`).
 
 ### 10.6.2 Uso
@@ -241,7 +264,7 @@ modificado: 2026-11-15
 ```
 - Campos: `titulo` (sin el sufijo " · identifAI-it", que añade el generador), `descripcion`, `h1`, `tipo` (`articulo` solo en las dos guías; `pagina` en las demás), `publicado` y `modificado` (fechas ISO, solo en artículos).
 - Cuerpo: solo `h2`, `h3`, `p`, `ul`, `ol`, `li`, `a`, `strong`, `em`, `blockquote`, `dl`, `dt`, `dd`. Sin `script`, `style`, atributos `on*`, `style=`, `id`/`class` (los pone la plantilla) ni imágenes (salvo las del bloque de ejemplos).
-- Marcadores: `{{enlace:clave}}` (href relativo a otra página del mismo idioma), `{{correo}}` (el `mailto:` de `CORREO`), `{{ejemplos}}` (solo en `guia_imagenes`, 10.8.6).
+- Marcadores: `{{enlace:clave}}` (href relativo a otra página del mismo idioma, con `rutasDe`), `{{correo}}` (el `mailto:` de `CORREO`), `{{ejemplos}}` (solo en `guia_imagenes`, 10.8.6).
 - Enlaces externos: solo `https://`, a sitios reconocidos (verificadores, licencias de Unsplash y Pexels), con `rel="noopener"` y sin `target` [DP-90]. Nunca en el juego (Fact or Fake sigue sin enlaces, D-126).
 - `analizarContenido(texto, ruta)` → `{meta, cuerpo, errores}`: error si falta un campo, si sobra uno, si hay una etiqueta o atributo no permitido, si un `{{enlace:x}}` no existe, si el `titulo` con sufijo supera 60 caracteres o la `descripcion` no mide entre 70 y 155 (contados con `[...s].length`). Nunca lanza.
 
@@ -249,9 +272,12 @@ modificado: 2026-11-15
 
 | Exportación | Descripción |
 |---|---|
-| `DOMINIO`, `CORREO`, `CSP` | `'https://identifaiit.com/'`, `'contacto@301juegodiario.es'`, la CSP de 2.4 (idéntica en todas las páginas). |
+| `DOMINIO`, `CORREO`, `CSP` | `'https://identifaiit.com/'`, `'contacto@301juegodiario.es'`, la CSP de 2.4 (idéntica en todas las páginas, también en `404.html`). |
+| `RUTAS_GUIAS`, `DIRECCIONES_EXCEPTUADAS` | 10.1 (exactas, congeladas). |
+| `rutasDe(idioma)` | `{...RUTAS[idioma], ...RUTAS_GUIAS[idioma]}` (10.1). |
+| `rutaExceptuada(ruta)`, `palabraProhibidaEnRuta(ruta)` | 10.1.1. |
 | `PAGINAS` | Claves publicadas en el orden del pie: `['sobre', 'como_jugar', 'metodo', 'guia_imagenes', 'guia_desinformacion', 'archivo', 'preguntas', 'creditos', 'privacidad', 'cookies', 'contacto']`. |
-| `ruta(idioma, clave, n)` | Ruta desde la raíz (`'es/archivo/caso-12/'`, `'en/'`). |
+| `ruta(idioma, clave, n)` | Ruta desde la raíz, con `rutasDe` (`'es/archivo/caso-12/'`, `'en/'`, `'es/como-detectar-un-bulo/'`). |
 | `prefijo(profundidad)` | `'../'.repeat(profundidad)`. |
 | `relativa(desde, hasta)` | Href relativo entre dos rutas de carpeta del sitio (`'es/como-jugar/'` → `'es/archivo/'` = `'../archivo/'`). |
 | `ultimoDiaArchivable(ahoraMs)` | 10.8.2. |
@@ -259,9 +285,9 @@ modificado: 2026-11-15
 | `datosDelDia({calendario, meses, n})` | `{n, fecha, tema, imagenes: [{id, verdad, ficha: {en, es}}] \| null, afirmaciones: [{verdad, texto: {en, es}, aclaracion: {en, es}}] \| null}`, descifrado con las funciones de `diario.js`. **Solo se llama con días de `diasArchivables`.** |
 | `analizarContenido(texto, ruta)` | 10.6.3. |
 | `cabecera({...})` | Bloque de 10.7.1. |
-| `generarJuego`, `generarRaiz`, `generarPagina`, `generarArchivoDia`, `generarIndiceArchivo`, `generarRedireccion`, `generarSitemap`, `ROBOTS` | Una página (cadena) cada una. |
+| `generarJuego`, `generarRaiz`, `generarPagina`, `generarArchivoDia`, `generarIndiceArchivo`, `generarRedireccion`, `generarNoEncontrada`, `generarSitemap`, `ROBOTS` | Una página (cadena) cada una. `generarNoEncontrada` en 10.18. |
 | `generarSitio({entradas, ahoraMs})` | `Map<ruta, contenido>` con todo lo que escribe `paginas.mjs`. |
-| `comprobarSitio(mapa, existentes)` | Errores: enlaces internos o recursos relativos que no existen, rutas que empiezan por `/`, palabras prohibidas, `data-verdad` fuera del juego, CSP distinta. La usa `validar`. |
+| `comprobarSitio(mapa, existentes)` | Errores: enlaces internos o recursos relativos que no existen, rutas que empiezan por `/`, palabras prohibidas (con `palabraProhibidaEnRuta` para rutas y URL, y sin excepción para ids, clases, `data-*` y `alt`), direcciones de las guías dentro del juego (10.1.1), `data-verdad` fuera del juego, CSP distinta, y las reglas propias de `404.html` (10.18). La usa `validar`. |
 | `escribirSitio(mapa, raiz)` *(efecto)* | Escribe, informa y borra los días sobrantes del archivo. |
 | `ejecutar(argv)` *(efecto)* | CLI de 10.6.2. |
 
@@ -269,8 +295,10 @@ modificado: 2026-11-15
 
 - Regenera el sitio en memoria con `ultimo = el mayor n archivado que ya está en disco` y lo compara con lo escrito (normalizando CRLF a LF): error "Páginas desactualizadas: ejecuta npm run paginas." con la lista de archivos. (Usar lo que hay en disco evita que falle solo porque hoy ya toque archivar un día que la Action aún no ha añadido.)
 - Error si algún día archivado tiene `fecha > ultimoDiaArchivable(ahora)`; si existe `es/aviso-legal/` o `en/legal-notice/` (10.14) con `ANUNCIOS_ACTIVOS = false`; si `ANUNCIOS_ACTIVOS` no está declarada una sola vez en `js/main.js` o vale `true` (hasta que exista una versión de la spec con anuncios, DP-87); si la raíz contiene `id="app"`; si falla `comprobarSitio`.
-- Palabras prohibidas en todo HTML publicado (raíz, `en/`, `es/`, redirecciones, créditos) y en todas las rutas.
-- Avisos (no errores): `title` > 60 o `description` fuera de 70–155 en alguna página.
+- **Palabras prohibidas** en todo HTML publicado (raíz, `404.html`, `en/`, `es/`, redirecciones, créditos) y en todas las rutas, con la lista blanca exacta de 10.1.1: error si una ruta o URL fuera de `DIRECCIONES_EXCEPTUADAS` lleva una palabra prohibida; si `DIRECCIONES_EXCEPTUADAS` no son exactamente las cuatro o no coinciden con `RUTAS_GUIAS`; si un valor de `RUTAS` lleva una palabra prohibida; si `juego.html`, `en/index.html`, `es/index.html` o un archivo de `js/` contienen una de las cuatro direcciones; si un id, clase, `data-*` o `alt` (también en las guías) lleva una palabra prohibida.
+- **Reutilización de imágenes** (10.8.7): `comprobarReutilizacion` sobre el calendario, siempre (también en la Action, sin banco).
+- **`404.html`** (10.18): existe en la raíz, lleva `noindex`, no está en el sitemap y cumple sus reglas de URL absolutas.
+- Avisos (no errores): `title` > 60 o `description` fuera de 70–155 en alguna página (salvo `404.html`, que no lleva descripción).
 - Las comprobaciones de `index.html` de la 3.0 (CSP, clases `dato*`, ids) pasan a `herramientas/plantillas/juego.html` y a `en/index.html` y `es/index.html`.
 - Créditos: comprueba `en/credits/index.html` (`lang="en"`) y `es/creditos/index.html` (`lang="es"`) en lugar de `creditos.html` y `creditos.es.html`, que ahora son redirecciones.
 
@@ -306,7 +334,8 @@ modificado: 2026-11-15
 <script type="application/ld+json">{…}</script>             <!-- solo donde toque (10.7.3) -->
 ```
 - `x-default`: la raíz (`DOMINIO`) para el juego y la raíz; la versión inglesa para el resto.
-- URL absolutas **solo** en `canonical`, `hreflang`, `og:url`, `og:image`, JSON-LD, `sitemap.xml` y `robots.txt` (excepción a "rutas relativas" de `CLAUDE.md`, DP-72). Todo lo demás, relativo.
+- URL absolutas **solo** en `canonical`, `hreflang`, `og:url`, `og:image`, JSON-LD, `sitemap.xml`, `robots.txt` y en los enlaces y recursos de `404.html` (10.18), como dice `CLAUDE.md` (D-186, DP-96). Todo lo demás, relativo.
+- `404.html` no usa esta cabecera: lleva la suya, reducida (10.18).
 - El bloque JSON-LD es un bloque de datos: la CSP no lo bloquea porque no se ejecuta.
 - WhatsApp y redes usan `og:title`, `og:description` y `og:image` (absoluta, https, ≤ 300 KB).
 
@@ -316,6 +345,7 @@ modificado: 2026-11-15
 - Búsquedas que deben aparecer (cada una en el `title`, `h1` o `description` de alguna página, de forma natural, sin repetir):
   - es: "cómo saber si una imagen es IA", "detectar imágenes generadas por IA", "juego para detectar imágenes de IA", "¿real o IA?", "juego diario de bulos", "cómo detectar un bulo", "comprobar si un dato es verdad", "juego diario tipo Wordle".
   - en: "how to tell if an image is AI generated", "spot the AI image game", "real or AI game", "daily fact or fake game", "how to spot fake news", "how to fact-check a claim", "Wordle-style daily game".
+- Las direcciones de las guías (`/es/como-saber-si-una-imagen-es-ia/`, `/es/como-detectar-un-bulo/`, `/en/how-to-spot-ai-images/`, `/en/how-to-spot-fake-news/`) ya llevan la búsqueda principal; el `title` y el `h1` la repiten de forma natural.
 - Propuestas (las fija el cronista): juego es "identifAI-it: juego diario para cazar imágenes de IA y bulos"; juego en "identifAI-it: daily game to spot AI images and fake facts"; guía es "Cómo saber si una imagen está hecha con IA: guía práctica"; guía en "How to tell if an image is AI-generated: a practical guide"; guía es "Cómo detectar un bulo y comprobar un dato"; guía en "How to spot fake news and check a claim"; día "Caso n.º {n} · {tema}: soluciones" / "Case #{n} · {tema}: answers".
 - Las descripciones del archivo **nunca citan una afirmación** (tampoco las falsas): "Las 5 imágenes y las 5 afirmaciones del caso n.º {n} ({tema}), con sus respuestas, confesiones y verdades." [riesgo R31].
 
@@ -339,18 +369,20 @@ Sitemap: https://identifaiit.com/sitemap.xml
 - No se bloquean `data/`, `casos/`, `css/`, `js/`, `fonts/` ni `img/`: Google los necesita para pintar el juego. Tampoco `?prueba=1`: un bloqueo le impediría ver el `noindex`.
 - Las barras iniciales de `robots.txt` son sintaxis de ese archivo (siempre en la raíz del dominio), no rutas del sitio.
 
-`sitemap.xml`: `urlset` del protocolo 0.9, solo `<loc>` (sin `lastmod`, `changefreq` ni `priority`, para que sea determinista), URL absolutas, en este orden: raíz; `en/` y las páginas indexables en el orden de `PAGINAS`; lo mismo en `es/`; los días archivados ascendentes (`en` y `es` de cada `n`). Excluye: redirecciones, páginas con `noindex` (índice del archivo vacío) y el aviso legal. Unos 730 URL nuevos al año: el límite de 50 000 tardaría décadas (DP-89).
+`sitemap.xml`: `urlset` del protocolo 0.9, solo `<loc>` (sin `lastmod`, `changefreq` ni `priority`, para que sea determinista), URL absolutas, en este orden: raíz; `en/` y las páginas indexables en el orden de `PAGINAS`; lo mismo en `es/`; los días archivados ascendentes (`en` y `es` de cada `n`). Las guías entran con sus direcciones de 10.1 (por ejemplo `https://identifaiit.com/es/como-saber-si-una-imagen-es-ia/`). Excluye: redirecciones, páginas con `noindex` (índice del archivo vacío), `404.html` y el aviso legal. Unos 730 URL nuevos al año: el límite de 50 000 tardaría décadas (DP-89).
 
 ### 10.7.5 `noindex`
 
-- **Estático** (lo escribe el generador): índice del archivo mientras está vacío; las dos redirecciones de créditos no lo llevan (usan `canonical` a su destino).
+- **Estático** (lo escribe el generador): índice del archivo mientras está vacío y `404.html`; las dos redirecciones de créditos no lo llevan (usan `canonical` a su destino).
 - **Dinámico** (main.js, 10.4.4): el juego con `?prueba=1`, con previsualización `?fecha=` y en `sin-casos` [DP-83]. Mientras no haya fecha de lanzamiento, el juego normal está en `sin-casos`, así que `/en/` y `/es/` no se indexarán hasta el lanzamiento; al lanzar, el usuario pide la indexación en Search Console (tarea 126).
 
 ## 10.8 Archivo de casos [D-179]
 
-### 10.8.1 Excepción a "nunca se publican en claro" (texto para `CLAUDE.md` en 9.15, DP-74)
+### 10.8.1 Excepción a "nunca se publican en claro" (ya en `CLAUDE.md`, D-188)
 
 > Única excepción: el archivo de casos (`/en/archive/`, `/es/archivo/`) publica en claro, en páginas aparte del juego, la respuesta, el prompt de las imágenes generadas y la afirmación con su verdad y sus detalles **solo de los días que ya han terminado en todas las zonas horarias** (10.8.2). Lo genera `herramientas/paginas.mjs` a partir de los datos ofuscados ya publicados. Nunca hay en el archivo nada de hoy ni de días futuros, en ningún idioma.
+
+`CLAUDE.md` añade: "una imagen archivada nunca se reutiliza en un día futuro" (10.8.7).
 
 Lo que **no** cambia: en el juego (`/en/`, `/es/`) la respuesta, la ficha y el prompt de un caso siguen sin existir en el DOM hasta que el jugador responde; los datos (`calendario.json`, `data/facts/`) siguen ofuscados y con longitud fija; el juego no enlaza a días concretos del archivo (solo al índice), ni lo carga.
 
@@ -363,15 +395,15 @@ ultimoDiaArchivable(ahoraMs) = sumarDias(fechaUTC(ahoraMs − 12 h), −1)
 ```
 - Ejemplos: `2026-12-02T11:59:59Z` → `2026-11-30`; `2026-12-02T12:00:00Z` → `2026-12-01`.
 - Usa solo UTC (`getUTC*`), nunca la hora local de la máquina ni `TZ`: da lo mismo en el equipo del usuario (Madrid) y en la Action (UTC).
-- Con la hora de Madrid que pidió el usuario para la Action (≈ 00:15), en ese momento **todavía se está jugando el día anterior en América** (00:15 en Madrid = 18:15 del día anterior en Nueva York). Por eso no vale "días anteriores a hoy en Madrid": ese día se archiva en la ejecución siguiente (DP-75).
+- La Action corre a las **12:15 UTC** (D-189): en ese momento el día anterior acaba de terminar en UTC−12 (a las 12:00 UTC), así que el día D se archiva el D+1 a las 13:15 (CET, invierno) o 14:15 (CEST, verano) de Madrid. No vale "días anteriores a hoy en Madrid" a medianoche: a las 00:15 en Madrid todavía se está jugando el día anterior en América (18:15 del día anterior en Nueva York).
 - **Modo prueba y previsualización**: no influyen. Sin `lanzamiento` (`null`) no hay ningún día archivable y el archivo está vacío; los días de prueba anteriores al lanzamiento nunca se archivan. Cambiar la hora del dispositivo (D-18) no afecta: el archivo se genera en el servidor.
 - `diasArchivables` solo considera días que existen en los datos y cuya `fechaDelDia(lanzamiento, n) ≤ ultimoDiaArchivable`. El generador **no descifra** ningún otro día (ni para comprobarlo).
 
-### 10.8.3 Imágenes del archivo [DP-77]
+### 10.8.3 Imágenes del archivo [DP-77, D-191]
 
 - Se reutilizan los archivos publicados `casos/{id}.webp` (nombre aleatorio, sin metadatos, 1080 x 1350): `src` relativo (`../../../casos/{id}.webp`), `width="1080" height="1350"`, `loading="lazy"` y `decoding="async"` (salvo la primera).
 - `alt` neutro, del idioma: `rellenar(TEXTOS[idioma].archivo.alt_prueba, {i, n})` ("Prueba 1 del caso n.º 12" / "Exhibit 1, case #12"), sin palabras prohibidas ni la respuesta. La respuesta va en el texto visible junto a la imagen, que los lectores de pantalla leen después.
-- No se copian ni se renombran imágenes (el archivo no añade peso al sitio). Consecuencia aceptada: los archivos de días pasados quedan asociados públicamente a su tipo (riesgo R25).
+- No se copian ni se renombran imágenes (el archivo no añade peso al sitio). Consecuencia aceptada: los archivos de días pasados quedan asociados públicamente a su tipo (riesgo R25). Por eso una imagen ya jugada o archivada **nunca** vuelve en un día futuro (10.8.7).
 
 ### 10.8.4 Página de un día (`archivo-dia.html`, profundidad 3, `data-pagina="archivo"`)
 
@@ -394,7 +426,24 @@ Cabecera y pie de 10.5.3. Cuerpo, en este orden:
 
 `{{ejemplos}}` en `guia_imagenes` se sustituye por `section.archivo-ejemplos` con hasta 3 imágenes **generadas** de los días archivados más recientes (la más reciente de cada uno de los 3 últimos días que tengan Images), cada una con su sello, su prompt y un enlace a su día. Sin días archivados, el marcador desaparece sin dejar rastro. Por tanto, la guía cambia cuando cambia el archivo (la Action la incluye en su commit).
 
-## 10.9 GitHub Action `.github/workflows/archivo.yml` (archivero) [D-180]
+### 10.8.7 Una imagen ya jugada nunca vuelve en un día futuro [D-191]
+
+Regla (`CLAUDE.md`): ninguna imagen de un día **futuro** coincide con una imagen de un día **ya llegado** (que se está jugando, ha terminado o está archivado). Manda sobre 4.4.2 y 4.22 en lo que añade; las comprobaciones que ya existían siguen igual (ids únicos en todo el calendario y dHash ≤ 5 entre todo el banco, que ya cubren los casos con el banco al día).
+
+**Función pura** en `herramientas/temas.mjs` (archivero):
+
+| Función | Parámetros → retorno | Descripción |
+|---|---|---|
+| `comprobarReutilizacion({dias, huellas, hoyISO})` | → `string[]` | `dias`: `[{n, fecha, pruebas}]` del calendario de Images, con `fecha = fechaDelDia(lanzamiento, n)` (`null` sin lanzamiento). `huellas`: `Map<id, {sha256, dhash}>`, con `sha256` (hex de los bytes del WebP publicado) y `dhash` (`string` o `null` si no hay banco). Un día es **llegado** si `fecha !== null && fecha <= hoyISO`, y **futuro** en otro caso. Para cada par (día llegado `a`, día futuro `b`) y cada pareja de pruebas, es error si tienen el mismo `id`, el mismo `sha256` o los dos `dhash` no nulos con `distanciaHamming ≤ 5` (el umbral de siempre). Un error por pareja: "La prueba {j} del día {b} repite la prueba {i} del día {a}, que ya ha llegado: una imagen jugada o archivada no puede volver en un día futuro." Los ids sin huella se saltan (otras comprobaciones ya avisan de que falta el archivo). Los mensajes no llevan tipo, tema ni ninguna palabra prohibida. Entrada mal formada → `['Datos de reutilización de imágenes no válidos.']`. Nunca lanza. |
+
+- **Por qué "llegado" y no "archivado"**: es más prudente (incluye hoy y los días ya jugados que aún no están en el archivo) y no depende de la hora del archivo. Como `ultimoDiaArchivable < hoy` en cualquier zona horaria, todo día archivado es llegado.
+- **`validar`** (siempre, también en la Action, que no tiene banco): `huellas` con el `sha256` de cada `casos/{id}.webp` del calendario (`node:crypto`) y el `dhash` del banco si existe (si no, `null`); `hoyISO` = la fecha local de la máquina, como en el resto de `validar`. Cualquier mensaje es error.
+- **`importar`** (con y sin `--reimportar`), **antes de escribir nada**: los días llegados se toman del calendario actual, con el `sha256` de sus archivos de `casos/` y el `dhash` del banco actual (leído antes de sustituirlo con `--reimportar`); los días nuevos o reimportados, con el `sha256` del WebP generado en memoria y su `dhash` recién calculado. Si hay algún error, no escribe nada (`casos/`, banco, calendario ni créditos) y sale con código 1.
+- **Sin lanzamiento** (`null`): ningún día ha llegado, la función devuelve `[]` y no bloquea nada; el usuario puede reorganizar los días libremente (las reglas de ids únicos y dHash del banco siguen evitando repetidos). Desde que se fija la fecha, la regla se aplica sola cada día.
+- **Modo prueba**: no cuenta. Lo que hace "llegado" a un día es su fecha según el lanzamiento, no que alguien lo haya abierto con `?prueba=1&dia=n` ni con `?fecha=`. Los días de prueba vistos antes del lanzamiento no quedan bloqueados.
+- Fact or Fake no necesita esta regla: las afirmaciones repetidas ya son error entre todos los días y meses (4.12, 4.22).
+
+## 10.9 GitHub Action `.github/workflows/archivo.yml` (archivero) [D-180, D-189]
 
 Esquema (el archivero escribe el archivo; los valores marcados son obligatorios):
 
@@ -402,8 +451,7 @@ Esquema (el archivero escribe el archivo; los valores marcados son obligatorios)
 name: Archivo de casos
 on:
   schedule:
-    - cron: '15 22 * * *'   # 00:15 en Madrid en horario de verano (CEST, UTC+2)
-    - cron: '15 23 * * *'   # 00:15 en Madrid en horario de invierno (CET, UTC+1)
+    - cron: '15 12 * * *'   # 12:15 UTC todo el año (13:15 en Madrid en invierno, 14:15 en verano)
   workflow_dispatch:
 permissions: {}
 concurrency:
@@ -435,10 +483,10 @@ jobs:
           git commit -m "datos: archivo de casos hasta el n.º $(node herramientas/paginas.mjs --ultimo)"
           git push
 ```
-- **Zona horaria**: el `cron` de GitHub es siempre UTC y no sigue el horario de verano; por eso hay dos líneas. La que no cae a las 00:15 cae a las 23:15 o a la 01:15 de Madrid y no hace daño: el generador es idempotente y la regla de 10.8.2 es segura a cualquier hora. GitHub puede retrasar las ejecuciones programadas (a veces más de una hora) o saltarse alguna: con la regla de 10.8.2 un retraso solo publica más tarde, nunca antes. **Recomendación** [DP-75]: sustituirlas (o completarlas) por `'15 12 * * *'` (12:15 UTC, sin horario de verano), que archiva el día D el D+1 a las 13:15/14:15 de Madrid en lugar del D+2 a las 00:15.
+- **Hora** [DP-75, D-189]: una sola línea, `'15 12 * * *'`. El `cron` de GitHub es siempre UTC y no sigue el horario de verano; a las 12:15 UTC el día anterior ya ha terminado en todo el mundo, así que cada ejecución archiva exactamente un día nuevo (el D, el D+1 a primera hora de la tarde en Madrid). GitHub puede retrasar las ejecuciones programadas (a veces más de una hora) o saltarse alguna, pero nunca las adelanta: con la regla de 10.8.2, calculada en el momento real de la ejecución, un retraso solo publica más tarde, nunca antes, y la siguiente ejecución recupera lo saltado.
 - **Solo `main`**: las ejecuciones programadas solo corren en la rama por defecto; el `if` evita además que un `workflow_dispatch` lanzado sobre otra rama (por ejemplo `paginas-seo`) escriba nada.
 - **Permisos**: ninguno por defecto y `contents: write` solo en el trabajo. Sin secretos ni tokens personales. Si `main` tiene protección de rama que impida el push del bot, el trabajo falla (riesgo R34).
-- **Seguridad del commit**: solo se añaden `en/`, `es/` y `sitemap.xml`; cualquier otro cambio hace fallar el trabajo sin commit (no puede publicar `entrada/` ni nada privado, que además no está en el checkout).
+- **Seguridad del commit**: solo se añaden `en/`, `es/` y `sitemap.xml`; cualquier otro cambio hace fallar el trabajo sin commit (no puede publicar `entrada/` ni nada privado, que además no está en el checkout). `404.html` no cambia con el archivo.
 - `npm run validar` sin `--estricto` (con `PRUEBAS_ABIERTAS = true` antes del lanzamiento, `--estricto` fallaría). No se ejecuta `npm test` (lento y con el test intermitente de TP-02); los tests corren en local antes de cada commit del usuario.
 - `node herramientas/paginas.mjs --ultimo` imprime el número del último caso archivado (o `0`) y no escribe nada.
 - Antes del lanzamiento la Action corre a diario sin commit (archivo vacío). Tras publicar, comprobar que el push del bot dispara el despliegue de GitHub Pages (riesgo R27, tarea 126).
@@ -468,7 +516,7 @@ Normas comunes: tono del juego (detective, novela negra suave) pero claro; frase
 
 1. **Sobre el juego**: qué es identifAI-it (dos retos diarios, cinco casos cada uno, un intento al día, el mismo para todos), el tema del día, que es un proyecto personal sin cuentas ni anuncios (de momento), y enlaces a Cómo jugar, al archivo y a las guías.
 2. **Cómo jugar**: Images (REAL / AI, teclas R e I; modos Investigator sin límite, Normal 3 s, Bloodhound 1 s; al acabarse el tiempo la imagen se tapa con un sobre y se responde sin límite, no es fallo; el temporizador empieza cuando la imagen está pintada; ocultar la pestaña no penaliza) y Fact or Fake (FACT / FAKE con F y K; DATO / BULO con D y B en español; sin tiempo; salir de la página más de unos segundos antes de responder cuenta como fallo; el texto no se puede copiar). Tras cada respuesta, la ficha. Un intento al día por reto, común a modos e idiomas; día nuevo a medianoche local; racha; compartir sin revelar respuestas.
-3. **Cómo elegimos los casos**: fotos reales de bancos con licencia libre (Unsplash, Pexels); imágenes generadas con Gemini o ChatGPT a partir de prompts propios, que se muestran tras responder; todas reprocesadas al mismo tamaño y calidad y sin metadatos para que el archivo no delate nada; las afirmaciones las escribe y comprueba una persona; las falsas nunca tratan de salud, seguridad, tragedias ni política ni dañan la reputación de nadie (solo pueden alterar cifras o récords inocuos de personas o marcas famosas), y siempre se desmienten tras responder.
+3. **Cómo elegimos los casos**: fotos reales de bancos con licencia libre (Unsplash, Pexels); imágenes generadas con Gemini o ChatGPT a partir de prompts propios, que se muestran tras responder; todas reprocesadas al mismo tamaño y calidad y sin metadatos para que el archivo no delate nada; una imagen ya usada no vuelve otro día; las afirmaciones las escribe y comprueba una persona; las falsas nunca tratan de salud, seguridad, tragedias ni política ni dañan la reputación de nadie (solo pueden alterar cifras o récords inocuos de personas o marcas famosas), y siempre se desmienten tras responder.
 4. **Guía: imágenes generadas**: pistas prácticas (manos y dedos, texto y letreros, reflejos y sombras incoherentes, fondos que se deshacen, simetrías raras, piel y texturas demasiado lisas, detalles repetidos, iluminación de estudio imposible), comprobaciones fuera de la imagen (búsqueda inversa, origen, metadatos y credenciales de contenido como C2PA cuando existen, marcas de agua invisibles como SynthID) y sus límites ("ninguna pista es definitiva; los generadores mejoran cada mes"). `{{ejemplos}}` con casos ya jugados (10.8.6). Practicar con el juego.
 5. **Guía: detectar un bulo**: cómo comprobar un dato (buscar la fuente original, fecha, unidades y contexto, cifras redondas o récords sospechosos), fuentes fiables (organismos oficiales, enciclopedias con referencias, verificadores reconocidos: en España Maldita.es, Newtral, EFE Verifica, AFP Factual; en inglés Snopes, PolitiFact, Reuters Fact Check, AP Fact Check, Full Fact [DP-90]), señales de alerta (urgencia, emoción, "lo que no te cuentan", sin fuente, capturas sin contexto), y sus límites.
 6. **Archivo**: introducción del índice (qué contiene y que un día entra cuando ha terminado en todo el mundo, al día siguiente).
@@ -481,11 +529,11 @@ Normas comunes: tono del juego (detective, novela negra suave) pero claro; frase
    - El sitio está alojado en **GitHub Pages** (GitHub, Inc.), que registra la dirección IP de los visitantes por motivos de seguridad, como cualquier servidor web; enlace a la declaración de privacidad de GitHub.
    - Compartir usa la función del propio dispositivo (o el portapapeles); el juego no ve a quién ni qué se comparte.
    - Si escribes al correo de contacto, tu dirección y tu mensaje se usan solo para responderte.
-   - Responsable y contacto: `{{correo}}` (y el nombre del responsable si el usuario lo decide, DP-85). Derechos (acceso, supresión…) por correo; reclamación ante la AEPD.
+   - Responsable y contacto: **solo** `{{correo}}` (contacto@301juegodiario.es), **sin nombre** (D-194). Derechos (acceso, supresión…) por correo; reclamación ante la AEPD.
    - Fecha de actualización. Se actualizará antes de añadir anuncios o cualquier servicio de terceros.
    - **No** se puede afirmar (y no se escribe): "no se registra nada" (GitHub registra IP), "cumplimos el RGPD al 100 %" ni nada sobre anuncios.
 10. **Cookies**: el sitio no usa cookies propias ni de terceros; solo el almacenamiento local necesario para el servicio que pides (progreso e idioma), que no requiere consentimiento (art. 22.2 LSSI); tabla con las tres claves, finalidad y duración (hasta que las borres). "Si algún día hay anuncios, esta página cambiará y te pediremos permiso antes."
-11. **Contacto**: `{{correo}}` como enlace `mailto:` (contacto@301juegodiario.es, DP-84), para errores, sugerencias, propuestas de temas o para pedir una corrección o retirada; sin formulario (nada que enviar a un servidor).
+11. **Contacto**: `{{correo}}` como enlace `mailto:` (contacto@301juegodiario.es, confirmado por el usuario, D-193), para errores, sugerencias, propuestas de temas o para pedir una corrección o retirada; sin formulario (nada que enviar a un servidor).
 12. **Aviso legal**: 10.14.
 
 ## 10.13 Anuncios futuros: solo el hueco [D-182, DP-87]
@@ -504,7 +552,7 @@ Normas comunes: tono del juego (detective, novela negra suave) pero claro; frase
 
 - **R21. Páginas de contenido** (regla de composición; no confundir con el riesgo R21): pueden deslizar (son artículos). Una columna de 70 caracteres como máximo, cuerpo ≥ 16 px, interlineado ≥ 1,5, sin desplazamiento horizontal a 360 px ni con zoom del 200 % (reflujo, WCAG 1.4.10). Imágenes del archivo a todo el ancho de la columna en móvil (una por fila) y en rejilla desde 600 px, siempre con su sello y su texto debajo.
 - **R8 (ampliada). Pie de la portada**: `#portada-aviso-dia` y `#portada-enlaces` caben sin deslizar en los 5 tamaños garantizados y en los dos idiomas; `#portada-enlaces` en **una fila** (con los rótulos cortos `pie.corto_*`, ≤ 48 caracteres en total con los separadores en cada idioma); desde 600 px de ancho, aviso y enlaces pueden compartir línea. Orden de compresión de R8 sin cambios (primero la ilustración), y los enlaces nunca se ocultan. Las demás pantallas del juego siguen exactamente como estaban.
-- **Accesibilidad** (raíz, contenido, archivo, créditos y pie de la portada): enlace "Saltar al contenido" visible al recibir el foco; `header`, `nav` con nombre, `main`, `footer`; un solo `h1` y jerarquía sin saltos; `lang` correcto en la página y en "English"/"Español"; `aria-current="page"` en el pie; foco visible; contraste AA (texto ≥ 4,5:1; el pie es **discreto por tamaño y posición, no por bajo contraste**: los enlaces del pie también ≥ 4,5:1 sobre su fondo); área de pulsación ≥ 24 x 24 px CSS en los enlaces del pie (WCAG 2.5.8) y 44 x 44 en los botones; enlaces distinguibles sin depender del color dentro del texto (subrayado); `prefers-reduced-motion`; imágenes del archivo con `alt` neutro y la respuesta en el texto adyacente.
+- **Accesibilidad** (raíz, contenido, archivo, créditos, `404.html` y pie de la portada): enlace "Saltar al contenido" visible al recibir el foco (salvo en `404.html`, que solo tiene `main`); `header`, `nav` con nombre, `main`, `footer` (en `404.html`, solo `main`); un solo `h1` y jerarquía sin saltos; `lang` correcto en la página y en "English"/"Español"; `aria-current="page"` en el pie; foco visible; contraste AA (texto ≥ 4,5:1; el pie es **discreto por tamaño y posición, no por bajo contraste**: los enlaces del pie también ≥ 4,5:1 sobre su fondo); área de pulsación ≥ 24 x 24 px CSS en los enlaces del pie (WCAG 2.5.8) y 44 x 44 en los botones; enlaces distinguibles sin depender del color dentro del texto (subrayado); `prefers-reduced-motion`; imágenes del archivo con `alt` neutro y la respuesta en el texto adyacente.
 
 ## 10.16 Textos nuevos en `js/textos.js` (cronista) [D-184]
 
@@ -518,17 +566,19 @@ Mismas reglas de 3.1 (dos árboles iguales, límites medidos con relleno). Grupo
 | `seo` | `titulo_raiz`, `descripcion_raiz`, `titulo_juego`, `descripcion_juego`, `titulo_archivo`, `descripcion_archivo`, `titulo_dia` (`{n}`, `{tema}`), `descripcion_dia` (`{n}`, `{tema}`), `og_alt` | títulos 60; descripciones 70–155 |
 | `archivo` | `titulo_dia` (`{n}`, `{tema}`), `alt_prueba` (`{i}`, `{n}`), `vacio`, `sin_reto` (`{reto}`), `anterior`, `siguiente`, `indice`, `jugar_hoy`, `ejemplos_titulo`, `ver_dia`, `meses` (array de 12), `fecha` (`{d}`, `{mes}`, `{a}`), `mes` (`{mes}`, `{a}`) | 90 |
 | `anuncios` | `etiqueta` ("Advertisement" / "Publicidad") | 20 |
+| `no_encontrada` | `titulo` ("Page not found" / "Página no encontrada"), `texto` (una frase del tono del juego, p. ej. "This file isn't in our records." / "Este expediente no consta en nuestros archivos."), `enlace` ("Back to the game" / "Volver al juego") | 30 / 120 / 30; `titulo` en + " · " + `titulo` es + " · identifAI-it" ≤ 60 |
 
 - **Se retira** `portada.enlace_creditos` (lo sustituye `pie.corto_creditos`). `creditos.volver` y `creditos.otro_idioma` siguen.
 - `archivo.alt_prueba` no puede contener palabras prohibidas en ningún idioma (test).
-- `RUTAS` (10.1) es exacta y la escribe el cronista tal cual.
+- `RUTAS` (10.1) es exacta y la escribe el cronista tal cual, **sin** las guías (que van en `RUTAS_GUIAS`, en `paginas.mjs`, y las escribe el archivero).
+- Los textos de `pie.guia_*` (rótulos visibles) sí pueden decir "IA", "AI", "bulo" o "fake news": son texto, no rutas.
 
 ## 10.17 Resumen de lo que cambia en secciones anteriores
 
 | Sección | Cambio |
 |---|---|
-| 0.2 | Filas de `index.html`, créditos, `js/`, `css/`, `img/`, `package.json` y las nuevas de 10.2. |
-| 0.1 | Excepción de rutas absolutas en metadatos (10.7.1). "Ninguna petición a dominios externos" sigue (enlaces externos en las guías no son peticiones). |
+| 0.2 | Filas de `index.html`, `404.html`, créditos, `js/`, `css/`, `img/`, `package.json` y las nuevas de 10.2. |
+| 0.1 | Excepción de rutas absolutas en metadatos (10.7.1) y en `404.html` (10.18). Excepción de palabras prohibidas solo en las cuatro direcciones de las guías (10.1.1). "Ninguna petición a dominios externos" sigue (enlaces externos en las guías no son peticiones). |
 | 2.1 | Efectos de `CAMBIAR_IDIOMA` (10.4.3). |
 | 2.2 | `data-pagina` con valores nuevos; `data-enlace` nuevo. |
 | 2.3 | Pie de la portada (10.5.1) y huecos de anuncio (10.5.2). |
@@ -537,5 +587,50 @@ Mismas reglas de 3.1 (dos árboles iguales, límites medidos con relleno). Grupo
 | 2.7, 4.5, 4.23 | Créditos en `en/credits/` y `es/creditos/` (10.10). |
 | 3.2 | `urlDeIdioma`, `destinoRaiz` (10.3). |
 | 3.7 | Arranque, selector, enlaces, noindex, `RAIZ`, `ANUNCIOS_ACTIVOS` (10.4). |
-| 4.22 | 10.6.5. |
+| 4.4.2, 4.6 | `importar` llama a `comprobarReutilizacion` antes de escribir; `temas.mjs` la exporta (10.8.7). |
+| 4.22 | 10.6.5 (con reutilización de imágenes, lista blanca de direcciones y `404.html`). |
 | 7, 4.24 | El `{url}` de los ejemplos pasa a `https://identifaiit.com/en/` y `https://identifaiit.com/es/` (DP-81); las plantillas no cambian. |
+
+## 10.18 Página no encontrada: `404.html` [D-196]
+
+GitHub Pages sirve `404.html` de la raíz, con estado 404, para **cualquier** dirección que no exista (`/es/no-existe/`, `/en/archive/case-999/a/b/`). Por eso no puede usar rutas relativas: sus enlaces y recursos son URL absolutas de `DOMINIO` (excepción de `CLAUDE.md`).
+
+**Una sola página con los dos idiomas, sin JS** (decisión): no hay manera de saber con HTML solo el idioma del visitante, y elegirlo con JS obligaría a cargar un script con URL absoluta, a leer el almacén desde una página de error y a mostrar algo distinto sin JS. Con los dos textos (como en la raíz) funciona sin JS, la CSP no cambia, no hay lógica nueva y quien llega desde un enlace roto de cualquier idioma ve el suyo.
+
+Plantilla `herramientas/plantillas/404.html` (perito-visual), generada por `generarNoEncontrada()` (archivero). Marcadores: `{{dominio}}` (= `DOMINIO`, **solo** en esta plantilla), `{{csp}}` y `[[en:grupo.clave]]` / `[[es:grupo.clave]]` (texto escapado de un idioma fijo, como en la raíz):
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="{{csp}}">
+<title>[[en:no_encontrada.titulo]] · [[es:no_encontrada.titulo]] · identifAI-it</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="{{dominio}}img/ui/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{dominio}}css/variables.css">
+<link rel="stylesheet" href="{{dominio}}css/base.css">
+<link rel="stylesheet" href="{{dominio}}css/paginas.css">
+</head>
+<body data-pagina="no-encontrada">
+<main id="contenido">
+  <a class="pagina-logo" href="{{dominio}}">identifAI-it</a>
+  <h1><span lang="en">[[en:no_encontrada.titulo]]</span> · <span lang="es">[[es:no_encontrada.titulo]]</span></h1>
+  <section class="no-encontrada-idioma" lang="en">
+    <p>[[en:no_encontrada.texto]]</p>
+    <p><a href="{{dominio}}en/" hreflang="en">[[en:no_encontrada.enlace]]</a></p>
+  </section>
+  <section class="no-encontrada-idioma" lang="es">
+    <p>[[es:no_encontrada.texto]]</p>
+    <p><a href="{{dominio}}es/" hreflang="es">[[es:no_encontrada.enlace]]</a></p>
+  </section>
+</main>
+</body>
+</html>
+```
+- Las hojas son las mismas que las de las páginas de contenido (las `url()` de las fuentes son relativas a la hoja, así que también salen de `DOMINIO`). El logo lleva a la raíz, que elige el idioma; cada bloque, a su juego.
+- **Sin** `canonical`, `hreflang` de cabecera, Open Graph, JSON-LD, `description`, cabecera, pie ni JS. `noindex` y fuera del sitemap.
+- Reglas de `comprobarSitio` solo para `404.html`: todo `href` y `src` empieza por `DOMINIO` y, quitado el dominio, resuelve a un archivo del sitio (una carpeta, a su `index.html`); ningún `href` ni `src` relativo ni de otro origen; ningún `{{dominio}}` ni `[[…]]` sin sustituir; CSP de 2.4 exacta; sin palabras prohibidas. En el resto de páginas, `{{dominio}}` es un error.
+- **Limitación aceptada**: servida fuera de `identifaiit.com` (en local con `npx serve` o en una subcarpeta de `github.io`), la CSP `default-src 'self'` bloquea las hojas del dominio y la página se ve sin estilos, pero se lee y sus enlaces funcionan. La comprobación visual se hace en el sitio publicado (tarea 126).
+- No cambia con el archivo ni con los datos: solo con la plantilla o con `TEXTOS.*.no_encontrada`.
