@@ -43,6 +43,55 @@ export function elegirIdioma({ search, guardado, lenguas } = {}) {
   return { idioma: idiomaDelNavegador(lenguas), origen: 'navegador' };
 }
 
+// ---- Direcciones por idioma [10.3] ----
+// Última carpeta de idioma de la ruta del juego: /en/, /es/, /en/index.html o /es/index.html.
+const RE_RUTA_JUEGO = /^(.*\/)(en|es)\/(?:index\.html)?$/;
+
+// URL absoluta de la misma página del juego en otro idioma; null si no se puede. Quita ?lang= y conserva lo demás.
+export function urlDeIdioma(href, idioma) {
+  try {
+    if (!idiomaValido(idioma) || typeof href !== 'string') return null;
+    const url = new URL(href);
+    const m = RE_RUTA_JUEGO.exec(url.pathname);
+    if (!m) return null;
+    url.pathname = `${m[1]}${idioma}/`;
+    const resto = url.search
+      .slice(1)
+      .split('&')
+      .filter((par) => par !== '' && par.split('=')[0] !== 'lang');
+    url.search = resto.length ? '?' + resto.join('&') : '';
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+// Destino relativo de la raíz: carpeta del idioma elegido, con search (también lang) y hash intactos.
+export function destinoRaiz({ search = '', hash = '', guardado, lenguas } = {}) {
+  const { idioma } = elegirIdioma({ search, guardado, lenguas });
+  return `${idioma}/${search}${hash}`;
+}
+
+// Qué hacer con ?lang= en /en/ o /es/ [10.3, punto 2]: manda la dirección. `guardar` es el idioma a recordar (o null);
+// 'quitar' = es el de la página, se limpia la URL; 'redirigir' = es el otro, se va a `url`; 'ninguna' = no hay (o no vale).
+export function decidirLangEnPagina({ idiomaPagina, search, href } = {}) {
+  const lang = idiomaDeUrl(search);
+  if (lang === null || !idiomaValido(idiomaPagina)) return { accion: 'ninguna', guardar: null, url: null };
+  const url = urlDeIdioma(href, lang);
+  if (url === null) return { accion: 'ninguna', guardar: lang, url: null };
+  return { accion: lang === idiomaPagina ? 'quitar' : 'redirigir', guardar: lang, url };
+}
+
+// noindex dinámico [10.7.5]: modo prueba, previsualización (?fecha=) o pantalla sin-casos.
+export function debeNoIndexar({ modoPrueba, previsualizacion, pantalla } = {}) {
+  return Boolean(modoPrueba) || Boolean(previsualizacion) || pantalla === 'sin-casos';
+}
+
+// Ruta relativa a la raíz del sitio -> URL absoluta desde `raiz` (URL o cadena). Sin raíz, la ruta tal cual.
+export function desdeRaiz(ruta, raiz) {
+  return raiz ? new URL(ruta, raiz).href : ruta;
+}
+
 function sufijoIdioma(idioma) {
   if (!idiomaValido(idioma)) throw new TypeError(`Idioma no válido: ${String(idioma)}`);
   return idioma === 'es' ? '|es' : '';
@@ -505,10 +554,10 @@ export function afirmacionesDelMes(meses, mes) {
 }
 
 // Juego normal y previsualización: solo el archivo del mes de la fecha efectiva.
-export async function cargarAfirmaciones(fechaISO, pedir = fetch) {
+export async function cargarAfirmaciones(fechaISO, pedir = fetch, raiz = null) {
   const mes = mesDeFecha(fechaISO);
   if (mes === null) throw new Error('Afirmaciones: fecha no válida');
-  const respuesta = await pedir(rutaAfirmaciones(mes), { cache: 'no-cache' });
+  const respuesta = await pedir(desdeRaiz(rutaAfirmaciones(mes), raiz), { cache: 'no-cache' });
   if (respuesta.status === 404) return afirmacionesVacias(mes);
   if (!respuesta.ok) throw new Error(`Afirmaciones: respuesta ${respuesta.status}`);
   const obj = await respuesta.json();
@@ -517,13 +566,13 @@ export async function cargarAfirmaciones(fechaISO, pedir = fetch) {
 }
 
 // Modo prueba: sondeo en serie de todos los meses existentes (4.7.2).
-export async function cargarAfirmacionesPrueba(lanzamiento, pedir = fetch) {
+export async function cargarAfirmacionesPrueba(lanzamiento, pedir = fetch, raiz = null) {
   const meses = [];
   let siguiente = 1;
   for (;;) {
     const mes = mesDeNumero(lanzamiento, siguiente);
     if (mes === null) throw new Error('Afirmaciones: lanzamiento no válido');
-    const respuesta = await pedir(rutaAfirmaciones(mes), { cache: 'no-cache' });
+    const respuesta = await pedir(desdeRaiz(rutaAfirmaciones(mes), raiz), { cache: 'no-cache' });
     if (respuesta.status === 404) break;
     if (!respuesta.ok) throw new Error(`Afirmaciones: respuesta ${respuesta.status}`);
     const obj = await respuesta.json();
@@ -544,11 +593,11 @@ export async function cargarCalendario(url = 'data/calendario.json', pedir = fet
   return calendario;
 }
 
-export async function precargar(ids, crearImagen = () => new Image()) {
+export async function precargar(ids, crearImagen = () => new Image(), raiz = null) {
   const imagenes = ids.map((id) => {
     const img = crearImagen();
     img.decoding = 'async';
-    img.src = rutaPrueba(id);
+    img.src = desdeRaiz(rutaPrueba(id), raiz);
     return img;
   });
   await Promise.all(imagenes.map((img) => img.decode()));

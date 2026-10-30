@@ -8,7 +8,7 @@ const CLAVES = {
     'titulo', 'lema', 'idioma', 'abrir', 'pie', 'sello_ilustracion', 'etiqueta_caso', 'elige_reto',
     'reto_imagenes', 'reto_afirmaciones', 'estado_pendiente', 'estado_jugado', 'estado_en_curso', 'estado_sin_caso',
     'modo_investigador', 'modo_normal', 'modo_perro', 'desc_investigador', 'desc_normal', 'desc_perro',
-    'expediente_imagenes', 'expediente_afirmaciones', 'desc_reto_imagenes', 'desc_reto_afirmaciones', 'enlace_creditos'
+    'expediente_imagenes', 'expediente_afirmaciones', 'desc_reto_imagenes', 'desc_reto_afirmaciones'
   ],
   instrucciones: [
     'volver', 'membrete', 'frase_imagenes', 'frase_afirmaciones', 'pasos_imagenes', 'pasos_afirmaciones', 'firma',
@@ -68,7 +68,8 @@ const CLAVES = {
     'ejemplos_titulo', 'ver_dia', 'meses', 'fecha', 'mes'
   ],
   anuncios: ['etiqueta'],
-  no_encontrada: ['titulo', 'texto', 'enlace']
+  no_encontrada: ['titulo', 'texto', 'enlace'],
+  noscript: ['aviso']
 };
 
 // Claves que se retiraron en la 3.0 (no deben existir en ningún idioma).
@@ -173,7 +174,7 @@ test('38. valores exactos en inglés', () => {
   assert.equal(T.portada.pie, 'New cases every day at midnight.');
   assert.equal(T.portada.elige_reto, 'Choose your case file');
   assert.equal(T.portada.lema, 'Two cases a day. Spot the fake.');
-  assert.equal(T.portada.enlace_creditos, 'Credits');
+  assert.equal('enlace_creditos' in T.portada, false);
   assert.equal(T.portada.reto_imagenes, 'Images');
   assert.equal(T.portada.reto_afirmaciones, 'Fact or Fake');
   assert.equal(T.portada.estado_en_curso, 'In another tab');
@@ -283,7 +284,7 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado, en cada i
       if (ruta.startsWith('fichas.') || esPlantillaCompartir(ruta)) continue;
       const largo = [...valor].length;
       if (ruta.startsWith('instrucciones.pasos_')) assert.ok(largo <= 80, `${idioma}.${ruta} mide ${largo}`);
-      else if (ruta === 'creditos.afirmaciones_texto') assert.ok(largo <= 120, `${idioma}.${ruta} mide ${largo}`);
+      else if (ruta === 'creditos.afirmaciones_texto' || ruta === 'noscript.aviso') assert.ok(largo <= 120, `${idioma}.${ruta} mide ${largo}`);
       else if (/^seo\.titulo_/.test(ruta)) assert.ok(largo <= 60, `${idioma}.${ruta} mide ${largo}`);
       else if (/^seo\.descripcion_/.test(ruta)) assert.ok(largo >= 70 && largo <= 155, `${idioma}.${ruta} mide ${largo}`);
       else if (ruta === 'instrucciones.ejemplo') assert.ok(largo <= 80, `${idioma}.${ruta} mide ${largo}`);

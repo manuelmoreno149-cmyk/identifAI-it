@@ -1,9 +1,13 @@
 // Punto de entrada: DOM, efectos y entrada del jugador. La lógica vive en los demás módulos.
-import { TEXTOS } from './textos.js';
+import { TEXTOS, RUTAS } from './textos.js';
 import {
   fechaLocal,
   formatearFecha,
-  elegirIdioma,
+  idiomaValido,
+  urlDeIdioma,
+  decidirLangEnPagina,
+  debeNoIndexar,
+  desdeRaiz,
   temaDelDia,
   msHastaMedianoche,
   formatearCuentaAtras,
@@ -71,7 +75,11 @@ import {
 import { rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from './compartir.js';
 
 const PRUEBAS_ABIERTAS = true; // Modo prueba [D-71]: poner false antes de la fecha de lanzamiento.
-const ANUNCIOS_ACTIVOS = false; // Anuncios [D-182, 10.13]: hoy solo hay un hueco vacío; validar falla si vale true. Aún sin uso (fase 5).
+const ANUNCIOS_ACTIVOS = false; // Anuncios [D-182, 10.13]: hoy solo hay un hueco vacío (hidden); validar falla si vale true. Con false main.js no toca los huecos de anuncio.
+
+// Carpeta que contiene js/ (la raíz del sitio): data/, casos/ e img/ se resuelven desde aquí, sin etiqueta base [10.4.2].
+const RAIZ = new URL('../', import.meta.url);
+const deRaiz = (ruta) => desdeRaiz(ruta, RAIZ);
 
 // Previsualización local [D-68]: fecha fija y almacenes en memoria (undefined = los del navegador).
 const fechaFija = fechaPrevisualizada(location.search, location.hostname);
@@ -193,7 +201,7 @@ function antesDeRender(previo, nuevo, evento) {
   if (evento.tipo === 'CAMBIAR_IDIOMA') {
     // Solo cambia lo que se muestra: no toca el progreso ni las partidas [D-154].
     guardarIdioma(almacenIdioma(), nuevo.idioma);
-    ponerIdiomaEnUrl(nuevo.idioma);
+    cambiarDireccion(nuevo.idioma);
     aplicarIdioma();
   }
   if (previo.fase !== 'veredicto' && nuevo.fase === 'veredicto') {
@@ -253,8 +261,8 @@ async function cargarDia() {
     let casoAfirmaciones = null;
     let dia = null;
     if (modoPrueba) {
-      calendario = await cargarCalendario();
-      const meses = await cargarAfirmacionesPrueba(calendario.lanzamiento);
+      calendario = await cargarCalendario(deRaiz('data/calendario.json'));
+      const meses = await cargarAfirmacionesPrueba(calendario.lanzamiento, undefined, RAIZ);
       const dias = diasDePrueba(calendario, meses);
       const nHoy = numeroDelDia(fechaLocal(new Date()), calendario.lanzamiento);
       const elegido = diaDePrueba(location.search, dias, nHoy);
@@ -268,7 +276,7 @@ async function cargarDia() {
       prepararModoPrueba(dias, elegido);
     } else {
       dia = hoy();
-      const [cal, mes] = await Promise.all([cargarCalendario(), cargarAfirmaciones(dia)]);
+      const [cal, mes] = await Promise.all([cargarCalendario(deRaiz('data/calendario.json')), cargarAfirmaciones(dia, undefined, RAIZ)]);
       calendario = cal;
       casoImagenes = casoDelDia(calendario, dia);
       casoAfirmaciones = afirmacionesDelDia(mes, calendario.lanzamiento, dia);
@@ -350,7 +358,7 @@ function pintarAvisosFecha() {
 // ---- Precarga (solo Images) ----
 async function hacerPrecarga() {
   try {
-    const lista = await precargar(estado.pruebas);
+    const lista = await precargar(estado.pruebas, undefined, RAIZ);
     if (estado.pantalla !== 'cargando') return;
     imagenes = lista;
     despachar({ tipo: 'PRECARGA_OK' });
@@ -570,8 +578,6 @@ function renderPortada(e) {
     const tarjeta = app.querySelector(`#pantalla-portada [data-reto-boton="${reto}"]`);
     if (tarjeta) tarjeta.disabled = !e.retos[reto].caso;
   }
-  const creditos = $('portada-creditos');
-  if (creditos) creditos.setAttribute('href', e.idioma === 'es' ? 'creditos.es.html' : 'creditos.html');
   pintarSelectorPrueba();
 }
 
@@ -780,7 +786,7 @@ function crearMiniaturas(e) {
       const foto = crearSpan('mini-foto');
       const img = document.createElement('img');
       img.className = 'mini-img';
-      img.src = rutaPrueba(e.pruebas[i]);
+      img.src = deRaiz(rutaPrueba(e.pruebas[i]));
       img.alt = '';
       img.width = 1080;
       img.height = 1350;
@@ -842,6 +848,7 @@ function renderYaJugado() {
 }
 
 function render(e) {
+  actualizarRobots(e);
   mostrarPantalla(e.pantalla);
   app.dataset.pantalla = e.pantalla;
   app.dataset.reto = e.reto;
@@ -922,7 +929,7 @@ function abrirFicha(i, conImagen, opener) {
     const img = $('ficha-img');
     if (conImagen) {
       img.alt = rellenar(t().final.alt_prueba, { n: i + 1 });
-      img.src = rutaPrueba(estado.pruebas[i]);
+      img.src = deRaiz(rutaPrueba(estado.pruebas[i]));
       img.hidden = false;
     } else {
       img.hidden = true;
@@ -1025,7 +1032,7 @@ async function accionCompartir() {
     nombreModo: afirmaciones ? undefined : nombreModo(partida.modo),
     resultados: partida.resultados,
     racha: calcularRacha(datos.retos[partida.reto].partidas, partida.fechaISO),
-    url: urlDelJuego()
+    url: urlDelJuego() // desde /es/ o /en/ da la dirección del idioma, sin ?lang= ni ?prueba= [DP-81]
   });
   const resultado = await compartir(mensaje);
   if (resultado === 'copiado') {
@@ -1189,16 +1196,39 @@ if (!enMemoria) {
   });
 }
 
-// ---- Idioma [D-154] ----
-// Si la URL lleva ?lang=, se actualiza para que recargar no deshaga la elección.
-function ponerIdiomaEnUrl(idioma) {
+// ---- Idioma [D-154, 10.4.3] ----
+// La dirección manda: el selector cambia /en/ <-> /es/ sin recargar ni añadir entrada al historial.
+function cambiarDireccion(idioma) {
   try {
-    const url = new URL(location.href);
-    if (!url.searchParams.has('lang')) return;
-    url.searchParams.set('lang', idioma);
-    history.replaceState(history.state, '', url);
+    const url = urlDeIdioma(location.href, idioma);
+    if (url !== null) history.replaceState(history.state, '', url);
   } catch {
     // sin historial: no pasa nada
+  }
+}
+
+// title, meta description y href de los a[data-enlace] en el idioma activo (relativos a la carpeta del idioma).
+function pintarCabeceraYEnlaces(idioma) {
+  document.title = TEXTOS[idioma].seo.titulo_juego;
+  const descripcion = document.querySelector('meta[name="description"]');
+  if (descripcion) descripcion.setAttribute('content', TEXTOS[idioma].seo.descripcion_juego);
+  for (const a of document.querySelectorAll('a[data-enlace]')) {
+    const ruta = RUTAS[idioma][a.dataset.enlace];
+    if (typeof ruta === 'string') a.setAttribute('href', ruta === '' ? './' : ruta);
+  }
+}
+
+// noindex dinámico [10.7.5, DP-83]: lo pone o lo quita según el modo y la pantalla.
+function actualizarRobots(e) {
+  const quiere = debeNoIndexar({ modoPrueba, previsualizacion: fechaFija !== null, pantalla: e.pantalla });
+  const actual = document.head.querySelector('meta[name="robots"]');
+  if (quiere && !actual) {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex';
+    document.head.append(meta);
+  } else if (!quiere && actual) {
+    actual.remove();
   }
 }
 
@@ -1225,6 +1255,7 @@ function aplicarIdioma() {
   document.documentElement.lang = estado.idioma;
   rellenarTextos();
   actualizarSelectorIdioma(estado.idioma);
+  pintarCabeceraYEnlaces(estado.idioma);
   pintarAvisosFecha();
   pintarSelectorPrueba();
 }
@@ -1234,18 +1265,29 @@ function arrancar() {
   const lectura = leerConRespaldo(almacenLocal, almacenSesion);
   datos = lectura.datos;
   marcarAlmacen(lectura.disponible);
-  const { idioma, origen } = elegirIdioma({
-    search: location.search,
-    guardado: leerIdioma(almacenIdioma()),
-    lenguas: navigator.languages ?? [navigator.language]
-  });
-  if (origen === 'url') guardarIdioma(almacenIdioma(), idioma);
+  // Manda la dirección (<html lang> lo pone el generador) [10.3, 10.4.4]. Visitar una dirección no cambia la preferencia.
+  const idiomaPagina = idiomaValido(document.documentElement.lang) ? document.documentElement.lang : 'en';
+  const lang = decidirLangEnPagina({ idiomaPagina, search: location.search, href: location.href });
+  if (lang.guardar !== null) guardarIdioma(almacenIdioma(), lang.guardar);
+  if (lang.accion === 'redirigir') {
+    location.replace(lang.url);
+    return; // el arranque se detiene: la otra dirección arranca por su cuenta
+  }
+  if (lang.accion === 'quitar') {
+    try {
+      history.replaceState(history.state, '', lang.url);
+    } catch {
+      // sin historial: no pasa nada
+    }
+  }
+  const idioma = idiomaPagina;
   // estadoInicial valida modo, reto e idioma y usa los de por defecto si no valen.
   estado = estadoInicial({ modo: datos.ajustes.modo, reto: datos.ajustes.reto, idioma });
   // Los textos se pintan antes de mostrar ninguna pantalla: nunca se ven los del otro idioma.
   aplicarIdioma();
   app.dataset.modo = estado.modo;
   app.dataset.reto = estado.reto;
+  actualizarRobots(estado);
   mostrarPantalla('iniciando');
   app.dataset.pantalla = 'iniciando';
   cargarDia();

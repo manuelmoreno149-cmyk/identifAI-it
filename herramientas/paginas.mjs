@@ -76,17 +76,9 @@ const SUFIJO_TITULO = ' · identifAI-it';
 export const ARCHIVOS_CREDITOS_REDIRECCION = Object.freeze({ en: 'creditos.html', es: 'creditos.es.html' });
 export const ARCHIVOS_CREDITOS_PAGINA = Object.freeze({ en: 'en/credits/index.html', es: 'es/creditos/index.html' });
 
-// Recursos que enlazan las páginas y que crean las fases 4 y 5 (perito-visual y agente-de-campo). Mientras no existan,
-// comprobarSitio no los da por error y validar solo avisa (con --estricto, error). Vaciar esta lista al terminar la fase 5.
-export const RECURSOS_PENDIENTES = Object.freeze([
-  'js/raiz.js'
-]);
-
-// Texto del <noscript> del juego (no está en TEXTOS; el cronista puede moverlo allí más adelante).
-const NOSCRIPT = Object.freeze({
-  en: "identifAI-it needs JavaScript to run. Turn it on in your browser to examine today's evidence.",
-  es: 'identifAI-it necesita JavaScript para funcionar. Actívalo en tu navegador para examinar las pruebas de hoy.'
-});
+// Recursos que las páginas enlazan y que aún no existen (comprobarSitio no los da por error y validar solo avisa).
+// Vacía desde la fase 5: js/raiz.js ya existe.
+export const RECURSOS_PENDIENTES = Object.freeze([]);
 
 export const ROBOTS = `User-agent: *
 Disallow: /docs/
@@ -558,7 +550,7 @@ export function generarJuego({ idioma, plantillas }) {
       idioma,
       cabecera: cab,
       raiz: prefijo(1),
-      noscript: escaparHtml(NOSCRIPT[idioma]),
+      noscript: escaparHtml(T.noscript.aviso),
       enlace_otro: relativa(carpeta, ruta(otro, 'juego')),
       otro_idioma: otro,
       otro_nombre: NOMBRE_IDIOMA[otro]

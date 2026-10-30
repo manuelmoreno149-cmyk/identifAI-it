@@ -30,8 +30,7 @@ export const TEXTOS = {
       expediente_imagenes: 'CASE FILE · 01/02',
       expediente_afirmaciones: 'CASE FILE · 02/02',
       desc_reto_imagenes: 'Five photos. Spot the AI ones.',
-      desc_reto_afirmaciones: 'Five claims. Spot the fakes.',
-      enlace_creditos: 'Credits'
+      desc_reto_afirmaciones: 'Five claims. Spot the fakes.'
     },
 
     instrucciones: {
@@ -312,6 +311,10 @@ export const TEXTOS = {
       etiqueta: 'Advertisement'
     },
 
+    noscript: {
+      aviso: "identifAI-it needs JavaScript to run. Turn it on in your browser to examine today's evidence."
+    },
+
     no_encontrada: {
       titulo: 'Page not found',
       texto: 'This file isn\'t in our records.',
@@ -344,8 +347,7 @@ export const TEXTOS = {
       expediente_imagenes: 'EXPEDIENTE · 01/02',
       expediente_afirmaciones: 'EXPEDIENTE · 02/02',
       desc_reto_imagenes: 'Cinco fotos. Separa las reales de las generadas.',
-      desc_reto_afirmaciones: 'Cinco afirmaciones. Separa el dato del bulo.',
-      enlace_creditos: 'Créditos'
+      desc_reto_afirmaciones: 'Cinco afirmaciones. Separa el dato del bulo.'
     },
 
     instrucciones: {
@@ -624,6 +626,10 @@ export const TEXTOS = {
 
     anuncios: {
       etiqueta: 'Publicidad'
+    },
+
+    noscript: {
+      aviso: 'identifAI-it necesita JavaScript para funcionar. Actívalo en tu navegador para examinar las pruebas de hoy.'
     },
 
     no_encontrada: {

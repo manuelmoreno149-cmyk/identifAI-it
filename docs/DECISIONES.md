@@ -496,3 +496,9 @@ Para cambiar una decisión:
 - DP-101 · `comprobarReutilizacion` da error si dos ids son iguales aunque no tengan huella.
 - DP-102 · El título "Cookies" es idéntico en los dos idiomas; la unicidad de títulos y descripciones se comprueba por idioma.
 - DP-103 · Los créditos vienen de `banco.json` local: la Action no los regenera.
+
+### 2026-10-30 · Decisiones pendientes de la fase 5 (propuesta del agente de campo ya aplicada)
+
+- DP-104 · `NOSCRIPT` pasa a un grupo propio `noscript.aviso` en `TEXTOS` (más de 90 caracteres; el test de longitud lo exime con un límite de 120). Falta añadir el grupo a la tabla 10.16 de la spec.
+- DP-105 · En el repintado de enlaces, una ruta `''` (juego) se escribe como `./`.
+- DP-106 · Si `?lang=` válido llega en una ruta que `urlDeIdioma` no reconoce, se guarda la preferencia y no se redirige.
