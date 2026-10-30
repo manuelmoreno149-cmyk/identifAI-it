@@ -486,3 +486,13 @@ Para cambiar una decisión:
 - D-197 · **Fechas de lanzamiento**: la fecha de publicación de las guías y la de la privacidad serán las del día del lanzamiento; quedan como tareas L1 y L2 en `9c-tareas-paginas.md` (9.17).
 - D-198 · **Textos**: guías, títulos acortados, `sessionStorage` en privacidad y cookies aprobados. La racha se describe como "jugaste el caso" / "played the case" (el código no cambia: un caso abandonado cuenta como jugado). Las guías enlazan a EFE Verifica y AFP Factual (es) y a AFP Fact Check y Reuters Fact Check (en), con `https` y `rel="noopener"`; las direcciones se confirman en el lanzamiento (L6).
 - D-199 · **DP-96 resuelta**: `CLAUDE.md` dice "los enlaces y recursos de 404.html". Los cambios de `.claude/` (9.16) están aplicados.
+
+### 2026-10-30 · Decisiones pendientes de la fase 3 (propuesta del archivero ya aplicada; el usuario las revisa antes del merge)
+
+- DP-97 · Los recursos que aún no existen (`css/paginas.css`, `img/ui/icono.svg`, `img/og/portada-{en,es}.png`, `js/raiz.js`) están en `RECURSOS_PENDIENTES` de `paginas.mjs`: su ausencia es aviso en `validar` (error con `--estricto`). Se vacía la lista al terminar la fase 5.
+- DP-98 · El `<noscript>` del juego es la constante `NOSCRIPT` de `paginas.mjs`; pasa a `TEXTOS` en la fase 5.
+- DP-99 · `archivo-dia.html` y `archivo-indice.html` son fragmentos de cuerpo dentro de `pagina.html`; las listas las construye el código.
+- DP-100 · Ejemplos de la guía de imágenes: la primera imagen generada de cada uno de los 3 últimos días con Images. Índice del archivo: de más reciente a más antiguo.
+- DP-101 · `comprobarReutilizacion` da error si dos ids son iguales aunque no tengan huella.
+- DP-102 · El título "Cookies" es idéntico en los dos idiomas; la unicidad de títulos y descripciones se comprueba por idioma.
+- DP-103 · Los créditos vienen de `banco.json` local: la Action no los regenera.
