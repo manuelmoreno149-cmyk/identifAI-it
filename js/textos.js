@@ -407,7 +407,7 @@ export const TEXTOS = {
       ],
       mensajes_afirmaciones: [
         'El papeleo te ganó. Ni una respuesta sobrevivió. La carpeta, boca abajo en el cajón.',
-        'Una se sostuvo. Las otras mentiras fueron más listas que tú. Revisa las fuentes.',
+        'Una se sostuvo. Las otras mentiras fueron más listas que tú. Lee cada afirmación con lupa.',
         'Dos aciertos. Un bulo con buen traje se te coló. Revisa la fuente antes de firmar.',
         'Tres aciertos. Buen instinto, pero dos mentiras aún se colaron en tu mesa.',
         'Cuatro aciertos. Una mentira se escapó. Lee cada afirmación como una coartada.',
