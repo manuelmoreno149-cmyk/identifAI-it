@@ -74,7 +74,7 @@ import {
 } from './temporizador.js';
 import { rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from './compartir.js';
 
-const PRUEBAS_ABIERTAS = true; // Modo prueba [D-71]: poner false antes de la fecha de lanzamiento.
+const PRUEBAS_ABIERTAS = false; // Modo prueba [D-71]: poner false antes de la fecha de lanzamiento.
 const ANUNCIOS_ACTIVOS = false; // Anuncios [D-182, 10.13]: hoy solo hay un hueco vacío (hidden); validar falla si vale true. Con false main.js no toca los huecos de anuncio.
 
 // Carpeta que contiene js/ (la raíz del sitio): data/, casos/ e img/ se resuelven desde aquí, sin etiqueta base [10.4.2].
