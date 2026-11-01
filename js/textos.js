@@ -8,7 +8,7 @@ export const TEXTOS = {
   en: {
     portada: {
       titulo: 'identifAI-it',
-      lema: 'Two cases a day. Spot the fake.',
+      lema: 'A daily game to spot AI-generated images and fake facts',
       idioma: 'Language',
       abrir: 'Open file',
       pie: 'New cases daily at midnight, Spanish time (CET).',
@@ -265,6 +265,7 @@ export const TEXTOS = {
       corto_como_jugar: 'Rules',
       corto_archivo: 'Archive',
       corto_privacidad: 'Privacy',
+      corto_guia_imagenes: 'Spot AI',
       corto_creditos: 'Credits'
     },
 
@@ -281,8 +282,8 @@ export const TEXTOS = {
     seo: {
       titulo_raiz: 'identifAI-it · Daily AI image and fact game · Juego diario',
       descripcion_raiz: 'Wordle-style daily game to spot AI images and fake facts. Juego diario tipo Wordle para cazar imágenes de IA y bulos.',
-      titulo_juego: 'identifAI-it: daily game to spot AI images and fake facts',
-      descripcion_juego: 'Real or AI game and daily fact or fake game: spot the AI image and the fake claim. Two cases a day, same for everyone.',
+      titulo_juego: 'AI or Real? Daily game to spot AI images | identifAI-it',
+      descripcion_juego: 'A daily game to spot AI-generated images and fake facts: five real-or-AI photos and five fact-or-fake claims. Free, no account.',
       titulo_archivo: 'Case archive',
       descripcion_archivo: 'Every closed case: five images with their answers and prompts, and five claims with their truth. New days join it every day.',
       titulo_dia: 'Case #{n} · {tema}: answers',
@@ -324,7 +325,7 @@ export const TEXTOS = {
   es: {
     portada: {
       titulo: 'identifAI-it',
-      lema: 'Dos casos al día. Caza el bulo.',
+      lema: 'Juego diario para identificar imágenes hechas con IA y detectar bulos',
       idioma: 'Idioma',
       abrir: 'Abrir expediente',
       pie: 'Casos nuevos a medianoche, hora de España.',
@@ -581,6 +582,7 @@ export const TEXTOS = {
       corto_como_jugar: 'Normas',
       corto_archivo: 'Archivo',
       corto_privacidad: 'Privacidad',
+      corto_guia_imagenes: 'Detectar IA',
       corto_creditos: 'Créditos'
     },
 
@@ -597,8 +599,8 @@ export const TEXTOS = {
     seo: {
       titulo_raiz: 'identifAI-it · Daily AI image and fact game · Juego diario',
       descripcion_raiz: 'Wordle-style daily game to spot AI images and fake facts. Juego diario tipo Wordle para cazar imágenes de IA y bulos.',
-      titulo_juego: 'identifAI-it: juego diario para cazar imágenes de IA y bulos',
-      descripcion_juego: 'Juego para detectar imágenes de IA, ¿real o IA?, y juego diario de bulos: dos casos al día, cinco fotos y cinco afirmaciones.',
+      titulo_juego: 'Juego para identificar imágenes de IA y bulos | identifAI-it',
+      descripcion_juego: 'Juego diario para detectar imágenes de IA y bulos: cinco fotos reales o IA y cinco afirmaciones de dato o bulo. Gratis, sin cuentas.',
       titulo_archivo: 'Archivo de casos',
       descripcion_archivo: 'Todos los casos ya cerrados: cinco imágenes con sus respuestas y sus instrucciones, y cinco afirmaciones con su verdad. Cada día se suman más.',
       titulo_dia: 'Caso n.º {n} · {tema}: soluciones',

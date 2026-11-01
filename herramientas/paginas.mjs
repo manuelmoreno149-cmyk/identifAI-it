@@ -553,6 +553,11 @@ export function generarJuego({ idioma, plantillas }) {
       raiz: prefijo(1),
       noscript: escaparHtml(T.noscript.aviso),
       enlace_otro: relativa(carpeta, ruta(otro, 'juego')),
+      // Único enlace del juego a las guías (el pie de la portada): válido desde /en/ y /es/ porque el selector cambia la dirección sin recargar.
+      guia_en: `../${ruta('en', 'guia_imagenes')}`,
+      guia_es: `../${ruta('es', 'guia_imagenes')}`,
+      oculta_en: idioma === 'en' ? '' : ' hidden',
+      oculta_es: idioma === 'es' ? '' : ' hidden',
       otro_idioma: otro,
       otro_nombre: NOMBRE_IDIOMA[otro]
     }
@@ -854,6 +859,9 @@ const esJuego = (r) => r === 'en/index.html' || r === 'es/index.html';
  * Errores de atributos de un HTML: manejadores en línea, palabras prohibidas en id, class, alt y data-* (nombre y valor),
  * clases que empiezan por dato y data-verdad fuera del juego [10.5.4]. La usan comprobarSitio y validar (plantilla del juego).
  */
+// Única aparición permitida de una guía en el juego: el enlace del pie de la portada (D-216).
+const ENLACE_GUIA_JUEGO = /<a id="portada-guia-(?:en|es)"[^>]*>/g;
+
 export function comprobarAtributos(rutaPagina, html, { juego = false } = {}) {
   const errores = [];
   const err = (m) => errores.push(`${rutaPagina}: ${m}`);
@@ -979,7 +987,7 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
     const csp = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(html)?.[1];
     if (csp === undefined || csp !== CSP) err(rutaPagina, 'la CSP no es la de la spec.');
     if (juego) {
-      for (const s of SUBCADENAS_GUIAS) if (html.includes(s)) err(rutaPagina, `el juego contiene la dirección de una guía (${s}).`);
+      for (const s of SUBCADENAS_GUIAS) if (html.replace(ENLACE_GUIA_JUEGO, '').includes(s)) err(rutaPagina, `el juego contiene la dirección de una guía (${s}).`);
     }
     if (rutaPagina === 'index.html' && /id="app"/.test(html)) err(rutaPagina, 'la raíz no puede contener id="app".');
 

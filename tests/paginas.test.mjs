@@ -461,11 +461,11 @@ test('307 ningún id, clase, data-* ni alt lleva palabras prohibidas (tampoco en
   assert.match(errores(con('es/como-jugar/index.html', 'href="../archivo/"', 'href="../how-to-spot-ai-images/"')), /how-to-spot-ai-images.*no existe/);
 });
 
-test('332 las guías no están en el juego: dirección de una guía en en/index.html o es/index.html es error', () => {
+test('332 las guías no están en el juego (salvo el enlace del pie de la portada, D-216): dirección de una guía en en/index.html o es/index.html es error', () => {
   const mapa = generarSitio({ entradas: entradas(), ahoraMs: AHORA_DIAS });
   for (const s of SUBCADENAS_GUIAS) {
     for (const r of ['en/index.html', 'es/index.html']) {
-      assert.ok(!html(mapa, r).includes(s), `${r} contiene ${s}`);
+      assert.ok(!html(mapa, r).replace(/<a id="portada-guia-(?:en|es)"[^>]*>/g, "").includes(s), `${r} contiene ${s}`);
       const m = new Map([...mapa, [r, html(mapa, r).replace('</body>', `<!-- ${s} --></body>`)]]);
       assert.match(comprobarSitio(m, existentesDeDisco(REPO), { pendientes: ['css/paginas.css', 'img/ui/icono.svg', 'img/og/portada-en.png', 'img/og/portada-es.png', 'js/raiz.js'] }).join('\n'), /el juego contiene la dirección de una guía/);
     }

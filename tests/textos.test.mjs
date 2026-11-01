@@ -55,7 +55,7 @@ const CLAVES = {
   pie: [
     'etiqueta', 'sobre', 'como_jugar', 'metodo', 'guia_imagenes', 'guia_desinformacion', 'archivo', 'preguntas',
     'creditos', 'privacidad', 'cookies', 'contacto', 'corto_sobre', 'corto_como_jugar', 'corto_archivo',
-    'corto_privacidad', 'corto_creditos'
+    'corto_privacidad', 'corto_guia_imagenes', 'corto_creditos'
   ],
   raiz: ['lema', 'jugar'],
   paginas: ['saltar', 'jugar'],
@@ -173,7 +173,7 @@ test('38. valores exactos en inglés', () => {
   assert.equal(T.portada.abrir, 'Open file');
   assert.equal(T.portada.pie, 'New cases daily at midnight, Spanish time (CET).');
   assert.equal(T.portada.elige_reto, 'Choose your case file');
-  assert.equal(T.portada.lema, 'Two cases a day. Spot the fake.');
+  assert.equal(T.portada.lema, 'A daily game to spot AI-generated images and fake facts');
   assert.equal('enlace_creditos' in T.portada, false);
   assert.equal(T.portada.reto_imagenes, 'Images');
   assert.equal(T.portada.reto_afirmaciones, 'Fact or Fake');
@@ -409,7 +409,7 @@ test('final.mensajes_afirmaciones no habla de IA, imágenes ni fotos, y difiere 
 test('"IA" solo aparece como palabra suelta en los sitios permitidos del español', () => {
   const permitidas = [
     /^partida\./, /^portada\.sello_ilustracion$/, /^revelacion\.resumen_generada$/, /^confesion\./,
-    /^final\.mensajes\[/, /^portada\.desc_reto_imagenes$/, /^instrucciones\.(frase|pasos)_imagenes/, /^pie\.guia_imagenes$/, /^raiz\.lema$/, /^seo\./
+    /^final\.mensajes\[/, /^portada\.desc_reto_imagenes$/, /^instrucciones\.(frase|pasos)_imagenes/, /^pie\.(guia|corto_guia)_imagenes$/, /^portada\.lema$/, /^raiz\.lema$/, /^seo\./
   ];
   for (const [ruta, valor] of cadenas(TEXTOS.es)) {
     if (/\bIA\b/.test(valor)) assert.ok(permitidas.some((re) => re.test(ruta)), `${ruta}: ${valor}`);

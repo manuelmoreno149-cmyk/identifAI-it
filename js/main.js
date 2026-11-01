@@ -1238,6 +1238,8 @@ function pintarCabeceraYEnlaces(idioma) {
     const ruta = RUTAS[idioma][a.dataset.enlace];
     if (typeof ruta === 'string') a.setAttribute('href', ruta === '' ? './' : ruta);
   }
+  // Enlace a la guía: una versión por idioma en el HTML generado (su dirección no está en js/); solo se ve la del idioma activo.
+  for (const a of document.querySelectorAll('#portada-enlaces a[hreflang]')) a.hidden = a.lang !== idioma;
 }
 
 // noindex dinámico [10.7.5, DP-83]: lo pone o lo quita según el modo y la pantalla.

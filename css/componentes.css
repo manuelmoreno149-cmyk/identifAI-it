@@ -602,6 +602,10 @@
   text-underline-offset: 3px;
 }
 
+#portada-enlaces a[hidden] {
+  display: none;
+}
+
 /* Separador " · " (contenido generado: no lo leen los lectores de pantalla en la mayoria) */
 #portada-enlaces a + a::before {
   content: "\00b7";
