@@ -1,11 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  fechaLocal,
   sumarDias,
   diasEntre,
   numeroCaso,
-  msHastaMedianoche,
   formatearCuentaAtras,
   validarCalendario,
   temaValido,
@@ -81,11 +79,6 @@ function calendarioValido(lanzamiento = '2026-11-01') {
   };
 }
 
-test('1. fechaLocal usa la hora local y cambia a medianoche', () => {
-  assert.equal(fechaLocal(new Date(2026, 10, 1, 23, 59, 59)), '2026-11-01');
-  assert.equal(fechaLocal(new Date(2026, 10, 2, 0, 0, 0)), '2026-11-02');
-});
-
 test('2. numeroCaso', () => {
   assert.equal(numeroCaso('2026-11-01', '2026-11-01'), 1);
   assert.equal(numeroCaso('2026-11-02', '2026-11-01'), 2);
@@ -98,10 +91,6 @@ test('3. sumarDias y diasEntre', () => {
   assert.equal(sumarDias('2027-03-27', 2), '2027-03-29');
   assert.equal(sumarDias('2026-11-01', -1), '2026-10-31');
   assert.equal(diasEntre('2026-11-01', '2026-10-30'), -2);
-});
-
-test('4. msHastaMedianoche', () => {
-  assert.equal(msHastaMedianoche(new Date(2026, 10, 1, 23, 59, 0)), 60000);
 });
 
 test('5. formatearCuentaAtras', () => {

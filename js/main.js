@@ -1,7 +1,7 @@
 // Punto de entrada: DOM, efectos y entrada del jugador. La lógica vive en los demás módulos.
 import { TEXTOS, RUTAS } from './textos.js';
 import {
-  fechaLocal,
+  fechaMadrid,
   formatearFecha,
   idiomaValido,
   urlDeIdioma,
@@ -9,7 +9,7 @@ import {
   debeNoIndexar,
   desdeRaiz,
   temaDelDia,
-  msHastaMedianoche,
+  msHastaMedianocheMadrid,
   formatearCuentaAtras,
   casoDelDia,
   casoDeNumero,
@@ -90,9 +90,9 @@ const almacenLocal = enMemoria ? crearAlmacenMemoria() : undefined;
 const almacenSesion = enMemoria ? crearAlmacenMemoria() : undefined;
 let fechaPrueba = null;
 
-// Fecha efectiva: previsualización, día elegido en modo prueba o fecha local.
+// Fecha efectiva: previsualización, día elegido en modo prueba o fecha de Madrid [11.3].
 function hoy() {
-  return fechaFija ?? fechaPrueba ?? fechaLocal(new Date());
+  return fechaFija ?? fechaPrueba ?? fechaMadrid(new Date());
 }
 
 const $ = (id) => document.getElementById(id);
@@ -264,7 +264,7 @@ async function cargarDia() {
       calendario = await cargarCalendario(deRaiz('data/calendario.json'));
       const meses = await cargarAfirmacionesPrueba(calendario.lanzamiento, undefined, RAIZ);
       const dias = diasDePrueba(calendario, meses);
-      const nHoy = numeroDelDia(fechaLocal(new Date()), calendario.lanzamiento);
+      const nHoy = numeroDelDia(fechaMadrid(new Date()), calendario.lanzamiento);
       const elegido = diaDePrueba(location.search, dias, nHoy);
       fechaPrueba = elegido ? fechaDelDia(calendario.lanzamiento ?? FECHA_BASE_PRUEBA, elegido.n) : null;
       dia = hoy();
@@ -982,7 +982,7 @@ function iniciarBucleMedianoche() {
   const enResultado = estado.pantalla === 'resultado';
   const tic = () => {
     const ahora = new Date();
-    const tiempo = formatearCuentaAtras(msHastaMedianoche(ahora));
+    const tiempo = formatearCuentaAtras(msHastaMedianocheMadrid(ahora));
     if (enResultado) $('resultado-cuenta-atras').textContent = tiempo;
     else $('ya-jugado-cuenta-atras').textContent = rellenar(t().ya_jugado.proximo, { tiempo });
     if (hoy() !== fechaCarga) {
@@ -999,6 +999,28 @@ function iniciarBucleMedianoche() {
     bucleMedianoche = setTimeout(tic, 1000);
   };
   tic();
+}
+
+// Vigía de medianoche [11.4]: un único temporizador que revisa el día aunque no haya cuenta atrás.
+let vigia = null;
+
+function revisarDia() {
+  if (fechaFija === null && fechaPrueba === null && fechaCarga !== null && hoy() !== fechaCarga) {
+    const p = estado.pantalla;
+    if (['portada', 'instrucciones', 'ya-jugado', 'sin-casos'].includes(p)) {
+      despachar({ tipo: 'MEDIANOCHE' });
+    } else if (p === 'resultado') {
+      $('resultado-proximo').hidden = true;
+      $('resultado-nuevo-caso').hidden = false;
+    }
+    // cargando, cuenta-atras, caso y error: la partida termina con sus datos.
+  }
+  armarVigia();
+}
+
+function armarVigia() {
+  clearTimeout(vigia);
+  vigia = setTimeout(revisarDia, Math.min(msHastaMedianocheMadrid(new Date()) + 250, 60000));
 }
 
 function detenerBucleMedianoche() {
@@ -1291,6 +1313,7 @@ function arrancar() {
   mostrarPantalla('iniciando');
   app.dataset.pantalla = 'iniciando';
   cargarDia();
+  armarVigia();
 }
 
 arrancar();

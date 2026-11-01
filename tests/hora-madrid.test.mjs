@@ -138,3 +138,28 @@ test('343: entradas no válidas en fechaMadrid y msHastaMedianocheMadrid', () =>
     assert.throws(() => msHastaMedianocheMadrid(malo), TypeError);
   }
 });
+
+test('343: búsqueda, sin hora local ni segundo literal de la zona en js/ y herramientas/', async () => {
+  const { readdirSync, readFileSync, statSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const raiz = new URL('../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+  const archivos = [];
+  const recorrer = (dir) => {
+    for (const n of readdirSync(dir)) {
+      const ruta = join(dir, n);
+      if (statSync(ruta).isDirectory()) recorrer(ruta);
+      else if (/\.(js|mjs)$/.test(n)) archivos.push(ruta);
+    }
+  };
+  recorrer(join(raiz, 'js'));
+  recorrer(join(raiz, 'herramientas'));
+  assert.ok(archivos.length > 5);
+  const prohibido = /fechaLocal|msHastaMedianoche\(|getFullYear|getMonth\(|getDate\(|getDay\(|getHours\(|getTimezoneOffset/;
+  let zona = 0;
+  for (const a of archivos) {
+    const texto = readFileSync(a, 'utf8');
+    assert.doesNotMatch(texto, prohibido, a);
+    zona += texto.split('Europe/Madrid').length - 1;
+  }
+  assert.equal(zona, 1, 'Europe/Madrid solo en la declaración de ZONA_JUEGO');
+});

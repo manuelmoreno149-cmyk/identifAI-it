@@ -109,10 +109,6 @@ function utcDe(fechaISO) {
   return Date.UTC(a, m - 1, d);
 }
 
-export function fechaLocal(fecha) {
-  return `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}`;
-}
-
 export function sumarDias(fechaISO, dias) {
   const [a, m, d] = fechaISO.split('-').map(Number);
   return new Date(Date.UTC(a, m - 1, d + dias)).toISOString().slice(0, 10);
@@ -262,10 +258,6 @@ export function temaDelDia(dia, idioma = IDIOMA_POR_DEFECTO) {
 
 export function numeroCaso(fechaISO, lanzamientoISO) {
   return diasEntre(lanzamientoISO, fechaISO) + 1;
-}
-
-export function msHastaMedianoche(fecha) {
-  return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate() + 1) - fecha;
 }
 
 export function formatearCuentaAtras(ms) {
