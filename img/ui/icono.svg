@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <title>identifAI-it</title>
+  <rect width="96" height="96" rx="18" fill="#0a0f17"/>
+  <rect x="3" y="3" width="90" height="90" rx="15" fill="none" stroke="#2c3a50" stroke-width="3"/>
+  <line x1="58" y1="58" x2="82" y2="82" stroke="#f2a93b" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="40" cy="40" r="27" fill="#172131" stroke="#f2a93b" stroke-width="9"/>
+  <g fill="none" stroke="#e8dcc0" stroke-width="4" stroke-linecap="round">
+    <path d="M28 46 C28 38 33 31 40 31 C47 31 52 37 52 44"/>
+    <path d="M34 50 C34 43 36 38 40 38 C44 38 46 42 46 48"/>
+    <path d="M40 45 L40 52"/>
+  </g>
+</svg>

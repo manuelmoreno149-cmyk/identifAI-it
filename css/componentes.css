@@ -558,38 +558,83 @@
   background: url("../img/ui/flecha.svg") no-repeat center / contain;
 }
 
-/* Pie: aviso del dia a la izquierda y creditos a la derecha */
+/* Pie (R8 ampliada, 10.15): el aviso del dia y UNA fila de 5 enlaces cortos, sin deslizar.
+   En estrecho, el aviso encima y la fila debajo; desde 600 px comparten linea.
+   Discreto por tamano y posicion, no por contraste (texto suave = 8:1). Enlaces de 24 px de alto como minimo. */
 #portada-pie {
   flex: none;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espacio-3);
-  min-height: var(--tactil-min);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
 }
 
 #portada-aviso-dia {
-  flex: 1 1 0;
   min-width: 0;
+  text-align: center;
   font-family: var(--fuente-datos);
   font-size: 0.8125rem;
   line-height: 1.25;
   color: var(--color-texto-suave);
 }
 
-#portada-creditos {
+#portada-enlaces {
   flex: none;
-  display: inline-flex;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  min-width: var(--tactil-min);
-  min-height: var(--tactil-min);
-  padding: 0 var(--espacio-3);
+  min-width: 0;
   font-family: var(--fuente-cuerpo);
-  font-size: var(--texto-pequeno);
+  font-size: clamp(0.75rem, 3.3vw, 0.875rem);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+#portada-enlaces a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0 0.3em;
   color: var(--color-texto-suave);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Separador " · " (contenido generado: no lo leen los lectores de pantalla en la mayoria) */
+#portada-enlaces a + a::before {
+  content: "\00b7";
+  display: inline-block;
+  margin-right: 0.3em;
+  margin-left: -0.15em;
+  text-decoration: none;
+  color: var(--color-texto-suave);
+}
+
+@media (hover: hover) {
+  #portada-enlaces a:hover {
+    color: var(--color-ambar);
+  }
+}
+
+@media (min-width: 600px) {
+  #portada-pie {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espacio-4);
+  }
+
+  #portada-aviso-dia {
+    flex: 1 1 0;
+    text-align: left;
+  }
+
+  #portada-enlaces {
+    flex: none;
+    font-size: 0.875rem;
+  }
 }
 
 /* Vertical estrecho y bajo, u horizontal bajo: la ilustracion pasa a un lado y la tarjeta se compacta (R8) */

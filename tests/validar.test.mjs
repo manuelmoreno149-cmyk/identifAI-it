@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import sharp from 'sharp';
 import { validar } from '../herramientas/validar.mjs';
 import { creditosParaBanco, ARCHIVOS_CREDITOS } from '../herramientas/creditos.mjs';
+import { generarSitio, leerEntradas } from '../herramientas/paginas.mjs';
 import { repartirPorMes } from '../herramientas/afirmaciones.mjs';
 import { FUENTES } from '../herramientas/temas.mjs';
 import { TEXTOS } from '../js/textos.js';
@@ -14,16 +15,22 @@ import { IDIOMAS, ofuscar, ofuscarFicha, ofuscarAfirmacion, ofuscarAclaracion, o
 
 // Todas las pruebas usan raíces temporales del SO; nunca el repositorio real.
 const HOY = '2026-10-27';
+const AHORA = Date.parse(`${HOY}T10:00:00Z`);
+const REPO = path.resolve(import.meta.dirname, '..');
 const CERO = () => 0;
 const CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">`;
 const json = (o) => JSON.stringify(o, null, 2) + '\n';
-const MAIN = (v) => `// js\nconst PRUEBAS_ABIERTAS = ${v}; // modo prueba\n`;
+const MAIN = (v) => `// js\nconst PRUEBAS_ABIERTAS = ${v}; // modo prueba\nconst ANUNCIOS_ACTIVOS = false;\n`;
 
 // Ids sin 'a' ni 'i' para que no contengan ia/ai/real/fake.
 const ALFA = 'bcdefghjklmnopqrstuvwxyz0123456789';
 const idDe = (n, i) => Array.from({ length: 10 }, (_, k) => ALFA[(n * 7 + i * 13 + k * 5 + n * k) % ALFA.length]).join('');
 
 const WEBP = await sharp({ create: { width: 1080, height: 1350, channels: 3, background: '#445566' } }).webp({ quality: 80 }).toBuffer();
+// Imágenes distintas byte a byte (y de peso casi igual): una imagen repetida entre un día llegado y uno futuro es un error [10.8.7].
+const POOL = await Promise.all(
+  Array.from({ length: 48 }, (_, k) => sharp({ create: { width: 1080, height: 1350, channels: 3, background: { r: 68, g: 85, b: 60 + k } } }).webp({ quality: 80 }).toBuffer())
+);
 
 // Un tema suelto (cadena) vale para los dos idiomas con un sufijo en el español; un objeto se usa tal cual.
 const temaDe = (x, n) => (x === undefined ? { en: `Topic ${n}`, es: `Tema ${n}` } : typeof x === 'string' ? { en: x, es: `${x} (es)` } : x);
@@ -77,7 +84,8 @@ async function proyecto(fn, o = {}) {
     const imagenes = Array.from({ length: o.nImagenes ?? 2 }, (_, k) => diaImagenes(k + 1, o.imagenes?.(k + 1)));
     const calendario = o.calendario ?? { version: 5, lanzamiento, dias: imagenes };
     escribe('data/calendario.json', json(calendario));
-    for (const d of calendario.dias ?? []) for (const id of d.pruebas ?? []) escribe(`casos/${id}.webp`, WEBP);
+    let k = 0;
+    for (const d of calendario.dias ?? []) for (const id of d.pruebas ?? []) escribe(`casos/${id}.webp`, POOL[k++ % POOL.length]);
     const nFacts = o.nFacts ?? 2;
     const diasFacts = Array.from({ length: nFacts }, (_, k) => diaFacts(k + 1, o.dia?.(k + 1)));
     const facts = o.facts ?? repartirPorMes(diasFacts, lanzamiento);
@@ -85,18 +93,27 @@ async function proyecto(fn, o = {}) {
     escribe('js/main.js', o.main ?? MAIN('false'));
     escribe('.nojekyll', '');
     escribe('.gitignore', 'entrada/\nherramientas/banco.json\nherramientas/banco.anterior.json\nherramientas/lote.json\n');
-    escribe('index.html', `<!doctype html>\n<html lang="en"><head>${CSP}</head><body></body></html>\n`);
-    for (const f of ['variables', 'base', 'componentes']) escribe(`css/${f}.css`, '');
+    for (const d of ['plantillas', 'contenido']) fs.cpSync(path.join(REPO, 'herramientas', d), ruta('herramientas', d), { recursive: true });
+    for (const f of ['variables', 'base', 'componentes', 'paginas']) escribe(`css/${f}.css`, '');
+    escribe('img/ui/icono.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+    for (const f of ['en', 'es']) escribe(`img/og/portada-${f}.png`, '');
+    escribe('js/raiz.js', '');
     escribe('fonts/OFL-oswald.txt', 'licencia');
     escribe('fonts/LICENSE-special-elite.txt', 'licencia');
     for (const idioma of IDIOMAS) escribe(ARCHIVOS_CREDITOS[idioma], creditosParaBanco(o.banco ?? { version: 3, imagenes: [] }, idioma));
     if (o.banco) escribe('herramientas/banco.json', json(o.banco));
+    // Páginas generadas como las dejaría npm run paginas; con datos rotos no se pueden generar y el test lo provoca a propósito.
+    try {
+      for (const [r, contenido] of generarSitio({ entradas: leerEntradas(raiz), ahoraMs: AHORA })) escribe(r, contenido);
+    } catch {
+      /* sin páginas */
+    }
     o.extra?.({ raiz, ruta, escribe });
     return await fn({
       raiz,
       ruta,
       escribe,
-      ejecutar: (extra = {}) => validar({ raiz, hoyISO: HOY, git: false, ...extra })
+      ejecutar: (extra = {}) => validar({ raiz, hoyISO: HOY, ahoraMs: AHORA, git: false, ...extra })
     });
   } finally {
     fs.rmSync(raiz, { recursive: true, force: true });
@@ -602,50 +619,63 @@ test('287 fichas de Images en cada idioma: las auténticas son exactamente la de
   }, { calendario: cal([{ ...d1, fichas: { ...d1.fichas, es: [d1.fichas.en[0], ...d1.fichas.es.slice(1)] } }, diaImagenes(2)]) });
 });
 
-test('287 creditos.html (lang en) y creditos.es.html (lang es) existen y se comprueban por separado', async () => {
+test('287 en/credits/ (lang en) y es/creditos/ (lang es) existen y se comprueban por separado; creditos*.html solo redirigen', async () => {
   await proyecto(async (p) => {
-    fs.rmSync(p.ruta('creditos.es.html'));
-    assert.ok(hay((await p.ejecutar()).errores, /Falta creditos\.es\.html en la raíz\./));
+    fs.rmSync(p.ruta('es/creditos'), { recursive: true });
+    assert.ok(hay((await p.ejecutar()).errores, /Falta es\/creditos\/index\.html\./));
   });
   await proyecto(async (p) => {
-    const h = fs.readFileSync(p.ruta('creditos.es.html'), 'utf8').replace('<html lang="es">', '<html lang="en">');
-    fs.writeFileSync(p.ruta('creditos.es.html'), h);
-    assert.ok(hay((await p.ejecutar()).errores, /creditos\.es\.html: falta <html lang="es">\./));
+    const h = fs.readFileSync(p.ruta('es/creditos/index.html'), 'utf8').replace('<html lang="es">', '<html lang="en">');
+    fs.writeFileSync(p.ruta('es/creditos/index.html'), h);
+    assert.ok(hay((await p.ejecutar()).errores, /es\/creditos\/index\.html: falta <html lang="es">\./));
   });
   await proyecto(async (p) => {
-    const h = fs.readFileSync(p.ruta('creditos.html'), 'utf8').replace('<html lang="en">', '<html lang="es">');
-    fs.writeFileSync(p.ruta('creditos.html'), h);
-    assert.ok(hay((await p.ejecutar()).errores, /creditos\.html: falta <html lang="en">\./));
+    const h = fs.readFileSync(p.ruta('en/credits/index.html'), 'utf8').replace('<html lang="en">', '<html lang="es">');
+    fs.writeFileSync(p.ruta('en/credits/index.html'), h);
+    assert.ok(hay((await p.ejecutar()).errores, /en\/credits\/index\.html: falta <html lang="en">\./));
   });
   // Con banco, cada página debe ser exactamente la que generaría creditos.mjs en su idioma.
   const banco = { version: 3, imagenes: [] };
   await proyecto(async (p) => {
-    p.escribe('creditos.es.html', creditosParaBanco(banco, 'en'));
+    p.escribe('es/creditos/index.html', creditosParaBanco(banco, 'en'));
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /creditos\.es\.html: falta <html lang="es">/));
+    assert.ok(hay(r.errores, /es\/creditos\/index\.html: falta <html lang="es">/));
+  });
+  // Las redirecciones antiguas existen y son las que genera paginas.mjs (una a mano es una página desactualizada).
+  await proyecto(async (p) => {
+    p.escribe('creditos.es.html', '<!doctype html>\n<html lang="es"><head></head><body></body></html>\n');
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /Páginas desactualizadas: .*creditos\.es\.html/));
+  });
+  await proyecto(async (p) => {
+    fs.rmSync(p.ruta('creditos.html'));
+    assert.ok(hay((await p.ejecutar()).errores, /Falta creditos\.html en la raíz\./));
   });
 });
 
-test('4.22 index.html y los créditos: palabras españolas prohibidas y clases dato* son errores', async () => {
-  const pagina = (cuerpo) => `<!doctype html>\n<html lang="en"><head>${CSP}</head><body>${cuerpo}</body></html>\n`;
+test('4.22 y 332: palabras prohibidas y clases dato* en las páginas son errores (también en los créditos)', async () => {
+  const modificar = (p, ruta, de, a) => p.escribe(ruta, fs.readFileSync(p.ruta(ruta), 'utf8').replace(de, a));
   await proyecto(async (p) => {
+    modificar(p, 'es/index.html', '<main id="app"', '<p class="dato-valor" id="bulo-uno" data-x="falso"></p><img alt="verdadera foto" src="../img/ui/icono.svg"><main id="app"');
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /index\.html: class="dato-valor" contiene la palabra prohibida "dato"/));
-    assert.ok(hay(r.errores, /index\.html: class="dato-valor" contiene una clase que empieza por dato\./));
-    assert.ok(hay(r.errores, /index\.html: id="bulo-uno" contiene la palabra prohibida "bulo"/));
-    assert.ok(hay(r.errores, /index\.html: data-x="falso" contiene la palabra prohibida "falso"/));
-    assert.ok(hay(r.errores, /index\.html: alt="verdadera foto" contiene la palabra prohibida "verdadera"/));
-  }, {
-    extra: ({ escribe }) => escribe('index.html', pagina('<p class="dato-valor" id="bulo-uno" data-x="falso"></p><img alt="verdadera foto" src="creditos.html">'))
+    assert.ok(hay(r.errores, /es\/index\.html: class="dato-valor" contiene la palabra prohibida "dato"/));
+    assert.ok(hay(r.errores, /es\/index\.html: class="dato-valor" contiene una clase que empieza por dato\./));
+    assert.ok(hay(r.errores, /es\/index\.html: id="bulo-uno" contiene la palabra prohibida "bulo"/));
+    assert.ok(hay(r.errores, /es\/index\.html: data-x="falso" contiene la palabra prohibida "falso"/));
+    assert.ok(hay(r.errores, /es\/index\.html: alt="verdadera foto" contiene la palabra prohibida "verdadera"/));
   });
   await proyecto(async (p) => {
-    const r = await p.ejecutar();
-    assert.deepEqual(r.errores, []);
-  }, { extra: ({ escribe }) => escribe('index.html', pagina('<p class="tabla-fuentes" id="bulos"></p>')) });
+    modificar(p, 'es/creditos/index.html', 'id="creditos-imagenes"', 'id="creditos-dato"');
+    assert.ok(hay((await p.ejecutar()).errores, /es\/creditos\/index\.html: id="creditos-dato" contiene la palabra prohibida "dato"/));
+  });
+  // Dentro de una guía (cuya dirección sí puede llevar las palabras) siguen prohibidas en ids, clases, data-* y alt.
   await proyecto(async (p) => {
-    const h = fs.readFileSync(p.ruta('creditos.es.html'), 'utf8').replace('id="creditos"', 'id="creditos-dato"');
-    fs.writeFileSync(p.ruta('creditos.es.html'), h);
-    assert.ok(hay((await p.ejecutar()).errores, /creditos\.es\.html: id="creditos-dato" contiene la palabra prohibida "dato"/));
+    modificar(p, 'es/como-detectar-un-bulo/index.html', '<p>', '<p class="ia-pista" id="bulo" data-x="fake"><img alt="IA" src="../../img/ui/icono.svg">');
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /como-detectar-un-bulo\/index\.html: class="ia-pista" contiene la palabra prohibida "ia"/));
+    assert.ok(hay(r.errores, /como-detectar-un-bulo\/index\.html: id="bulo" contiene la palabra prohibida "bulo"/));
+    assert.ok(hay(r.errores, /como-detectar-un-bulo\/index\.html: data-x="fake" contiene la palabra prohibida "fake"/));
+    assert.ok(hay(r.errores, /como-detectar-un-bulo\/index\.html: alt="IA" contiene la palabra prohibida "ia"/));
   });
 });
 
@@ -665,4 +695,181 @@ test('4.22 archivos de Fact or Fake de la versión 1 son un error con el mensaje
     assert.ok(r.errores.includes('data/facts/2000-01.json es de la versión 1 (solo inglés): rehazlo con npm run afirmaciones -- --reimportar --confirmar --revisado.'), r.errores.join('\n'));
     assert.equal(r.codigo, 1);
   }, { facts: [{ version: 1, mes: '2000-01', dias: [{ ...diaFacts(1), tema: 'Topic 1', textos: diaFacts(1).textos.en, fichas: diaFacts(1).fichas.en }] }] });
+});
+
+// ---------- Páginas generadas (324, 332, 334) ----------
+
+const cambiar = (p, rel, de, a) => p.escribe(rel, fs.readFileSync(p.ruta(rel), 'utf8').replace(de, () => a));
+const escapar = (f) => f.replace(/[./]/g, '\\$&');
+
+test('324 páginas generadas al día: pasan; modificadas a mano o con un enlace roto fallan', async () => {
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+    assert.ok(fs.existsSync(p.ruta('en/how-to-spot-ai-images/index.html')) && fs.existsSync(p.ruta('robots.txt')) && fs.existsSync(p.ruta('404.html')));
+  });
+  await proyecto(async (p) => {
+    cambiar(p, 'es/como-jugar/index.html', '<h1>', '<h1 class="x">');
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /^Páginas desactualizadas: ejecuta npm run paginas\. \(1: es\/como-jugar\/index\.html\)/), r.errores.join('\n'));
+  });
+  await proyecto(async (p) => {
+    p.escribe('index.html', 'distinta\n');
+    assert.ok(hay((await p.ejecutar()).errores, /Páginas desactualizadas: .*index\.html/));
+  });
+  await proyecto(async (p) => {
+    cambiar(p, 'es/como-jugar/index.html', 'href="../archivo/"', 'href="../noexiste/"');
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /es\/como-jugar\/index\.html: href="\.\.\/noexiste\/" no existe/));
+  });
+  await proyecto(async (p) => {
+    fs.rmSync(p.ruta('404.html'));
+    assert.ok(hay((await p.ejecutar()).errores, /Falta 404\.html en la raíz\./));
+  });
+  await proyecto(async (p) => {
+    cambiar(p, '404.html', '<meta name="robots" content="noindex">', '');
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /404\.html: la 404 debe llevar noindex/));
+  });
+  await proyecto(async (p) => {
+    cambiar(p, 'index.html', '<main id="contenido"', '<main id="app"');
+    assert.ok(hay((await p.ejecutar()).errores, /index\.html: la raíz no puede contener id="app"/));
+  });
+  await proyecto(async (p) => {
+    cambiar(p, 'herramientas/plantillas/juego.html', '<body data-pagina="juego">', '<body data-pagina="juego"><p class="dato-x"></p>');
+    assert.ok(hay((await p.ejecutar()).errores, /herramientas\/plantillas\/juego\.html: class="dato-x" contiene una clase que empieza por dato\./));
+  });
+});
+
+test('324 el archivo no puede tener días de hoy ni del futuro; y no falla porque hoy ya toque archivar uno que no está en disco', async () => {
+  // Día 1 el 26 de octubre: aún no ha terminado en todo el mundo el 27 a las 10:00 UTC.
+  await proyecto(async (p) => {
+    p.escribe('en/archive/case-1/index.html', 'x');
+    p.escribe('es/archivo/caso-1/index.html', 'x');
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /El caso n\.º 1 \(en\/archive\/case-1\/\) está archivado pero su fecha \(2026-10-26\) no ha terminado en todo el mundo/), r.errores.join('\n'));
+    assert.ok(hay(r.errores, /El caso n\.º 1 \(es\/archivo\/caso-1\/\)/));
+  }, { lanzamiento: '2026-10-26' });
+  await proyecto(async (p) => {
+    p.escribe('es/archivo/caso-1/index.html', 'x');
+    assert.ok(hay((await p.ejecutar()).errores, /El caso n\.º 1 .* aún no hay fecha de lanzamiento/));
+  });
+  // Con lanzamiento antiguo, los días 1 y 2 están archivados y todo cuadra.
+  await proyecto(async (p) => {
+    assert.ok(fs.existsSync(p.ruta('es/archivo/caso-2/index.html')));
+    assert.ok(fs.readFileSync(p.ruta('sitemap.xml'), 'utf8').includes('/es/archivo/caso-2/'));
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+    cambiar(p, 'en/archive/case-2/index.html', '<h1>', '<h1 class="x">');
+    assert.ok(hay((await p.ejecutar()).errores, /Páginas desactualizadas/));
+  }, { lanzamiento: '2026-10-20' });
+  // La Action aún no ha añadido el día 2 (y hoy ya toca): no es un error.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar({ ahoraMs: Date.parse('2026-10-28T13:00:00Z') });
+    assert.deepEqual(r.errores, []);
+  }, { lanzamiento: '2026-10-26' });
+});
+
+test('ANUNCIOS_ACTIVOS: ausente, repetida o true es error; el aviso legal no puede existir con false', async () => {
+  const base = '// js\nconst PRUEBAS_ABIERTAS = false;\n';
+  for (const main of [base, `${base}const ANUNCIOS_ACTIVOS = false;\nconst ANUNCIOS_ACTIVOS = false;\n`]) {
+    await proyecto(async (p) => {
+      assert.ok(hay((await p.ejecutar()).errores, /debe declarar una sola vez const ANUNCIOS_ACTIVOS/));
+    }, { main });
+  }
+  await proyecto(async (p) => {
+    assert.ok(hay((await p.ejecutar()).errores, /ANUNCIOS_ACTIVOS vale true/));
+  }, { main: `${base}const ANUNCIOS_ACTIVOS = true;\n` });
+  for (const dir of ['es/aviso-legal', 'en/legal-notice']) {
+    await proyecto(async (p) => {
+      p.escribe(`${dir}/index.html`, 'x');
+      assert.ok(hay((await p.ejecutar()).errores, /Existe la página del aviso legal/));
+    });
+  }
+});
+
+test('332 validar: lista blanca de direcciones, rutas prohibidas y direcciones de las guías fuera del juego', async () => {
+  await proyecto(async (p) => {
+    p.escribe('es/guia-ia/index.html', fs.readFileSync(p.ruta('es/como-jugar/index.html'), 'utf8'));
+    p.escribe('en/fake-news/index.html', 'x');
+    p.escribe('es/como-detectar-un-bulo/extra.html', 'x');
+    p.escribe('es/como-detectar-un-bulo/sub/index.html', 'x');
+    const r = await p.ejecutar();
+    for (const f of ['es/guia-ia/index.html', 'en/fake-news/index.html', 'es/como-detectar-un-bulo/extra.html', 'es/como-detectar-un-bulo/sub/index.html']) {
+      assert.ok(hay(r.errores, new RegExp(`${escapar(f)}: la ruta lleva una palabra prohibida`)), f);
+      assert.ok(hay(r.errores, new RegExp(`Archivo inesperado en lo publicado: ${escapar(f)}`)), f);
+    }
+  });
+  await proyecto(async (p) => {
+    cambiar(p, 'es/como-jugar/index.html', 'href="../archivo/"', 'href="../how-to-spot-ai-images/"');
+    assert.ok(hay((await p.ejecutar()).errores, /how-to-spot-ai-images.*no existe/));
+  });
+  // Las cuatro direcciones, en js/ o en la plantilla del juego, son errores.
+  await proyecto(async (p) => {
+    p.escribe('js/otro.js', "export const X = 'como-detectar-un-bulo';\n");
+    assert.ok(hay((await p.ejecutar()).errores, /js\/otro\.js: contiene la dirección de una guía \(como-detectar-un-bulo\)/));
+  });
+  await proyecto(async (p) => {
+    cambiar(p, 'herramientas/plantillas/juego.html', '<body data-pagina="juego">', '<body data-pagina="juego"><!-- how-to-spot-fake-news -->');
+    assert.ok(hay((await p.ejecutar()).errores, /juego\.html: contiene la dirección de una guía \(how-to-spot-fake-news\)/));
+  });
+  // Las guías generadas son válidas: llevan las palabras en la ruta y nada más.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+    for (const d of ['en/how-to-spot-ai-images', 'en/how-to-spot-fake-news', 'es/como-saber-si-una-imagen-es-ia', 'es/como-detectar-un-bulo']) {
+      assert.ok(fs.existsSync(p.ruta(`${d}/index.html`)), d);
+      assert.ok(fs.readFileSync(p.ruta('sitemap.xml'), 'utf8').includes(`/${d}/`), d);
+    }
+  });
+});
+
+test('334 validar: una imagen de un día futuro idéntica (o casi) a una de un día ya llegado es error', async () => {
+  // Lanzamiento 26 de octubre y hoy 27: los días 1 y 2 han llegado, el 3 es futuro.
+  const opciones = { lanzamiento: '2026-10-26', nImagenes: 3, nFacts: 3 };
+  await proyecto(async (p) => {
+    assert.deepEqual((await p.ejecutar()).errores, []);
+    const dias = JSON.parse(fs.readFileSync(p.ruta('data/calendario.json'), 'utf8')).dias;
+    // Copia byte a byte, con otro nombre, del primer archivo del día 1 en el día 3.
+    fs.copyFileSync(p.ruta(`casos/${dias[0].pruebas[0]}.webp`), p.ruta(`casos/${dias[2].pruebas[1]}.webp`));
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /La prueba 2 del día 3 repite la prueba 1 del día 1, que ya ha llegado: una imagen jugada o archivada no puede volver en un día futuro\./), r.errores.join('\n'));
+    assert.ok(!hay(r.errores, /día 3 repite la prueba \d del día 2/));
+  }, opciones);
+  // Sin lanzamiento no hay días llegados: la misma copia no da error.
+  await proyecto(async (p) => {
+    const dias = JSON.parse(fs.readFileSync(p.ruta('data/calendario.json'), 'utf8')).dias;
+    fs.copyFileSync(p.ruta(`casos/${dias[0].pruebas[0]}.webp`), p.ruta(`casos/${dias[2].pruebas[1]}.webp`));
+    assert.ok(!hay((await p.ejecutar()).errores, /repite la prueba/));
+  }, { nImagenes: 3, nFacts: 3 });
+  // Con banco: dHash a distancia <= 5 (el del día 1 es 0 y el del día 3 tiene 5 bits).
+  await proyecto(async (p) => {
+    const dias = JSON.parse(fs.readFileSync(p.ruta('data/calendario.json'), 'utf8')).dias;
+    const hex = (n) => n.toString(16).padStart(16, '0');
+    const imagenes = dias.flatMap((d) =>
+      d.pruebas.map((id, i) => {
+        const gen = i === 0 || i === 3;
+        const f = FUENTES.find((x) => x.tipo === (gen ? 'generada' : 'autentica'));
+        let dhash = (BigInt(d.n * 5 + i) * 0x9e3779b97f4a7c15n) % (1n << 64n);
+        if (d.n === 1 && i === 0) dhash = 0n;
+        if (d.n === 3 && i === 1) dhash = 0x1fn;
+        return { id, tipo: gen ? 'generada' : 'autentica', dia: d.n, tema: d.tema.en, fuente: f.fuente, licencia: f.licencia, original: `x/${id}`, dhash: hex(dhash), recorte: 'atencion', alta: '2026-10-01' };
+      })
+    );
+    p.escribe('herramientas/banco.json', JSON.stringify({ version: 3, imagenes }));
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /La prueba 2 del día 3 repite la prueba 1 del día 1, que ya ha llegado/), r.errores.join('\n'));
+  }, opciones);
+});
+
+test('el mensaje de reutilización no lleva el tipo, el tema ni palabras prohibidas', async () => {
+  const { contienePalabraProhibida } = await import('../herramientas/temas.mjs');
+  await proyecto(async (p) => {
+    const dias = JSON.parse(fs.readFileSync(p.ruta('data/calendario.json'), 'utf8')).dias;
+    fs.copyFileSync(p.ruta(`casos/${dias[0].pruebas[0]}.webp`), p.ruta(`casos/${dias[2].pruebas[0]}.webp`));
+    const m = (await p.ejecutar()).errores.find((e) => /repite la prueba/.test(e));
+    assert.ok(m);
+    assert.equal(contienePalabraProhibida(m), null);
+    assert.ok(!/autentica|generada|Topic/.test(m));
+  }, { lanzamiento: '2026-10-26', nImagenes: 3, nFacts: 3 });
 });

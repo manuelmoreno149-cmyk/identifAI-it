@@ -30,3 +30,8 @@ Lee CLAUDE.md, docs/ESPECIFICACION.md e index.html antes de empezar.
 - No cambies textos: léelos de js/textos.js.
 - Antes de terminar ejecuta npm test y arregla lo que falle.
 - Resume en 8 líneas como máximo qué hiciste, qué tests pasan y qué no.
+
+## Páginas y SEO (spec 10)
+- El juego se lee de herramientas/plantillas/juego.html y se sirve en /en/ y /es/ (generado por `npm run paginas`); index.html de la raíz solo redirige (js/raiz.js).
+- Datos e imágenes se resuelven con RAIZ = new URL('../', import.meta.url), nunca con <base>. Prueba el juego en /en/ y /es/ (también con ?prueba=1).
+- `ANUNCIOS_ACTIVOS = false` en main.js; nunca anuncios en la partida ni en las revelaciones.

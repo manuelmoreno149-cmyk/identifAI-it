@@ -75,6 +75,9 @@
   --alto-pie: 3.75rem;           /* pie de la ficha de revelacion: marca y boton Next en ordenador */
   --ancho-ficha: clamp(15rem, 38vw, 26rem); /* columna de la ficha de Images en horizontal */
   --ancho-tarjeta: 48rem;        /* tarjeta de Fact or Fake en horizontal */
+  --ancho-pagina: 46rem;         /* hoja de las paginas de contenido (css/paginas.css) */
+  --medida: 70ch;                /* columna de lectura: 70 caracteres como maximo (R21) */
+  --color-enlace-papel: var(--color-tinta-azul); /* enlaces sobre papel: 11:1 */
 
   /* Radios */
   --radio-1: 2px;

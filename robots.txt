@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /docs/
+Disallow: /herramientas/
+Disallow: /tests/
+
+Sitemap: https://identifaiit.com/sitemap.xml
