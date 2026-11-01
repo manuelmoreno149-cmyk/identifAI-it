@@ -560,7 +560,7 @@ function estadoDeReto(e, reto) {
     return rellenar(t().portada.estado_jugado, { aciertos: contarAciertos(partida.resultados) });
   }
   if (partida?.estado === 'en_curso' || jugado) return t().portada.estado_en_curso;
-  return t().portada.estado_pendiente;
+  return '';
 }
 
 // Tema del caso elegido en el idioma activo ('' sin caso).

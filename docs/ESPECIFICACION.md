@@ -300,7 +300,7 @@ Temas, afirmaciones, aclaraciones, detalles y fichas solo como `textContent` en 
   ```
   - Toda la tarjeta es el botón: pulsarla (o Enter / Espacio con el foco en ella) despacha `ABRIR_RETO {reto: data-reto-boton}`.
   - `.reto-ilustracion`: dibujo hecho solo con CSS (sin imágenes ni `data:`; CSP): Images, tres polaroids superpuestas con un sello "AI?"; Fact or Fake, dos fichas con los sellos FACT y FAKE. Los textos de los sellos son `span` con `data-texto` dentro del contenedor `aria-hidden`. Con `prefers-reduced-motion`, sin animación.
-  - `.reto-estado` (main.js, `textContent`): `portada.estado_sin_caso`, `portada.estado_jugado` (`{aciertos}`), `portada.estado_en_curso` o `portada.estado_pendiente`.
+  - `.reto-estado` (main.js, `textContent`): `portada.estado_sin_caso`, `portada.estado_jugado` (`{aciertos}`), `portada.estado_en_curso` o, si el caso aún no se ha abierto, nada (sin etiqueta) [D-202].
   - `disabled` si ese reto no tiene caso hoy. Una tarjeta de reto jugado o en curso en otra pestaña no lleva `disabled`: abre `ya-jugado`.
   - No hay reto "elegido" en la portada: las dos tarjetas tienen el mismo aspecto salvo por su estado.
 - `footer#portada-pie`: `p#portada-aviso-dia data-texto="portada.pie"` ("New cases every day at midnight.") y `a#portada-creditos data-texto="portada.enlace_creditos"`, cuyo `href` pone main.js: `creditos.html` en inglés y `creditos.es.html` en español [D-161].

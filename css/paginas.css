@@ -656,9 +656,28 @@ body[data-pagina="raiz"] .pagina-pie {
   border-top-color: transparent;
 }
 
+body[data-pagina="raiz"] .pagina-pie {
+  padding-top: var(--espacio-2);
+  padding-bottom: calc(var(--espacio-2) + env(safe-area-inset-bottom));
+}
+
+/* Dos filas, una por idioma: cabe sin deslizar a 360x640 [D-203] */
 body[data-pagina="raiz"] .pagina-pie ul {
+  grid-template-columns: repeat(3, auto);
+  justify-content: space-between;
+  gap: 0 var(--espacio-3);
   max-width: 28rem;
   margin-inline: auto;
+}
+
+body[data-pagina="raiz"] .pagina-pie a {
+  min-height: 2rem;
+  font-size: 0.875rem;
+}
+
+body[data-pagina="raiz"] .pagina-cabecera {
+  padding-top: var(--espacio-4);
+  padding-bottom: var(--espacio-2);
 }
 
 /* ---------- Pagina no encontrada (una sola pagina, dos idiomas) ---------- */

@@ -507,3 +507,9 @@ Para cambiar una decisión:
 
 - D-200 · 723 comprobaciones sin defectos en las 23 páginas del sitemap, la raíz, el 404 y el juego en `/en/` y `/es/` con `?prueba=1`; `npm test` 346 de 346, `npm run validar` correcto (6 avisos de peso de imágenes). No probado: Safari en dispositivo, enlaces externos, anclas, subcarpeta de `github.io`, dominio real con HTTPS, archivo con días cerrados (0 archivados) y día de lanzamiento fijado.
 - D-201 · Observaciones aceptadas: la portada normal pide `data/facts/AAAA-MM.json` del mes sin casos y recibe 404 (lo prevé la spec 4.7; el navegador lo escribe en la consola); WebKit avisa de una hoja interna del `<select>` del modo prueba bajo la CSP (no existe en producción); `404.html` solo muestra sus estilos en identifaiit.com (10.18).
+
+### 2026-11-01 · Ajustes tras la prueba del usuario (sin subir versión)
+
+- D-202 · Se quita la etiqueta "Open case" / "Abrir caso" de las tarjetas de la portada (era redundante con "Open file" / "Abrir expediente"): `estado_pendiente` desaparece de `TEXTOS` y `estadoDeReto` devuelve vacío; la etiqueta (`.reto-estado:empty`) queda oculta. Siguen los estados jugado, en curso y sin caso.
+- D-203 · La raíz cabe sin deslizar a 360x640: el pie va en dos filas de tres enlaces (una por idioma), con menos relleno.
+- D-204 · `/nuevo-lote` y el archivero ejecutan siempre `npm run paginas` y `npm run validar` justo después de importar, y no se hace commit sin ello.

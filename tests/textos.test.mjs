@@ -6,7 +6,7 @@ import { IDIOMAS } from '../js/diario.js';
 const CLAVES = {
   portada: [
     'titulo', 'lema', 'idioma', 'abrir', 'pie', 'sello_ilustracion', 'etiqueta_caso', 'elige_reto',
-    'reto_imagenes', 'reto_afirmaciones', 'estado_pendiente', 'estado_jugado', 'estado_en_curso', 'estado_sin_caso',
+    'reto_imagenes', 'reto_afirmaciones', 'estado_jugado', 'estado_en_curso', 'estado_sin_caso',
     'modo_investigador', 'modo_normal', 'modo_perro', 'desc_investigador', 'desc_normal', 'desc_perro',
     'expediente_imagenes', 'expediente_afirmaciones', 'desc_reto_imagenes', 'desc_reto_afirmaciones'
   ],
@@ -268,7 +268,7 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado, en cada i
     'prueba.opcion': 50,
     'portada.reto_imagenes': 14, 'portada.reto_afirmaciones': 14,
     'portada.abrir': 24, 'portada.pie': 48, 'portada.idioma': 20,
-    'portada.estado_pendiente': 18, 'portada.estado_jugado': 18, 'portada.estado_en_curso': 18, 'portada.estado_sin_caso': 18,
+    'portada.estado_jugado': 18, 'portada.estado_en_curso': 18, 'portada.estado_sin_caso': 18,
     'instrucciones.volver': 24, 'instrucciones.membrete': 70, 'instrucciones.frase_imagenes': 70,
     'instrucciones.frase_afirmaciones': 70, 'instrucciones.firma': 40, 'instrucciones.metodo': 30,
     'instrucciones.reglas': 30, 'instrucciones.boton_empezar': 20, 'instrucciones.ejemplo': 80,
