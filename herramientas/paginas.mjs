@@ -10,6 +10,7 @@ import { TEXTOS, RUTAS } from '../js/textos.js';
 import {
   IDIOMAS,
   sumarDias,
+  fechaMadrid,
   fechaDelDia,
   desofuscar,
   desofuscarFicha,
@@ -349,8 +350,8 @@ export function analizarContenido(texto, rutaArchivo = 'contenido') {
 // ---------- Archivo: qué días y datos [10.8] ----------
 
 export function ultimoDiaArchivable(ahoraMs) {
-  const iso = new Date(ahoraMs - 12 * 3600 * 1000).toISOString().slice(0, 10);
-  return sumarDias(iso, -1);
+  // [11.5.1] El día es el mismo para todos: hoy en Madrid es D, archivable hasta D-1.
+  return sumarDias(fechaMadrid(ahoraMs), -1);
 }
 
 function diasDeMeses(meses) {

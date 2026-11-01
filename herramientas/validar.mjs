@@ -15,7 +15,7 @@ import {
   desofuscarFicha,
   diasEntre,
   fechaDelDia,
-  fechaLocal,
+  fechaMadrid,
   sumarDias,
   validarCalendario
 } from '../js/diario.js';
@@ -100,7 +100,7 @@ function listaDias(n) {
   return `los días ${rango}`;
 }
 
-export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fechaLocal(new Date()), ahoraMs = Date.now(), git = true } = {}) {
+export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fechaMadrid(new Date()), ahoraMs = Date.now(), git = true } = {}) {
   const p = (...r) => join(raiz, ...r);
   const errores = [];
   const avisos = [];
@@ -419,7 +419,7 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
         const fecha = fechaDelDia(lanzamiento, Number(m[1]));
         error(
           'El caso n.º ' + m[1] + ' (' + idioma + '/' + carpeta + '/' + nombre + '/) está archivado pero ' +
-            (lanzamiento === null ? 'aún no hay fecha de lanzamiento' : 'su fecha (' + fecha + ') no ha terminado en todo el mundo') +
+            (lanzamiento === null ? 'aún no hay fecha de lanzamiento' : 'su fecha (' + fecha + ') no ha terminado según la hora de España') +
             ': nada de hoy ni del futuro puede estar en el archivo (10.8.2).'
         );
       }

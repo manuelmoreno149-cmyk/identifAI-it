@@ -1,7 +1,8 @@
 name: Archivo de casos
 on:
   schedule:
-    - cron: '15 12 * * *'   # 12:15 UTC todo el año (13:15 en Madrid en invierno, 14:15 en verano)
+    - cron: '10 22 * * *'   # 00:10 en Madrid en verano (CEST); en invierno son las 23:10 y no hace nada
+    - cron: '10 23 * * *'   # 00:10 en Madrid en invierno (CET); en verano son las 01:10 y no hace nada
   workflow_dispatch:
 permissions: {}
 concurrency:
@@ -14,14 +15,30 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Hora de Madrid
+        id: hora
+        run: |
+          hora="$(TZ=Europe/Madrid date +%H)"
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$hora" != "00" ]; then
+            echo "seguir=no" >> "$GITHUB_OUTPUT"
+            echo "En Madrid son las ${hora}:xx: esta ejecución programada no toca."
+          else
+            echo "seguir=si" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        if: steps.hora.outputs.seguir == 'si'
       - uses: actions/setup-node@v4
+        if: steps.hora.outputs.seguir == 'si'
         with:
           node-version: 20
       - run: npm ci
+        if: steps.hora.outputs.seguir == 'si'
       - run: npm run paginas
+        if: steps.hora.outputs.seguir == 'si'
       - run: npm run validar
+        if: steps.hora.outputs.seguir == 'si'
       - name: Commit si hay cambios
+        if: steps.hora.outputs.seguir == 'si'
         run: |
           git add -- en es sitemap.xml
           if [ -n "$(git status --porcelain --untracked-files=all -- . ':!en' ':!es' ':!sitemap.xml')" ]; then

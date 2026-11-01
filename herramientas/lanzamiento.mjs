@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fechaLocal, fechaDelDia, validarCalendario } from '../js/diario.js';
+import { fechaMadrid, fechaDelDia, validarCalendario } from '../js/diario.js';
 import {
   analizarArgumentosLanzamiento,
   comprobarCambioLanzamiento,
@@ -30,7 +30,7 @@ function calendarioLanzable(c) {
 }
 
 // Ejecuta la herramienta sobre una raíz de proyecto. Devuelve {codigo, mensajes}; no llama a process.exit.
-export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date()) } = {}) {
+export function lanzar({ raiz = RAIZ, argv = [], hoyISO = fechaMadrid(new Date()) } = {}) {
   const mensajes = [];
   const decir = (t) => mensajes.push(t);
   const fallo = (errores) => {

@@ -482,8 +482,9 @@ export function comprobarCambioLanzamiento({ actual, nuevo, hoyISO }) {
   if (nuevo !== null && nuevo !== undefined) {
     if (!esFechaISO(nuevo)) {
       errores.push(`La fecha ${JSON.stringify(nuevo)} no es una fecha válida AAAA-MM-DD.`);
-    } else if (diasEntreISO(hoyISO, nuevo) < 1) {
-      errores.push(`La fecha de lanzamiento (${nuevo}) debe ser posterior a hoy (${hoyISO}); como pronto, mañana.`);
+    } else if (diasEntreISO(hoyISO, nuevo) < 1 && !((actual === null || actual === undefined) && nuevo === hoyISO)) {
+      // [141] Sin fecha previa se puede lanzar el mismo día (nuevo === hoy).
+      errores.push(`La fecha de lanzamiento (${nuevo}) debe ser posterior a hoy (${hoyISO}), o hoy mismo si aún no hay fecha.`);
     }
   }
   if (actual !== null && actual !== undefined && esFechaISO(actual) && diasEntreISO(hoyISO, actual) < 1) {

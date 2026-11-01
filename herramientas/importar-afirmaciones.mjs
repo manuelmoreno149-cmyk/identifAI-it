@@ -10,7 +10,7 @@ import path from 'node:path';
 import { randomInt } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {
-  IDIOMAS, fechaLocal, fechaDelDia, diasEntre, validarCalendario, validarAfirmaciones,
+  IDIOMAS, fechaMadrid, fechaDelDia, diasEntre, validarCalendario, validarAfirmaciones,
   ofuscar, desofuscar, ofuscarAfirmacion, ofuscarAclaracion, desofuscarAfirmacion
 } from '../js/diario.js';
 import { analizarCarpeta, barajar, avisosMezcla, calendarioAnteriorValido, ARCHIVO_TEMA_ES } from './temas.mjs';
@@ -51,7 +51,7 @@ function leerCarpetas(dirTemas) {
 }
 
 // Ejecuta el importador sobre una raíz de proyecto. Devuelve {codigo, mensajes}; no llama a process.exit.
-export function importarAfirmaciones({ raiz = RAIZ, argv = [], hoyISO = fechaLocal(new Date()), aleatorio = aleatorioCripto } = {}) {
+export function importarAfirmaciones({ raiz = RAIZ, argv = [], hoyISO = fechaMadrid(new Date()), aleatorio = aleatorioCripto } = {}) {
   const mensajes = [];
   const decir = (t) => mensajes.push(t);
   const fallo = (errores, pie) => {

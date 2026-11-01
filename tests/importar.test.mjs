@@ -7,7 +7,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import sharp from 'sharp';
-import { fechaLocal } from '../js/diario.js';
+import { fechaMadrid } from '../js/diario.js';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Bytes no UTF-8 y texto con llaves, "source:" y "---": el importador nunca debe abrir ni mostrar esto.
@@ -155,7 +155,7 @@ test('335 importar: una imagen igual a una de un día ya llegado en un día nuev
     assert.equal(correr(raiz).status, 0);
     const rutaCal = join(raiz, 'data', 'calendario.json');
     const cal = JSON.parse(readFileSync(rutaCal, 'utf8'));
-    cal.lanzamiento = fechaLocal(new Date()); // el día 1 es hoy: ya ha llegado
+    cal.lanzamiento = fechaMadrid(new Date()); // el día 1 es hoy: ya ha llegado
     writeFileSync(rutaCal, JSON.stringify(cal, null, 2) + '\n');
     // Sin banco no hay dHash: cuenta el SHA-256 del WebP publicado frente al que saldría del mismo origen.
     rmSync(join(raiz, 'herramientas', 'banco.json'));

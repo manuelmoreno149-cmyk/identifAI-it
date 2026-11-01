@@ -4,7 +4,7 @@ import { randomInt, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import sharp from 'sharp';
-import { ofuscar, sumarDias, fechaDelDia, fechaLocal, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES, IDIOMAS } from '../js/diario.js';
+import { ofuscar, sumarDias, fechaDelDia, fechaMadrid, desofuscar, temaValido, validarCalendario, ofuscarFicha, FICHA_MAX_BYTES, IDIOMAS } from '../js/diario.js';
 import { TEXTOS } from '../js/textos.js';
 import {
   analizarCarpeta,
@@ -139,7 +139,7 @@ async function main() {
   const args = analizarArgumentos(process.argv.slice(2));
   if (args.errores.length > 0) salir(args.errores);
   const { simular, bancoNuevo, reimportar, confirmar } = args;
-  const hoy = fechaLocal(new Date());
+  const hoy = fechaMadrid(new Date());
 
   const casosExistentes = existsSync(RUTA_CASOS) ? readdirSync(RUTA_CASOS).filter((f) => f.toLowerCase().endsWith('.webp')) : [];
 

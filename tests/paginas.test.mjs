@@ -8,7 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { TEXTOS, RUTAS } from '../js/textos.js';
-import { IDIOMAS, ofuscar, ofuscarFicha, ofuscarAfirmacion, ofuscarAclaracion, desofuscar, desofuscarFicha, desofuscarAfirmacion, desofuscarAclaracion } from '../js/diario.js';
+import { IDIOMAS, ZONA_JUEGO, ofuscar, ofuscarFicha, ofuscarAfirmacion, ofuscarAclaracion, desofuscar, desofuscarFicha, desofuscarAfirmacion, desofuscarAclaracion } from '../js/diario.js';
 import {
   DOMINIO,
   CORREO,
@@ -164,33 +164,41 @@ test('ruta, prefijo y relativa', () => {
 
 // ---------- 312, 313, 314 ----------
 
-test('312 ultimoDiaArchivable: el día D se archiva cuando ha terminado en UTC-12', () => {
+test('350 ultimoDiaArchivable: hoy en Madrid es D, archivable hasta D-1', () => {
   for (const [ahora, esperado] of [
-    ['2026-12-02T11:59:59Z', '2026-11-30'],
-    ['2026-12-02T12:00:00Z', '2026-12-01'],
-    ['2026-12-31T23:59:59Z', '2026-12-30'],
-    ['2027-01-01T12:00:00Z', '2026-12-31'],
-    ['2026-12-02T12:15:00Z', '2026-12-01']
+    ['2026-12-01T22:59:59Z', '2026-11-30'],
+    ['2026-12-01T23:00:00Z', '2026-12-01'],
+    ['2026-12-01T23:10:00Z', '2026-12-01'],
+    ['2027-06-30T21:59:59Z', '2027-06-29'],
+    ['2027-06-30T22:10:00Z', '2027-06-30'],
+    ['2026-12-31T23:00:00Z', '2026-12-31'],
+    ['2026-10-24T22:10:00Z', '2026-10-24'],
+    ['2026-10-25T23:10:00Z', '2026-10-25'],
+    ['2027-03-27T23:10:00Z', '2027-03-27'],
+    ['2027-03-28T22:10:00Z', '2027-03-28']
   ]) {
     assert.equal(ultimoDiaArchivable(ms(ahora)), esperado, ahora);
   }
 });
 
-test('312 y 303 el resultado no depende de TZ ni de la hora local', () => {
+test('350 y 303 el resultado no depende de TZ ni de la hora local', () => {
+  const casos = [['2026-12-01T22:59:59Z', '2026-11-30'], ['2026-12-01T23:10:00Z', '2026-12-01'], ['2027-06-30T22:10:00Z', '2027-06-30'], ['2027-03-28T22:10:00Z', '2027-03-28']];
   const script = `
     import { leerEntradas, generarSitio, ultimoDiaArchivable } from ${JSON.stringify(new URL('../herramientas/paginas.mjs', import.meta.url).href)};
     import { createHash } from 'node:crypto';
     const m = generarSitio({ entradas: leerEntradas(${JSON.stringify(REPO)}), ahoraMs: Date.parse('2026-12-02T12:15:00Z') });
     const h = createHash('sha256');
     for (const [r, c] of m) h.update(r + c);
-    console.log(ultimoDiaArchivable(Date.parse('2026-12-02T12:15:00Z')), h.digest('hex'));`;
-  const salidas = ['Pacific/Kiritimati', 'Pacific/Pago_Pago', 'Europe/Madrid'].map((TZ) => {
+    const u = ${JSON.stringify(casos.map((c) => c[0]))}.map((x) => ultimoDiaArchivable(Date.parse(x))).join(',');
+    console.log(u, h.digest('hex'));`;
+  const zonas = ['Europe/Madrid', 'America/Mexico_City', 'America/New_York', 'Asia/Tokyo', 'UTC', 'Pacific/Kiritimati', 'Pacific/Pago_Pago'];
+  const salidas = zonas.map((TZ) => {
     const r = spawnSync(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, TZ }, encoding: 'utf8' });
     assert.equal(r.status, 0, r.stderr);
     return r.stdout.trim();
   });
   assert.equal(new Set(salidas).size, 1, salidas.join(' | '));
-  assert.ok(salidas[0].startsWith('2026-12-01 '));
+  assert.ok(salidas[0].startsWith(casos.map((c) => c[1]).join(',') + ' '));
 });
 
 test('303 determinista: mismas entradas y mismo ahora, mismo Map; LF, sin BOM, sin fecha de generación', () => {
@@ -224,7 +232,7 @@ test('313 sin lanzamiento: sin páginas de día, índice vacío con noindex, fue
   }
 });
 
-test('314 solo se archivan los días terminados en todo el mundo; nada de los demás aparece ni se descifra', () => {
+test('351 solo se archivan los días terminados en hora de España; nada de los demás aparece ni se descifra', () => {
   const e = entradas();
   const llamadas = [];
   const espia = (nombre, f) => (...args) => {
@@ -238,9 +246,9 @@ test('314 solo se archivan los días terminados en todo el mundo; nada de los de
     aclaracion: espia('aclaracion', desofuscarAclaracion)
   };
   const dias = (iso) => diasArchivables({ calendario: e.calendario, meses: e.meses, ahoraMs: ms(iso) }).map((d) => d.n);
-  assert.deepEqual(dias('2026-12-04T11:00:00Z'), [1, 2]);
-  assert.deepEqual(dias('2026-12-04T12:00:00Z'), [1, 2, 3]);
-  const mapa = generarSitio({ entradas: e, ahoraMs: ms('2026-12-04T11:00:00Z'), desofuscadores });
+  assert.deepEqual(dias('2026-12-03T22:59:59Z'), [1, 2]); // 23:59:59 del día 3 en Madrid (ya día 4 en Tokio)
+  assert.deepEqual(dias('2026-12-03T23:00:00Z'), [1, 2, 3]); // aún día 3 en Nueva York
+  const mapa = generarSitio({ entradas: e, ahoraMs: ms('2026-12-03T22:59:59Z'), desofuscadores });
   assert.deepEqual([...new Set(llamadas.map((l) => l[1]))].sort(), [1, 2]);
   const dias2 = [...mapa.keys()].filter((r) => /case-\d+\/index|caso-\d+\/index/.test(r));
   assert.deepEqual(dias2.sort(), ['en/archive/case-1/index.html', 'en/archive/case-2/index.html', 'es/archivo/caso-1/index.html', 'es/archivo/caso-2/index.html']);
@@ -251,10 +259,10 @@ test('314 solo se archivan los días terminados en todo el mundo; nada de los de
     }
   }
   assert.ok(texto.includes('SECRETOPROMPT-en-2-0') && texto.includes('SECRETOCLAIM-es-1-1'));
-  const m3 = generarSitio({ entradas: e, ahoraMs: ms('2026-12-04T12:00:00Z') });
+  const m3 = generarSitio({ entradas: e, ahoraMs: ms('2026-12-03T23:00:00Z') });
   assert.ok(m3.has('en/archive/case-3/index.html'));
   // limiteN: validar no falla porque hoy ya toque archivar un día que la Action aún no ha añadido.
-  const m1 = generarSitio({ entradas: e, ahoraMs: ms('2026-12-04T12:00:00Z'), limiteN: 1 });
+  const m1 = generarSitio({ entradas: e, ahoraMs: ms('2026-12-03T23:00:00Z'), limiteN: 1 });
   assert.ok(m1.has('en/archive/case-1/index.html') && !m1.has('en/archive/case-2/index.html'));
 });
 
@@ -629,7 +637,7 @@ test('analizarArgumentosPaginas y salidaPermitida: --ahora exige --salida, y --s
   assert.match(s.errores.join(), /dentro del repositorio/);
 });
 
-test('322 --ultimo imprime el último caso archivado (0 sin archivo) y no escribe nada', () => {
+test('354 --ultimo imprime el último caso archivado (0 sin archivo) y no escribe nada', () => {
   const sinLanzamiento = raizPrueba(entradas({ lanzamiento: null }));
   const con = raizPrueba(entradas());
   try {
@@ -639,6 +647,9 @@ test('322 --ultimo imprime el último caso archivado (0 sin archivo) y no escrib
     s = salida();
     assert.equal(ejecutar(['--ultimo'], { raiz: con, ahoraMs: ms('2026-12-05T12:00:00Z'), log: s.log, error: s.error }), 0);
     assert.deepEqual(s.lineas, ['4']);
+    s = salida();
+    assert.equal(ejecutar(['--ultimo'], { raiz: con, ahoraMs: ms('2026-12-01T23:00:00Z'), log: s.log, error: s.error }), 0);
+    assert.deepEqual(s.lineas, ['1']);
     for (const raiz of [sinLanzamiento, con]) {
       assert.ok(!fs.existsSync(path.join(raiz, 'index.html')) && !fs.existsSync(path.join(raiz, 'sitemap.xml')));
     }
@@ -705,22 +716,39 @@ test('escribirSitio trata CRLF y LF como iguales', () => {
 
 // ---------- 320 ----------
 
-test('320 la Action del archivo cumple la spec (revisión del archivo)', () => {
+test('352 la Action del archivo cumple la spec (revisión del archivo)', () => {
   const y = fs.readFileSync(path.join(REPO, '.github/workflows/archivo.yml'), 'utf8');
-  assert.equal((y.match(/cron:/g) ?? []).length, 1);
-  assert.match(y, /- cron: '15 12 \* \* \*'/);
+  assert.deepEqual(y.match(/cron: '[^']*'/g), ["cron: '10 22 * * *'", "cron: '10 23 * * *'"]);
+  assert.ok(!y.includes('15 12'));
   assert.match(y, /^on:\n  schedule:\n[\s\S]*\n  workflow_dispatch:\n/m);
   assert.match(y, /^permissions: \{\}$/m);
   assert.equal((y.match(/contents: write/g) ?? []).length, 1);
   assert.match(y, /if: github\.ref == 'refs\/heads\/main'/);
   assert.match(y, /concurrency:\n  group: archivo\n  cancel-in-progress: false/);
   assert.match(y, /node-version: 20/);
+  assert.ok(y.indexOf('id: hora') > 0 && y.indexOf('id: hora') < y.indexOf('actions/checkout'));
+  assert.ok(y.includes('TZ=Europe/Madrid date +%H') && y.includes('"$GITHUB_EVENT_NAME" = "schedule"') && y.includes('"$hora" != "00"'));
+  const pasos = y.split(/\n {6}- /).slice(1);
+  assert.ok(pasos[0].includes('id: hora'));
+  for (const p of pasos.slice(1)) assert.ok(p.includes("if: steps.hora.outputs.seguir == 'si'"), p.split('\n')[0]);
   for (const paso of ['npm ci', 'npm run paginas', 'npm run validar', 'git add -- en es sitemap.xml', 'git push']) assert.ok(y.includes(paso), paso);
   assert.ok(y.indexOf('npm run paginas') < y.indexOf('npm run validar') && y.indexOf('npm run validar') < y.indexOf('git push'));
   assert.ok(y.includes('Cambios inesperados fuera de en/, es/ y sitemap.xml') && y.includes('exit 1'));
   assert.ok(y.includes('if git diff --cached --quiet; then echo "Sin cambios"; exit 0; fi'));
   assert.ok(y.includes('datos: archivo de casos hasta el n.º $(node herramientas/paginas.mjs --ultimo)'));
   assert.ok(!/secrets\.|token|npm test|--estricto/i.test(y));
+});
+
+test('353 una ejecución por noche: de 22:10Z y 23:10Z exactamente una cae a las 00 de Madrid', () => {
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: ZONA_JUEGO, hour: '2-digit', hourCycle: 'h23' });
+  const hora = (t) => Number(fmt.format(t));
+  for (let t = Date.parse('2026-01-01T00:00:00Z'); t < Date.parse('2028-01-01T00:00:00Z'); t += 86400000) {
+    const dia = new Date(t).toISOString().slice(0, 10);
+    const ts = [Date.parse(`${dia}T22:10:00Z`), Date.parse(`${dia}T23:10:00Z`)];
+    const buenas = ts.filter((x) => hora(x) === 0);
+    assert.equal(buenas.length, 1, dia);
+    assert.equal(ultimoDiaArchivable(buenas[0]), dia, dia);
+  }
 });
 
 test('paquete: script paginas sin dependencias nuevas', () => {

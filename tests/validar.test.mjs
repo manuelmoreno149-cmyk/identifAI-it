@@ -742,14 +742,14 @@ test('324 páginas generadas al día: pasan; modificadas a mano o con un enlace 
 });
 
 test('324 el archivo no puede tener días de hoy ni del futuro; y no falla porque hoy ya toque archivar uno que no está en disco', async () => {
-  // Día 1 el 26 de octubre: aún no ha terminado en todo el mundo el 27 a las 10:00 UTC.
+  // Día 1 el 27 de octubre: aún no ha terminado en Madrid el 27 a las 10:00 UTC.
   await proyecto(async (p) => {
     p.escribe('en/archive/case-1/index.html', 'x');
     p.escribe('es/archivo/caso-1/index.html', 'x');
     const r = await p.ejecutar();
-    assert.ok(hay(r.errores, /El caso n\.º 1 \(en\/archive\/case-1\/\) está archivado pero su fecha \(2026-10-26\) no ha terminado en todo el mundo/), r.errores.join('\n'));
+    assert.ok(hay(r.errores, /El caso n\.º 1 \(en\/archive\/case-1\/\) está archivado pero su fecha \(2026-10-27\) no ha terminado según la hora de España/), r.errores.join('\n'));
     assert.ok(hay(r.errores, /El caso n\.º 1 \(es\/archivo\/caso-1\/\)/));
-  }, { lanzamiento: '2026-10-26' });
+  }, { lanzamiento: '2026-10-27' });
   await proyecto(async (p) => {
     p.escribe('es/archivo/caso-1/index.html', 'x');
     assert.ok(hay((await p.ejecutar()).errores, /El caso n\.º 1 .* aún no hay fecha de lanzamiento/));

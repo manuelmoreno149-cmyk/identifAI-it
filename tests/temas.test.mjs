@@ -445,7 +445,9 @@ test('151 analizarArgumentosLanzamiento', () => {
 test('151 comprobarCambioLanzamiento', () => {
   const hoyISO = '2026-10-26';
   assert.deepEqual(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-27', hoyISO }), []);
-  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-26', hoyISO }).length, 1);
+  assert.deepEqual(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-26', hoyISO }), []); // 141: lanzar el mismo día
+  assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-25', hoyISO }).length, 1);
+  assert.equal(comprobarCambioLanzamiento({ actual: '2026-10-26', nuevo: '2026-10-26', hoyISO }).length, 2);
   assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-10-01', hoyISO }).length, 1);
   assert.equal(comprobarCambioLanzamiento({ actual: null, nuevo: '2026-13-01', hoyISO }).length, 1);
   assert.match(comprobarCambioLanzamiento({ actual: '2026-10-26', nuevo: '2026-12-01', hoyISO })[0], /^El juego se lanzó el 2026-10-26: cambiar la fecha renumeraría/);
