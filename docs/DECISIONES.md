@@ -376,7 +376,7 @@ Para cambiar una decisión:
 
 ### 2026-10-30 · Ajustes tras la primera revisión del español
 
-- D-164 · **Cifras en español con punto de millares desde cuatro cifras** ("840.537", "4.000", "1.296,72"), como en los textos del usuario; los años no llevan separador. Sustituye al espacio de millares desde cinco cifras de DP-67 (RESUELTA). El mensaje final de ¿Dato o Bulo? con 1 acierto ya no menciona fuentes (el reto no las usa); el inglés ("Check the sources.") queda igual, a la espera de que el usuario decida.
+- D-164 · **Cifras en español con punto de millares desde cuatro cifras** ("123.456", "4.000", "2.718,28"), como en los textos del usuario; los años no llevan separador. Sustituye al espacio de millares desde cinco cifras de DP-67 (RESUELTA). El mensaje final de ¿Dato o Bulo? con 1 acierto ya no menciona fuentes (el reto no las usa); el inglés ("Check the sources.") queda igual, a la espera de que el usuario decida.
 
 ### 2026-10-30 · Flecha de las tarjetas, mensaje en inglés y tarea pendiente
 

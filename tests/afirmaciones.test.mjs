@@ -499,7 +499,7 @@ test('213 escribirAfirmacionesMensuales: solo cambia lo que cambia y borra solo 
 
 test('contarFrases: abreviaturas y decimales no cierran frase', () => {
   for (const t of [
-    "It ends Sgt. Pepper's Lonely Hearts Club Band.", 'Dr. Smith met Mr. Jones and Mrs. Lee.',
+    "It ends Mr. Smith's Lonely Hearts Club.", 'Dr. Smith met Mr. Jones and Mrs. Lee.',
     'Ms. Ray and St. Louis fans.', 'Jr. and Sr. played.', 'The U.S. has 13,700 stores.', 'The U.K. and the U.S. agree.',
     'Cats vs. dogs, etc. are common.', 'Pets, e.g. dogs, i.e. animals, rest.', 'It starts at 5 a.m. and ends at 9 p.m. today.',
     'It weighs 3.5 kg and costs 2.25 dollars.', 'It is about 3.5 times larger.'
@@ -517,7 +517,7 @@ test('contarFrases: abreviaturas y decimales no cierran frase', () => {
 });
 
 test('analizarAfirmaciones: abreviaturas y decimales no disparan el aviso de varias frases', () => {
-  const r = analizarAfirmaciones(con(0, 'answer: fact\nclaim: The U.S. has 3.5 million km of roads.\ntruth: Sgt. Pepper (1967) ends with a tone.\ndetails: x.'), 'x');
+  const r = analizarAfirmaciones(con(0, 'answer: fact\nclaim: The U.S. has 3.5 million km of roads.\ntruth: Sgt. Smith (1967) ends with a tone.\ndetails: x.'), 'x');
   assert.deepEqual(r.errores, []);
   assert.ok(!r.avisos.some((a) => a.includes('más de una frase')));
 });
