@@ -502,3 +502,8 @@ Para cambiar una decisión:
 - DP-104 · `NOSCRIPT` pasa a un grupo propio `noscript.aviso` en `TEXTOS` (más de 90 caracteres; el test de longitud lo exime con un límite de 120). Falta añadir el grupo a la tabla 10.16 de la spec.
 - DP-105 · En el repintado de enlaces, una ruta `''` (juego) se escribe como `./`.
 - DP-106 · Si `?lang=` válido llega en una ruta que `urlDeIdioma` no reconoce, se guarda la preferencia y no se redirige.
+
+### 2026-11-01 · Fase 6: comprobación con Playwright (WebKit y Chromium, 390x844 y 1280x720)
+
+- D-200 · 723 comprobaciones sin defectos en las 23 páginas del sitemap, la raíz, el 404 y el juego en `/en/` y `/es/` con `?prueba=1`; `npm test` 346 de 346, `npm run validar` correcto (6 avisos de peso de imágenes). No probado: Safari en dispositivo, enlaces externos, anclas, subcarpeta de `github.io`, dominio real con HTTPS, archivo con días cerrados (0 archivados) y día de lanzamiento fijado.
+- D-201 · Observaciones aceptadas: la portada normal pide `data/facts/AAAA-MM.json` del mes sin casos y recibe 404 (lo prevé la spec 4.7; el navegador lo escribe en la consola); WebKit avisa de una hoja interna del `<select>` del modo prueba bajo la CSP (no existe en producción); `404.html` solo muestra sus estilos en identifaiit.com (10.18).
