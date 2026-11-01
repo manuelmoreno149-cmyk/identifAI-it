@@ -1,6 +1,8 @@
 # identifAI-it: especificación técnica
 
-**Versión 3.0, del 2026-10-29** [D-151]. Parte de la 2.1 (con los ajustes D-131 a D-150, todos sin subir versión) y añade, por decisión cerrada del usuario, una portada nueva, una pantalla de instrucciones por reto y el juego en dos idiomas:
+**Versión 3.1, del 2026-11-01** [D-205]. Parte de la 3.0 y cambia, por decisión cerrada del usuario el día del lanzamiento, una regla del juego: **el día cambia para todo el mundo a la vez a las 00:00 hora de España** (zona `Europe/Madrid`, con su horario de verano e invierno), no a la medianoche local de cada jugador. Afecta a la fecha del caso (`fechaMadrid` sustituye a `fechaLocal`), al almacén, la racha y el compartir (sin cambios de forma), a la cuenta atrás y al cambio de día en vivo, al archivo (`ultimoDiaArchivable` sin el margen de UTC−12), a la GitHub Action (dos `cron` y comprobación de la hora de Madrid) y a los textos que hablan del cambio de día. Detalle en `docs/especificacion/11-hora-espana.md`. Registra además el lanzamiento (2026-11-01, 7 casos) y el cierre del modo prueba [D-213].
+
+**Cambios de la 3.0, del 2026-10-29** [D-151]. Parte de la 2.1 (con los ajustes D-131 a D-150, todos sin subir versión) y añade, por decisión cerrada del usuario, una portada nueva, una pantalla de instrucciones por reto y el juego en dos idiomas:
 - **Portada nueva** [D-152]: logo y lema arriba, selector de idioma EN | ES a la derecha; "Case #N" con el tema (en modo prueba, el tema es un desplegable que elige el día); "Choose your case file" y dos tarjetas grandes (Images y Fact or Fake) que son botones enteros, con ilustración CSS, expediente, nombre, frase, estado y "Open file" + icono de flecha; pie con "New cases every day at midnight." y Credits. Sin modos, sin reglas, sin racha y **sin Cómo jugar** en la portada.
 - **Pantalla `instrucciones`** [D-153]: carpeta de cartón abierta con dos páginas (briefing con 4 pasos a máquina; a la derecha, los modos de Images como casillas o las normas de Fact or Fake con una ficha de ejemplo) y el botón "Open the case". El modo se elige aquí. El intento se sigue gastando al empezar (Images, al terminar la cuenta atrás; Fact or Fake, al pulsar "Open the case"), nunca al ver las instrucciones.
 - **Dos idiomas** [D-154 a D-161]: inglés americano y español de España. Primera visita según el navegador, después la elección guardada (`identifaiit.idioma`), y `?lang=es|en` la fuerza. Cambian textos, temas, afirmaciones, verdades, detalles, prompts, créditos y texto de compartir. **El intento, la racha y el progreso son comunes a los dos idiomas.** Nombres en español: Imágenes (REAL / IA, teclas R e I), ¿Dato o Bulo? (DATO / BULO, teclas D y B) y modos Investigador, Normal y Sabueso.
@@ -20,8 +22,9 @@ La especificación se reparte en varios archivos de `docs/`, que forman un únic
 | `docs/especificacion/8-criterios.md` y `8b-criterios-3.0.md` | 8. Criterios de aceptación (los de la 3.0, cambiados y nuevos 241–290, en 8b) |
 | `docs/especificacion/9-tareas.md` y `9b-tareas-3.0.md` | 9. Plan de tareas (las fases 2 a 6 de la 3.0, tareas 89–104, en 9b), riesgos y cambios fuera de `docs/` |
 | `docs/especificacion/10-paginas-seo.md`, `8c-criterios-paginas.md` y `9c-tareas-paginas.md` | **10.** Páginas para buscadores, archivo de casos y hueco de anuncios: direcciones `/en/` y `/es/`, raíz, generador `herramientas/paginas.mjs`, SEO, archivo, GitHub Action, créditos, imagen OG, contenido y legales, página `404.html`; criterios 291–337 y tareas 105–130. Anexo de la 3.0 **sin subir versión** [D-171]. **Manda sobre 0.2, 2.1, 2.3 (pie de la portada), 2.4, 2.7, 3.7, 4.4.2, 4.5/4.23 y 4.22 donde difieran.** |
+| `docs/especificacion/11-hora-espana.md` | **[3.1] 11.** Día común en hora de España: `fechaMadrid`, `medianocheMadrid` y `msHastaMedianocheMadrid`, dónde se usa la fecha de Madrid, cuenta atrás y vigía de medianoche, archivo y Action, textos afectados, registro del lanzamiento, criterios 338–357 (8.50), tareas 131–141 (9.18), riesgos R38–R42 y cambios de `CLAUDE.md` (P9). **Manda sobre todos los demás archivos donde difieran** (lista exacta al principio de 11). Los archivos que siguen diciendo "3.0" o "2.1" en su título forman parte de la 3.1 sin más cambios que los que indica 11. |
 
-Este documento es la fuente de verdad técnica. Si algo no está aquí, no se inventa: se pregunta o se registra en `docs/DECISIONES.md`. Las reglas de `CLAUDE.md` prevalecen: **la 3.0 contradice varias** (interfaz solo en inglés, Cómo jugar desplegable, teclas, palabras prohibidas, `facts.txt`, prompt `.en.txt` como único usado). Hasta que el usuario actualice `CLAUDE.md` con el texto de 9.6 (requisito **P7**, DP-64), nadie implementa las tareas que cambian lo que ve el jugador (fases 3 a 5). La sección 10 (páginas para buscadores) contradecía además `CLAUDE.md` en rutas absolutas de metadatos, archivo publicado en claro, estructura y scroll de las páginas de contenido: el usuario aplicó el texto de 9.15 en `CLAUDE.md` el 2026-10-30 (requisito **P8**, D-186), con la excepción exacta de las cuatro direcciones de las guías (D-187) y `404.html` con URL absolutas (D-196). Falta el cambio de `.claude/` (9.16) antes de delegar la primera tarea de cada agente afectado.
+Este documento es la fuente de verdad técnica. Si algo no está aquí, no se inventa: se pregunta o se registra en `docs/DECISIONES.md`. Las reglas de `CLAUDE.md` prevalecen: **la 3.0 contradice varias** (interfaz solo en inglés, Cómo jugar desplegable, teclas, palabras prohibidas, `facts.txt`, prompt `.en.txt` como único usado). Hasta que el usuario actualice `CLAUDE.md` con el texto de 9.6 (requisito **P7**, DP-64), nadie implementa las tareas que cambian lo que ve el jugador (fases 3 a 5). La sección 10 (páginas para buscadores) contradecía además `CLAUDE.md` en rutas absolutas de metadatos, archivo publicado en claro, estructura y scroll de las páginas de contenido: el usuario aplicó el texto de 9.15 en `CLAUDE.md` el 2026-10-30 (requisito **P8**, D-186), con la excepción exacta de las cuatro direcciones de las guías (D-187) y `404.html` con URL absolutas (D-196). Falta el cambio de `.claude/` (9.16) antes de delegar la primera tarea de cada agente afectado. **[3.1]** La sección 11 contradice "El día cambia a medianoche, hora local." y la descripción del archivo y de la Action de `CLAUDE.md`: hasta que el usuario aplique el texto de 11.11 (requisito **P9**), nadie implementa las tareas 131 a 139.
 
 Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuando cambia el comportamiento del juego [D-44].
 
@@ -32,7 +35,7 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 | Reto | Juego diario independiente. Ids internos: `imagenes` ("Images" / "Imágenes") y `afirmaciones` ("Fact or Fake" / "¿Dato o Bulo?") [D-98, D-121, D-155]. |
 | Idioma | `en` (inglés americano, `en-US`) o `es` (español de España, `es-ES`) [D-154]. `IDIOMAS = ['en', 'es']`, por defecto `en`. Solo cambia lo que se muestra: nunca entra en la clave de partida, en el almacén de progreso ni en `n`. |
 | Caso del día | Las 5 pruebas de un reto en una fecha. Tiene un número `n` (Case #n), **común a los dos retos** (días desde el lanzamiento + 1) [D-99], y un **tema común** a los dos retos [D-123], con un texto por idioma [D-157]. |
-| Lanzamiento | Fecha ISO del Caso #1 de los dos retos, o `null`. Vive solo en `data/calendario.json` y solo se cambia con `npm run lanzamiento` [D-95]. |
+| Lanzamiento | Fecha ISO del Caso #1 de los dos retos, o `null`. Vive solo en `data/calendario.json` y solo se cambia con `npm run lanzamiento` [D-95]. **[3.1]** `2026-11-01` [D-213]. |
 | Tema | Asunto común de las pruebas de un día: `{en, es}`. En inglés sale del nombre de la carpeta de entrada; en español, de `tema.es.txt` [D-159]. No revela la verdad [D-52, D-53]. |
 | Prueba | Cada uno de los 5 elementos del caso, índice `i` de 0 a 4. En Images es una imagen; en Fact or Fake, una **afirmación**. |
 | Afirmación | Frase única que el jugador juzga (campo `claim`), de 1 a 140 caracteres, en cada idioma [D-124, D-159]. |
@@ -46,12 +49,12 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 | Ficha | Lo que se revela tras responder, en el idioma del jugador. Images: prompt o "Real photograph" / "Fotografía real" [D-85, D-157]. Fact or Fake: `{aclaracion, detalles}`. Siempre ofuscada y rellenada. |
 | Instrucciones | Pantalla intermedia de cada reto entre la portada y la partida [D-153]. Verla no gasta el intento. |
 | Tarjeta | `article#afirmacion` de la partida de Fact or Fake [D-126]. No confundir con las tarjetas de reto de la portada (`button.reto`). |
-| Fecha ISO | `AAAA-MM-DD` en hora **local**. |
+| Fecha ISO | `AAAA-MM-DD`. **[3.1]** La fecha del juego es la fecha civil de **Madrid** (`Europe/Madrid`), la misma para todos los jugadores, calculada con `fechaMadrid` (11.2), nunca con la hora local del jugador [D-205, D-206]. |
 | Mes de datos | `AAAA-MM`: el de un día `n` es `mesDeNumero(lanzamiento, n)`; el juego normal carga `data/facts/{mesDeFecha(fecha efectiva)}.json` y el modo prueba, todos [D-117]. |
 | Modo | Solo Images: `investigador` (sin límite), `normal` (3000 ms), `perro` (1000 ms) [D-81]. Nombres visibles: Investigator / Investigador, Normal, Bloodhound / Sabueso. Se elige en `instrucciones` [D-153]. |
 | Previsualización | Solo en `localhost`, `127.0.0.1` o `[::1]`: `?fecha=` fija la fecha efectiva y no se guarda nada (salvo el idioma, D-154) [D-68]. |
-| Modo prueba | Con `?prueba=1` y `PRUEBAS_ABIERTAS = true`: desplegable de día en la portada, almacén en memoria (salvo el idioma), todos los meses de `data/facts/` [D-70, D-110, D-117, D-152]. |
-| Fecha efectiva | La de la previsualización; si no, la del día elegido en modo prueba (`fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); si no, `fechaLocal(new Date())`. |
+| Modo prueba | Con `?prueba=1` y `PRUEBAS_ABIERTAS = true`: desplegable de día en la portada, almacén en memoria (salvo el idioma), todos los meses de `data/facts/` [D-70, D-110, D-117, D-152]. **[3.1]** Cerrado desde el lanzamiento (`PRUEBAS_ABIERTAS = false`) [D-213]. |
+| Fecha efectiva | La de la previsualización; si no, la del día elegido en modo prueba (`fechaDelDia(lanzamiento ?? FECHA_BASE_PRUEBA, n)`); si no, **[3.1]** `fechaMadrid(new Date())` [D-207]. |
 
 ### 0.1 Convenciones obligatorias
 
@@ -100,7 +103,7 @@ Las marcas **[D-nn]** remiten a `docs/DECISIONES.md`. La versión solo sube cuan
 | Pantalla (`data-pantalla`) | Contenido |
 |---|---|
 | `iniciando` | Transitorio mientras se cargan el almacén, `data/calendario.json` y el archivo de afirmaciones del mes de la fecha efectiva (o, en modo prueba, todos los meses, en serie). Sin sección. |
-| `portada` | [3.0, D-152] Cabecera con logo, lema y selector de idioma; "Case #n" y el tema (en modo prueba, desplegable de día); "Choose your case file"; dos tarjetas-botón (Images y Fact or Fake) con ilustración CSS, expediente, nombre, frase, estado y "Open file" + icono de flecha; pie con "New cases every day at midnight." y Credits. |
+| `portada` | [3.0, D-152] Cabecera con logo, lema y selector de idioma; "Case #n" y el tema (en modo prueba, desplegable de día); "Choose your case file"; dos tarjetas-botón (Images y Fact or Fake) con ilustración CSS, expediente, nombre, frase, estado y "Open file" + icono de flecha; pie con el aviso del cambio de día ([3.1] "at midnight, Spanish time (CET)", 11.6) y Credits. |
 | `instrucciones` | [3.0, D-153] Del reto elegido: "All case files", logo y selector de idioma; carpeta con la página del briefing (membrete, nombre, frase, 4 pasos, firma) y la página de acción (Images: método de investigación con los 3 modos; Fact or Fake: normas con el aviso de ausencia y una ficha de ejemplo) con "Open the case". |
 | `cargando` | Solo Images: precarga de las 5 imágenes. |
 | `cuenta-atras` | Solo Images: 3, 2, 1. |
@@ -183,7 +186,7 @@ Un único objeto de estado, gestionado por la función pura `transicion(estado, 
 | `instrucciones`, `cuenta-atras`, `caso` | `OTRA_PESTANA` `{reto}` | reto válido | `retos[reto].jugado = true`; si `reto === estado.reto` → `ya-jugado` [D-51]. |
 | `cargando`, `resultado`, `ya-jugado` | `OTRA_PESTANA` `{reto}` | reto válido | `retos[reto].jugado = true`, sin cambiar de pantalla. |
 | `resultado`, `ya-jugado` | `COMPARTIR` | | sin cambio de estado (efecto en main.js, en el idioma activo). |
-| `portada`, `instrucciones`, `ya-jugado`, `sin-casos` | `MEDIANOCHE` | la fecha efectiva ha cambiado | `iniciando`: main.js vuelve a cargar el calendario y el mes de `data/facts/` de la nueva fecha; `idioma` se conserva. |
+| `portada`, `instrucciones`, `ya-jugado`, `sin-casos` | `MEDIANOCHE` | la fecha efectiva ha cambiado ([3.1] a medianoche de Madrid; lo detectan el bucle de `resultado`/`ya-jugado`, `visibilitychange` y el vigía de medianoche, 11.4) | `iniciando`: main.js vuelve a cargar el calendario y el mes de `data/facts/` de la nueva fecha; `idioma` se conserva. |
 | cualquiera | evento no listado (incluidos `ELEGIR_RETO`, `VER_COMO_JUGAR`, `ENTENDIDO`, `OCULTA`, `EMPEZAR` y `ELEGIR_MODO` en `portada`, y `CAMBIAR_IDIOMA` fuera de `portada` e `instrucciones`) | | el mismo objeto |
 
 Reglas adicionales:
@@ -303,7 +306,7 @@ Temas, afirmaciones, aclaraciones, detalles y fichas solo como `textContent` en 
   - `.reto-estado` (main.js, `textContent`): `portada.estado_sin_caso`, `portada.estado_jugado` (`{aciertos}`), `portada.estado_en_curso` o, si el caso aún no se ha abierto, nada (sin etiqueta) [D-202].
   - `disabled` si ese reto no tiene caso hoy. Una tarjeta de reto jugado o en curso en otra pestaña no lleva `disabled`: abre `ya-jugado`.
   - No hay reto "elegido" en la portada: las dos tarjetas tienen el mismo aspecto salvo por su estado.
-- `footer#portada-pie`: `p#portada-aviso-dia data-texto="portada.pie"` ("New cases every day at midnight.") y `a#portada-creditos data-texto="portada.enlace_creditos"`, cuyo `href` pone main.js: `creditos.html` en inglés y `creditos.es.html` en español [D-161].
+- `footer#portada-pie`: `p#portada-aviso-dia data-texto="portada.pie"` ([3.1] con "at midnight, Spanish time (CET)" / "a medianoche, hora de España", 11.6) y `a#portada-creditos data-texto="portada.enlace_creditos"`, cuyo `href` pone main.js: `creditos.html` en inglés y `creditos.es.html` en español [D-161].
 - **Retirados** [D-152]: `fieldset#portada-retos`, los radios `#reto-{r}` y `.reto-radio`, `.reto-cabecera`, `.reto-accion`, `fieldset#portada-modos` (los radios de modo pasan a `instrucciones`), `#portada-regla`, `#portada-empezar-{r}-texto`, `#portada-racha`, `button.boton-ayuda`, `dialog#como-jugar` (con `#como-jugar-titulo`, `#como-jugar-pasos`, `#como-jugar-cerrar`), `div#selector-prueba` y el botón `abrir-prueba`. La racha ya no se ve en la portada (resultado y `ya-jugado` la muestran) [DP-69].
 
 **Instrucciones** (`#pantalla-instrucciones`) [3.0, D-153, D-167]:
@@ -498,9 +501,9 @@ Temas, afirmaciones, aclaraciones, detalles y fichas solo como `textContent` en 
     <button type="button" class="boton boton-primario" data-accion="compartir"><span class="icono-compartir" aria-hidden="true"></span><span class="boton-texto" data-texto="compartir.boton">…</span></button>
   </div>
   ```
-  Rachas, cuenta atrás y medianoche en resultado como en la 2.1 [D-145].
+  Rachas, cuenta atrás y medianoche en resultado como en la 2.1 [D-145]. [3.1] La cuenta atrás es hasta la próxima medianoche de Madrid (`msHastaMedianocheMadrid`, 11.4).
 
-**Ya jugado** (`#pantalla-ya-jugado`): sin cambios (`#ya-jugado-reto`, `#ya-jugado-aciertos`, `#ya-jugado-modo` con `hidden` en Fact or Fake, `#ya-jugado-cuadros` con `aria-label` = `final.cuadros_etiqueta`, `#ya-jugado-racha`, `#ya-jugado-cuenta-atras`, Share y Back). No tiene selector de idioma: se pinta en el idioma vigente.
+**Ya jugado** (`#pantalla-ya-jugado`): sin cambios (`#ya-jugado-reto`, `#ya-jugado-aciertos`, `#ya-jugado-modo` con `hidden` en Fact or Fake, `#ya-jugado-cuadros` con `aria-label` = `final.cuadros_etiqueta`, `#ya-jugado-racha`, `#ya-jugado-cuenta-atras`, Share y Back). No tiene selector de idioma: se pinta en el idioma vigente. [3.1] `#ya-jugado-cuenta-atras` cuenta hasta la próxima medianoche de Madrid (11.4).
 
 **Sin casos**: `<p id="sin-casos-texto" tabindex="-1" data-foco>`: `sin_casos.sin_lanzamiento` si `lanzamiento === null`, o `sin_casos.texto` [D-95]. **Error**: sin cambios.
 

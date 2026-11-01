@@ -50,3 +50,6 @@ Ya no existen importar-dataset.mjs ni generar-calendario.mjs (ni sus scripts de 
 - Los créditos se generan en en/credits/ y es/creditos/ (creditos.html y creditos.es.html solo redirigen). SIEMPRE, justo después de cada importación (npm run importar, npm run afirmaciones o sus --reimportar) o de cambiar datos, plantillas o textos: `npm run paginas` y luego `npm run validar`. Nunca termines un lote ni hagas commit sin haberlo ejecutado.
 - herramientas/paginas.mjs genera raíz, juego, páginas, archivo (solo días terminados en todo el mundo), 404, robots.txt y sitemap.xml. La Action .github/workflows/archivo.yml lo regenera cada día a las 12:15 UTC.
 - Ninguna imagen de un día ya llegado vuelve en un día futuro (comprobarReutilizacion, en importar y validar).
+
+## Hora de España (spec 11)
+- La Action pasa de `15 12 * * *` a dos cron (22:10 y 23:10 UTC) con la comprobación de la hora de Madrid (11.5.2); `hoyISO` de las herramientas sale de `fechaMadrid`; `ultimoDiaArchivable` según 11.5.1.

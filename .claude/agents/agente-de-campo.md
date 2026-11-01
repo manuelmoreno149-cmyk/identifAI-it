@@ -35,3 +35,6 @@ Lee CLAUDE.md, docs/ESPECIFICACION.md e index.html antes de empezar.
 - El juego se lee de herramientas/plantillas/juego.html y se sirve en /en/ y /es/ (generado por `npm run paginas`); index.html de la raíz solo redirige (js/raiz.js).
 - Datos e imágenes se resuelven con RAIZ = new URL('../', import.meta.url), nunca con <base>. Prueba el juego en /en/ y /es/ (también con ?prueba=1).
 - `ANUNCIOS_ACTIVOS = false` en main.js; nunca anuncios en la partida ni en las revelaciones.
+
+## Hora de España (spec 11)
+- El día del juego sale siempre de `fechaMadrid` (nunca de la hora local). Tests con varias zonas en procesos hijos y Playwright con `timezoneId`.

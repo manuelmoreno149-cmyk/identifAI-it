@@ -118,6 +118,62 @@ export function sumarDias(fechaISO, dias) {
   return new Date(Date.UTC(a, m - 1, d + dias)).toISOString().slice(0, 10);
 }
 
+// ---- Día común en hora de España [11.2, D-206] ----
+export const ZONA_JUEGO = 'Europe/Madrid';
+
+let formatoMadrid = null;
+
+function aMs(instante) {
+  const ms = instante instanceof Date ? instante.getTime() : instante;
+  if ((!(instante instanceof Date) && typeof instante !== 'number') || !Number.isFinite(ms)) {
+    throw new TypeError('El instante debe ser un Date válido o un número finito');
+  }
+  return ms;
+}
+
+// Partes (año, mes, día, hora, minuto, segundo) de un instante en ZONA_JUEGO. Interna, no se exporta.
+function partesMadrid(instante) {
+  const ms = aMs(instante);
+  formatoMadrid ??= new Intl.DateTimeFormat('en-US', {
+    timeZone: ZONA_JUEGO,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23'
+  });
+  const partes = {};
+  for (const p of formatoMadrid.formatToParts(ms)) partes[p.type] = p.value;
+  return partes;
+}
+
+export function fechaMadrid(instante) {
+  const p = partesMadrid(instante);
+  return `${p.year.padStart(4, '0')}-${p.month}-${p.day}`;
+}
+
+export function medianocheMadrid(fechaISO) {
+  if (typeof fechaISO !== 'string' || !RE_FECHA.test(fechaISO) || sumarDias(fechaISO, 0) !== fechaISO) {
+    throw new TypeError(`Fecha no válida: ${String(fechaISO)}`);
+  }
+  const base = utcDe(fechaISO);
+  for (const desfase of [3600000, 7200000]) {
+    const candidato = base - desfase;
+    const p = partesMadrid(candidato);
+    if (`${p.year}-${p.month}-${p.day}` === fechaISO && Number(p.hour) === 0 && p.minute === '00' && p.second === '00') {
+      return candidato;
+    }
+  }
+  throw new Error(`No hay medianoche en Madrid para ${fechaISO}`);
+}
+
+export function msHastaMedianocheMadrid(instante) {
+  const ms = aMs(instante);
+  return medianocheMadrid(sumarDias(fechaMadrid(ms), 1)) - ms;
+}
+
 // Hosts en los que se permite la previsualización local de un día.
 export const HOSTS_LOCALES = ['localhost', '127.0.0.1', '[::1]'];
 

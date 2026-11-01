@@ -25,3 +25,6 @@ Lee CLAUDE.md y docs/ESPECIFICACION.md, y revisa el código contra sus criterios
 
 ## Páginas y archivo (spec 10)
 - Revisa que el archivo no contiene nada de hoy ni del futuro (zona horaria UTC−12), que las palabras prohibidas solo aparecen en las cuatro direcciones exceptuadas, y el contenido legal (privacidad y cookies solo con afirmaciones ciertas hoy).
+
+## Hora de España (spec 11)
+- Ningún día se archiva antes de la medianoche de Madrid; las tareas 131–137 se publican juntas (R39).

@@ -21,3 +21,6 @@ js/textos.js, un módulo ES que exporta un único objeto TEXTOS con claves en mi
 
 ## Páginas y SEO (spec 10)
 - También escribes herramientas/contenido/{en,es}/ y los grupos de js/textos.js de las páginas (pie, raiz, paginas, seo, archivo, anuncios, no_encontrada) y RUTAS (exacta, según la spec). En las páginas legales y las guías, tono sobrio y exacto; si no estás seguro de algo, no lo pongas. No menciones la mezcla de IA/falsas por día. Cumple las normas de 10.12 de la spec.
+
+## Hora de España (spec 11)
+- El cambio de día se nombra "at midnight, Spanish time (CET)" / "a medianoche, hora de España"; nunca "hora local".
