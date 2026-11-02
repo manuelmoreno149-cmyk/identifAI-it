@@ -20,6 +20,7 @@ export const TEXTOS = {
       estado_jugado: 'Filed · {aciertos}/5',
       estado_en_curso: 'In another tab',
       estado_sin_caso: 'No case today',
+      estado_sin_caso_archivo: 'No case that day',
       modo_investigador: 'Investigator',
       modo_normal: 'Normal',
       modo_perro: 'Bloodhound',
@@ -32,9 +33,26 @@ export const TEXTOS = {
       desc_reto_afirmaciones: 'Five claims. Spot the fakes.'
     },
 
+    casos: {
+      elegir: 'Choose a case',
+      titulo: 'Case files',
+      cerrar: 'Close',
+      hoy: 'Today',
+      estado_reto: '{reto}: {estado}',
+      estado_jugado: '✓ {aciertos}/5',
+      estado_sin_jugar: 'Not played',
+      estado_en_curso: 'In progress',
+      estado_sin_caso: 'No case',
+      aviso: 'Archive case · {fecha}',
+      volver_hoy: 'Back to today',
+      vacia: 'No earlier cases yet.',
+      etiqueta_archivo: 'Case #{n} (archive)'
+    },
+
     instrucciones: {
       volver: 'All case files',
       membrete: 'Briefing · Case #{n} · {tema}',
+      membrete_archivo: 'Archive · Case #{n} · {tema}',
       frase_imagenes: 'Five photos. One call each: real or AI.',
       frase_afirmaciones: 'A true fact or a clever lie?',
       pasos_imagenes: [
@@ -70,6 +88,7 @@ export const TEXTOS = {
 
     partida: {
       caso_del_dia: 'Case of the day: {tema}',
+      caso_archivo: 'Archive case: {tema}',
       marca: 'identifAI-it · Real or AI?',
       etiqueta_prueba: 'Evidence {i}/5',
       marcador: 'Correct: {aciertos}',
@@ -192,14 +211,16 @@ export const TEXTOS = {
       siguiente_caso: 'Next case in',
       nuevo_caso: 'New case available',
       boton_nuevo_caso: 'Play',
-      dijiste: 'You said {voto}'
+      dijiste: 'You said {voto}',
+      nota_archivo: 'Archive cases don\'t count toward your streak.'
     },
 
     ya_jugado: {
       titulo: 'Case closed',
       texto: 'You\'ve already filed today\'s case. Come back tomorrow. Crime never sleeps.',
       proximo: 'Next case in {tiempo}',
-      modo: 'Mode: {modo}'
+      modo: 'Mode: {modo}',
+      texto_archivo: 'You\'ve already filed this case.'
     },
 
     sin_casos: {
@@ -230,7 +251,9 @@ export const TEXTOS = {
       copiado: 'Copied to clipboard',
       manual: 'Copy this text:',
       plantilla: 'identifAI-it Images #{caso}\nMode: {modo}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}',
-      plantilla_afirmaciones: 'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}'
+      plantilla_afirmaciones: 'identifAI-it Fact or Fake #{caso}\n{aciertos}/5 {cuadros}\nStreak: {racha}\n{url}',
+      plantilla_archivo: 'identifAI-it Images #{caso} (archive)\nMode: {modo}\n{aciertos}/5 {cuadros}\n{url}',
+      plantilla_afirmaciones_archivo: 'identifAI-it Fact or Fake #{caso} (archive)\n{aciertos}/5 {cuadros}\n{url}'
     },
 
     creditos: {
@@ -337,6 +360,7 @@ export const TEXTOS = {
       estado_jugado: 'Archivado · {aciertos}/5',
       estado_en_curso: 'En otra pestaña',
       estado_sin_caso: 'Sin caso hoy',
+      estado_sin_caso_archivo: 'Sin caso ese día',
       modo_investigador: 'Investigador',
       modo_normal: 'Normal',
       modo_perro: 'Sabueso',
@@ -349,9 +373,26 @@ export const TEXTOS = {
       desc_reto_afirmaciones: 'Cinco afirmaciones. Separa el dato del bulo.'
     },
 
+    casos: {
+      elegir: 'Elegir caso',
+      titulo: 'Casos',
+      cerrar: 'Cerrar',
+      hoy: 'Hoy',
+      estado_reto: '{reto}: {estado}',
+      estado_jugado: '✓ {aciertos}/5',
+      estado_sin_jugar: 'Sin jugar',
+      estado_en_curso: 'En curso',
+      estado_sin_caso: 'Sin caso',
+      aviso: 'Caso del archivo · {fecha}',
+      volver_hoy: 'Volver a hoy',
+      vacia: 'Aún no hay casos anteriores.',
+      etiqueta_archivo: 'Caso n.º {n} (archivo)'
+    },
+
     instrucciones: {
       volver: 'Todos los expedientes',
       membrete: 'Informe · Caso n.º {n} · {tema}',
+      membrete_archivo: 'Archivo · Caso n.º {n} · {tema}',
       frase_imagenes: 'Cinco fotos. Decide cuáles son reales y cuáles hizo una máquina.',
       frase_afirmaciones: '¿Una verdad o una mentira ingeniosa?',
       pasos_imagenes: [
@@ -387,6 +428,7 @@ export const TEXTOS = {
 
     partida: {
       caso_del_dia: 'Caso del día: {tema}',
+      caso_archivo: 'Caso del archivo: {tema}',
       marca: 'identifAI-it · ¿Real o IA?',
       etiqueta_prueba: 'Prueba {i}/5',
       marcador: 'Aciertos: {aciertos}',
@@ -509,14 +551,16 @@ export const TEXTOS = {
       siguiente_caso: 'Próximo caso en',
       nuevo_caso: 'Nuevo caso disponible',
       boton_nuevo_caso: 'Jugar',
-      dijiste: 'Dijiste {voto}'
+      dijiste: 'Dijiste {voto}',
+      nota_archivo: 'Los casos del archivo no cuentan para la racha.'
     },
 
     ya_jugado: {
       titulo: 'Caso cerrado',
       texto: 'Ya archivaste el caso de hoy. Vuelve mañana. El crimen nunca duerme.',
       proximo: 'Próximo caso en {tiempo}',
-      modo: 'Modo: {modo}'
+      modo: 'Modo: {modo}',
+      texto_archivo: 'Ya cerraste este caso.'
     },
 
     sin_casos: {
@@ -547,7 +591,9 @@ export const TEXTOS = {
       copiado: 'Copiado al portapapeles',
       manual: 'Copia este texto:',
       plantilla: 'identifAI-it Imágenes #{caso}\nModo: {modo}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}',
-      plantilla_afirmaciones: 'identifAI-it ¿Dato o Bulo? #{caso}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}'
+      plantilla_afirmaciones: 'identifAI-it ¿Dato o Bulo? #{caso}\n{aciertos}/5 {cuadros}\nRacha: {racha}\n{url}',
+      plantilla_archivo: 'identifAI-it Imágenes #{caso} (archivo)\nModo: {modo}\n{aciertos}/5 {cuadros}\n{url}',
+      plantilla_afirmaciones_archivo: 'identifAI-it ¿Dato o Bulo? #{caso} (archivo)\n{aciertos}/5 {cuadros}\n{url}'
     },
 
     creditos: {

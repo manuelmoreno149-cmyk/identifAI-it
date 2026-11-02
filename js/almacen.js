@@ -253,3 +253,135 @@ export function cerrarAbandonada(datos, reto, fecha, hoyISO) {
   });
   return registrarFin(cerrada, reto, fecha, hoyISO);
 }
+
+// ---- Almacén de los casos anteriores [12.6.3, 12.7] ----
+// Clave aparte: jamás toca identifaiit.v3 (ni racha, ni mejor racha, ni partidas de hoy).
+export const CLAVE_ARCHIVO = 'identifaiit.archivo.v1';
+export const VERSION_ARCHIVO = 1;
+
+export function archivoInicial() {
+  return { version: VERSION_ARCHIVO, retos: { imagenes: { partidas: {} }, afirmaciones: { partidas: {} } } };
+}
+
+const RE_FECHA_ARCHIVO = /^\d{4}-\d{2}-\d{2}$/;
+
+function partidaArchivoValida(p) {
+  return (
+    esObjeto(p) &&
+    Number.isInteger(p.n) &&
+    (p.modo === null || typeof p.modo === 'string') &&
+    (p.estado === 'en_curso' || p.estado === 'terminada') &&
+    typeof p.resultados === 'string' &&
+    /^[AF-]{5}$/.test(p.resultados) &&
+    Number.isInteger(p.aciertos) &&
+    typeof p.sesion === 'string'
+  );
+}
+
+function normalizarRetoArchivo(crudo) {
+  const partidas = {};
+  if (esObjeto(crudo) && esObjeto(crudo.partidas)) {
+    for (const [fecha, p] of Object.entries(crudo.partidas)) {
+      if (RE_FECHA_ARCHIVO.test(fecha) && partidaArchivoValida(p)) {
+        partidas[fecha] = { n: p.n, modo: p.modo, estado: p.estado, resultados: p.resultados, aciertos: p.aciertos, sesion: p.sesion };
+      }
+    }
+  }
+  return { partidas };
+}
+
+function normalizarArchivo(crudo) {
+  if (!esObjeto(crudo) || crudo.version !== VERSION_ARCHIVO || !esObjeto(crudo.retos)) return archivoInicial();
+  return {
+    version: VERSION_ARCHIVO,
+    retos: {
+      imagenes: normalizarRetoArchivo(crudo.retos.imagenes),
+      afirmaciones: normalizarRetoArchivo(crudo.retos.afirmaciones)
+    }
+  };
+}
+
+export function leerArchivo(almacen = almacenGlobal()) {
+  let disponible = false;
+  try {
+    almacen.setItem(CLAVE_PRUEBA, '1');
+    almacen.removeItem(CLAVE_PRUEBA);
+    disponible = true;
+  } catch {
+    return { datos: archivoInicial(), disponible: false };
+  }
+  try {
+    const texto = almacen.getItem(CLAVE_ARCHIVO);
+    if (texto === null || texto === undefined) return { datos: archivoInicial(), disponible };
+    return { datos: normalizarArchivo(JSON.parse(texto)), disponible };
+  } catch {
+    return { datos: archivoInicial(), disponible };
+  }
+}
+
+function guardarArchivo(datos, almacen) {
+  try {
+    almacen.setItem(CLAVE_ARCHIVO, JSON.stringify(datos));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function leerClaveArchivo(almacen) {
+  try {
+    const texto = almacen.getItem(CLAVE_ARCHIVO);
+    if (texto === null || texto === undefined) return null;
+    const crudo = JSON.parse(texto);
+    if (!esObjeto(crudo) || crudo.version !== VERSION_ARCHIVO || !esObjeto(crudo.retos)) return null;
+    return normalizarArchivo(crudo);
+  } catch {
+    return null;
+  }
+}
+
+export function leerArchivoConRespaldo(local = almacenGlobal(), sesion = respaldoGlobal()) {
+  const l = leerArchivo(local);
+  if (l.disponible) return { datos: l.datos, disponible: true, respaldo: false };
+  const copia = leerClaveArchivo(sesion);
+  if (copia) return { datos: copia, disponible: false, respaldo: true };
+  return { datos: l.datos, disponible: false, respaldo: false };
+}
+
+export function guardarArchivoConRespaldo(datos, local = almacenGlobal(), sesion = respaldoGlobal()) {
+  const guardado = guardarArchivo(datos, local);
+  const respaldo = guardarArchivo(datos, sesion);
+  return { guardado, respaldo };
+}
+
+export function actualizarArchivo(cambio, enMemoria, local = almacenGlobal(), sesion = respaldoGlobal()) {
+  const lectura = leerArchivo(local);
+  const base = lectura.disponible ? lectura.datos : (enMemoria ?? lectura.datos);
+  const nuevos = cambio(base);
+  if (lectura.disponible && nuevos === base) return { datos: base, guardado: true };
+  const { guardado } = guardarArchivoConRespaldo(nuevos, local, sesion);
+  return { datos: nuevos, guardado };
+}
+
+// Como registrarFin, pero sin racha ni mejor racha.
+export function terminarSinRacha(datos, reto, fecha, sesion) {
+  const partida = partidaDe(datos, reto, fecha);
+  if (!editable(partida, sesion)) return datos;
+  return conPartida(datos, reto, fecha, { ...partida, estado: 'terminada', aciertos: contar(partida.resultados) });
+}
+
+export function cerrarAbandonadaArchivo(datos, reto, fecha) {
+  const partida = partidaDe(datos, reto, fecha);
+  if (!editable(partida)) return datos;
+  const cerrada = conPartida(datos, reto, fecha, { ...partida, resultados: partida.resultados.replaceAll('-', 'F') });
+  return terminarSinRacha(cerrada, reto, fecha);
+}
+
+// La partida de un caso: la de identifaiit.v3 (se jugó en su día) o la del archivo; si no, null.
+export function partidaDeCaso(datosDia, datosArchivo, reto, fecha) {
+  const delDia = datosDia ? partidaDe(datosDia, reto, fecha) : null;
+  if (delDia) return { partida: delDia, origen: 'dia' };
+  const delArchivo = datosArchivo ? partidaDe(datosArchivo, reto, fecha) : null;
+  if (delArchivo) return { partida: delArchivo, origen: 'archivo' };
+  return null;
+}

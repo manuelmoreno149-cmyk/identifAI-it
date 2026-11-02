@@ -47,8 +47,15 @@
       </div>
     </header>
     <div id="portada-dia">
-      <p id="portada-caso"></p>
-      <p id="portada-tema"></p>
+      <button type="button" id="portada-dia-boton" data-accion="abrir-casos" aria-haspopup="dialog" aria-expanded="false" aria-controls="casos">
+        <span id="portada-caso"></span><span id="portada-tema"></span>
+        <span class="solo-lectores" data-texto="casos.elegir">Choose a case</span>
+        <span class="portada-dia-flecha" aria-hidden="true"></span>
+      </button>
+      <p id="portada-archivo" hidden>
+        <span id="portada-archivo-texto"></span>
+        <button type="button" class="boton-hoy" data-accion="volver-hoy"><span class="boton-texto" data-texto="casos.volver_hoy">Back to today</span></button>
+      </p>
     </div>
     <h2 id="portada-elige" data-texto="portada.elige_reto">Choose your case file</h2>
     <div class="retos">
@@ -294,6 +301,7 @@
     <!-- Pie: rachas y cuenta atras a la izquierda, botones a la derecha -->
     <footer id="resultado-pie">
       <div id="resultado-rachas">
+        <p id="resultado-archivo" data-texto="resultado.nota_archivo" hidden>Archive cases don&#39;t count toward your streak.</p>
         <p class="cifra"><span class="cifra-etiqueta" data-texto="resultado.etiqueta_racha">Streak</span><span class="cifra-valor" id="resultado-racha"></span></p>
         <p class="cifra"><span class="cifra-etiqueta" data-texto="resultado.etiqueta_mejor_racha">Best streak</span><span class="cifra-valor" id="resultado-mejor-racha"></span></p>
         <p class="cifra" id="resultado-proximo"><span class="cifra-etiqueta" data-texto="resultado.siguiente_caso">Next case in</span><span class="cifra-valor cifra-ambar" id="resultado-cuenta-atras" aria-live="off"></span></p>
@@ -314,11 +322,12 @@
   <section class="pantalla" id="pantalla-ya-jugado" hidden>
     <div class="tarjeta">
       <h2 tabindex="-1" data-texto="ya_jugado.titulo">Case closed</h2>
-      <p id="ya-jugado-texto" data-texto="ya_jugado.texto">You&#39;ve already filed today&#39;s case. Come back tomorrow. Crime never sleeps.</p>
+      <p id="ya-jugado-texto"></p>
       <p id="ya-jugado-reto"></p>
       <p id="ya-jugado-aciertos"></p>
       <p id="ya-jugado-modo"></p>
       <p id="ya-jugado-cuadros" role="img"></p>
+      <p id="ya-jugado-archivo" data-texto="resultado.nota_archivo" hidden>Archive cases don&#39;t count toward your streak.</p>
       <p id="ya-jugado-racha"></p>
       <p id="ya-jugado-cuenta-atras" aria-live="off"></p>
     </div>
@@ -367,6 +376,17 @@
     <button type="button" id="ficha-cerrar" class="boton" data-accion="cerrar-ficha">
       <span class="boton-texto" data-texto="ficha.cerrar">Close</span>
     </button>
+  </dialog>
+
+  <dialog id="casos" aria-labelledby="casos-titulo">
+    <div class="casos-caja">
+      <div class="casos-cabecera">
+        <h2 id="casos-titulo" data-texto="casos.titulo">Case files</h2>
+        <button type="button" id="casos-cerrar" data-accion="cerrar-casos" data-texto-aria="casos.cerrar" aria-label="Close"><span class="casos-cerrar-aspa" aria-hidden="true"></span></button>
+      </div>
+      <ol id="casos-lista"></ol>
+      <p id="casos-vacia" data-texto="casos.vacia" hidden>No earlier cases yet.</p>
+    </div>
   </dialog>
 
 </main>

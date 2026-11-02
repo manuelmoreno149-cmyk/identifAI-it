@@ -559,3 +559,30 @@ Para cambiar una decisión:
 ### 2026-11-02 · Lote de la semana 2 (días 8 a 14; sin subir versión)
 
 - D-219 · **Riesgo de pesos aceptado en los días 8 a 14**: el usuario publica el lote con los pesos como salieron del importador, igual que con los días 2 y 7. La diferencia de peso medio entre imágenes auténticas y generadas es de 70 % (día 9), 59 % (13), 50 % (8), 48 % (10) y 17 % (14), y varias imágenes quedan fuera de la franja de 110 a 160 KB aun con calidad 55 o 90. El tamaño de archivo podría delatar la respuesta; se acepta el riesgo y queda pendiente reexportar o sustituir imágenes si se quiere reducir.
+
+### 2026-11-02 · Versión 3.2: jugar casos anteriores desde el juego (pedido del usuario; sube versión)
+
+- D-220 · **Especificación 3.2** (`docs/especificacion/12-casos-anteriores.md`). Sube versión (D-44) porque cambia el comportamiento del juego (casos anteriores jugables, eventos `ELEGIR_CASO` y estado `archivo`, historial del navegador); no es un ajuste pequeño. Contradecía `CLAUDE.md` (carga solo del mes en curso, intento solo del día, etiqueta de la portada): requisito P10, ya aplicado (D-231). Los datos no cambian de formato.
+- D-221 · **Reglas**: se pueden jugar los días `1 ≤ n < nHoy` (terminados en hora de Madrid), una vez por reto y caso, con las mismas reglas (modos, sobre, ausencia de más de 3 s), sin contar para la racha. Un reto jugado en su día cuenta como jugado.
+- D-222 · **Datos sin cambio de formato**: el calendario y `data/facts/` siguen en sus versiones actuales, sin migración y con el tema en claro (D-231). Las páginas del archivo no cambian.
+- D-223 · **Carga**: un caso anterior usa el calendario y el `data/facts/` de su mes; la lista no hace peticiones ni descifra nada; del caso que se juega solo se descifra su contenido ofuscado (respuestas, prompts, fichas, afirmaciones) y solo si `n < nHoy`.
+- D-224 · **Almacén aparte** `identifaiit.archivo.v1`, por fecha del caso; `identifaiit.v3` no cambia.
+- D-225 · **`?caso=N`**: inválido, hoy o futuro → hoy y se quita de la URL; se conserva en la raíz, `?lang=` y el selector. Historial: D-232.
+- D-226 · **Desplegable**: `#portada-dia-boton` y `dialog#casos` modal; lista bajo la etiqueta (≥ 600 x 500) u hoja inferior con filas de 44 px; scroll solo en la lista; hoy arriba con "Today"; aviso y "Back to today" en `#portada-dia`.
+- D-227 · **Compartir**: plantillas con "(archive)" / "(archivo)", sin racha y con `?caso=N`.
+- D-228 · **Pantallas en modo archivo**: sin racha ni cuenta atrás; a medianoche la lista se cierra y se recarga conservando el caso.
+- D-229 · **Textos**: grupo `casos` y claves de 12.11; privacidad y cookies listan cuatro claves; pregunta frecuente nueva.
+- D-230 · **Publicación**: tareas 142–146 y revisión antes de publicar en `main` (sin coordinación de datos y código, porque los formatos no cambian).
+- D-231 · **El tema no es secreto** (usuario, 2026-11-02): se descartó ofuscar los temas (y con ello cambiar el formato de los datos); siguen en claro en `data/calendario.json` y `data/facts/`, sin cambio de formato. Lo que no puede filtrarse de hoy ni de días futuros son respuestas, prompts, verdades y afirmaciones. Cambio de P10 **aplicado en `CLAUDE.md`** el mismo día: intento por día y casos anteriores (`?caso=N`, `identifaiit.archivo.v1`), etiqueta de la portada como desplegable, compartir con "(archive)" / "(archivo)", carga del mes del caso abierto y descifrado solo del caso que se juega y solo si `n < nHoy`.
+- D-232 · **Historial (DP-113 resuelta por decisión del usuario)**: estando en un caso del archivo (`?caso=N`), Atrás del navegador vuelve al caso de hoy; solo sale del juego si ya se está en el de hoy. Elegir un caso anterior desde hoy usa `history.pushState`; entre anteriores y "Back to today", `replaceState` (sin acumular entradas); `popstate` vuelve a hoy o al estado anterior sin recargar; al entrar directamente por `?caso=N` se inserta antes la entrada de hoy (`replaceState` sin `caso` y `pushState` a `?caso=N`). Detalle en 12.9.
+- D-233 · **DP-114 a DP-119, resueltas por defecto por el usuario**: URL compartida con `?caso=N` (114); sin lista en `sin-casos` (115); día jugado en su día y compartido desde el archivo: plantilla normal con la racha de esa fecha (116); firma "One try per day. — The Chief" sin cambios en modo archivo (117); cuenta atrás oculta en modo archivo (118); hoja inferior con ancho < 600 px o alto < 500 px, 640x360 incluido (119).
+
+### Marcas que hay que poner en decisiones anteriores (3.2)
+
+- D-32, D-99: AMPLIADAS por D-221. D-116, D-117: MODIFICADAS por D-223. D-109, D-154: AMPLIADAS por D-224. D-128, D-155: AMPLIADAS por D-227. D-152: AMPLIADA por D-226. D-184: MODIFICADA por D-229. D-209: AMPLIADA por D-228.
+
+### 2026-11-02 · Ajustes tras la auditoría de casos anteriores (sin subir versión)
+
+- D-234 · **Foco del desplegable**: no se añade bucle de Tab. Se acepta el comportamiento nativo de `showModal()` (algún Tab pasa por la interfaz del navegador y vuelve al diálogo); el criterio 370 se relaja en consecuencia (usuario).
+- D-235 · **Filas de la lista**: fecha y estado a 16 px (1rem); "Volver a hoy" va junto al texto del aviso a partir de 600 px.
+- D-236 · **`?fecha=` y `?caso=` en producción**: `fechaPrevisualizada` solo acepta localhost, 127.0.0.1 y [::1] (test 104); en identifaiit.com se ignora. `?caso=N` solo admite 1 ≤ N < nHoy (hora de Madrid), sin `?fecha=` en producción; hoy, futuro o inválido abren hoy. Confirmado, sin cambios de código.

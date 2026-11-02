@@ -3862,6 +3862,368 @@
   }
 }
 
+/* ---------- Casos anteriores (spec 12.5): etiqueta-boton, aviso de archivo y lista (R22) ---------- */
+#portada-dia-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--tactil-min);
+  padding: 0 var(--espacio-2);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px dashed var(--color-borde);
+  border-radius: var(--radio-2);
+  cursor: pointer;
+}
+
+#portada-dia-boton:hover {
+  border-color: var(--color-ambar);
+}
+
+#portada-dia-boton #portada-caso {
+  display: inline-block;
+  flex: none;
+  padding: 0 var(--espacio-2);
+}
+
+#portada-dia-boton #portada-tema {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  line-height: 1.15;
+  max-height: 2.3em;
+}
+
+.portada-dia-flecha {
+  flex: none;
+  width: 0.75rem;
+  height: 0.5rem;
+  background: var(--color-ambar);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transition: transform var(--duracion-media);
+}
+
+#portada-dia-boton[aria-expanded="true"] .portada-dia-flecha {
+  transform: rotate(180deg);
+}
+
+#portada-archivo {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--espacio-3);
+  font-family: var(--fuente-datos);
+  font-size: var(--texto-pequeno);
+  line-height: 1.2;
+  color: var(--color-texto-suave);
+}
+
+#portada-archivo-texto {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.boton-hoy {
+  flex: none;
+  min-width: var(--tactil-min);
+  min-height: var(--tactil-min);
+  padding: 0 var(--espacio-2);
+  font: inherit;
+  font-family: var(--fuente-datos);
+  font-size: var(--texto-pequeno);
+  color: var(--color-ambar);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.boton-hoy:hover {
+  color: var(--color-foco);
+}
+
+@media (min-width: 600px) {
+  #portada-archivo {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: 0 var(--espacio-4);
+  }
+}
+
+/* Nota de archivo en resultado y ya jugado */
+#resultado-archivo,
+#ya-jugado-archivo {
+  font-family: var(--fuente-datos);
+  font-size: var(--texto-pequeno);
+  line-height: 1.3;
+  color: var(--color-texto-suave);
+}
+
+#ya-jugado-archivo {
+  color: var(--color-tinta-suave);
+}
+
+/* Lista de casos: hoja inferior por defecto (< 600 px o < 500 px de alto) */
+#casos {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: 85dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--color-texto);
+  background: var(--color-fondo-2);
+  border: 0;
+  border-top: 2px solid var(--color-ambar);
+  border-radius: var(--radio-3) var(--radio-3) 0 0;
+  box-shadow: var(--sombra-papel);
+}
+
+#casos[open] {
+  display: flex;
+  flex-direction: column;
+  animation: casos-subir 200ms ease-out;
+}
+
+#casos::backdrop {
+  background: rgba(5, 8, 13, 0.75);
+}
+
+@keyframes casos-subir {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.casos-caja {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--espacio-3) var(--espacio-4) calc(var(--espacio-3) + env(safe-area-inset-bottom));
+  max-height: inherit;
+}
+
+.casos-cabecera {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding-bottom: var(--espacio-2);
+}
+
+#casos-titulo {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: var(--color-papel);
+}
+
+#casos-cerrar {
+  flex: none;
+  position: relative;
+  width: var(--tactil-min);
+  height: var(--tactil-min);
+  padding: 0;
+  color: var(--color-texto);
+  background: transparent;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-2);
+  cursor: pointer;
+}
+
+#casos-cerrar:hover {
+  border-color: var(--color-ambar);
+}
+
+.casos-cerrar-aspa::before,
+.casos-cerrar-aspa::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.1rem;
+  height: 2px;
+  background: currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.casos-cerrar-aspa::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+#casos :focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+#casos-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#casos-lista > li {
+  flex: none;
+}
+
+#casos-vacia {
+  flex: none;
+  margin: var(--espacio-2) 0 0;
+  font-family: var(--fuente-datos);
+  font-size: var(--texto-pequeno);
+  color: var(--color-texto-suave);
+}
+
+.caso-fila {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--tactil-min);
+  padding: var(--espacio-2) var(--espacio-3);
+  font-family: var(--fuente-cuerpo);
+  font-size: var(--texto-base);
+  line-height: 1.25;
+  text-align: left;
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-2);
+  cursor: pointer;
+}
+
+.caso-fila:hover {
+  border-color: var(--color-ambar);
+}
+
+.caso-fila[aria-current="true"] {
+  border-color: var(--color-ambar);
+  box-shadow: inset 4px 0 0 var(--color-ambar);
+}
+
+.caso-fila-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--espacio-3);
+}
+
+.caso-fila-numero {
+  font-family: var(--fuente-titulos);
+  font-size: 1.125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-papel);
+}
+
+.caso-fila-hoy {
+  padding: 0 var(--espacio-2);
+  font-size: var(--texto-pequeno);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-tinta);
+  background: var(--color-ambar);
+  border-radius: var(--radio-1);
+}
+
+.caso-fila-fecha {
+  margin-left: auto;
+  font-size: 1rem;
+  color: var(--color-texto-suave);
+}
+
+.caso-fila-tema {
+  color: var(--color-ambar);
+}
+
+.caso-fila-estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--espacio-4);
+  font-size: 1rem;
+}
+
+.caso-fila-estado[data-situacion="jugado"] {
+  color: var(--color-texto);
+  font-weight: 700;
+}
+
+.caso-fila-estado[data-situacion="curso"] {
+  color: var(--color-ambar);
+}
+
+.caso-fila-estado[data-situacion="pendiente"],
+.caso-fila-estado[data-situacion="sin-caso"] {
+  color: var(--color-texto-suave);
+}
+
+.caso-fila-estado[data-situacion="sin-caso"] {
+  font-style: italic;
+}
+
+/* Lista pequena (ordenador): bajo el boton; main.js pone --casos-arriba y --casos-izquierda */
+@media (min-width: 600px) and (min-height: 500px) {
+  #casos {
+    inset: var(--casos-arriba, 8rem) auto auto var(--casos-izquierda, 1rem);
+    width: min(28rem, calc(100vw - 32px));
+    max-width: min(28rem, calc(100vw - 32px));
+    max-height: min(60dvh, calc(100dvh - var(--casos-arriba, 8rem) - 16px));
+    border: 2px solid var(--color-ambar);
+    border-radius: var(--radio-2);
+  }
+
+  #casos[open] {
+    animation: none;
+  }
+
+  #casos::backdrop {
+    background: transparent;
+  }
+
+  .casos-caja {
+    padding: var(--espacio-3);
+  }
+
+  #casos-titulo {
+    font-size: 1.25rem;
+  }
+
+  .caso-fila {
+    padding-block: var(--espacio-1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #casos[open] {
+    animation: none;
+    transition: none;
+  }
+}
+
 /* ---------- Espanol (R20): textos mas largos, solo ajustes de composicion ---------- */
 :lang(es) .cifra-etiqueta,
 :lang(es) #resultado-reto {
