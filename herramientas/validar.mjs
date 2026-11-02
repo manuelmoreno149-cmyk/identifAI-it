@@ -49,7 +49,12 @@ import {
   ARCHIVOS_CREDITOS_REDIRECCION,
   CSP,
   RECURSOS_PENDIENTES,
+  SUBCADENAS_GOOGLE,
   SUBCADENAS_GUIAS,
+  leerAjustes,
+  contenidoAdsTxt,
+  huecosSinRellenar,
+  leerAdsense,
   avisosMeta,
   comprobarAtributos,
   comprobarListaBlanca,
@@ -64,6 +69,7 @@ import {
 
 const RAIZ_REAL = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const puntos = (t) => Array.from(t).length;
+const normalizarLf = (s) => s.replace(/\r\n?/g, '\n');
 const NOMBRE_IDIOMA = { en: 'inglés', es: 'español' };
 // La fecha del antiguo lanzamiento fijo no puede aparecer en el código [D-95]; se arma por partes para que este archivo no la contenga.
 const FECHA_FIJA_ANTIGUA = ['2026', '11', '01'].join('-');
@@ -351,6 +357,19 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     if (leer(f).includes(FECHA_FIJA_ANTIGUA)) error(`${f}: contiene la fecha fija ${FECHA_FIJA_ANTIGUA}; el lanzamiento vive solo en data/calendario.json [D-95].`);
   }
 
+  // herramientas/adsense.json y ads.txt [13.3, 13.5]
+  const adsense = leerAdsense(raiz);
+  for (const e of adsense.errores) error(e);
+  const editor = adsense.editor;
+  const ajustesCreditos = leerAjustes(raiz);
+  {
+    const esperado = contenidoAdsTxt(editor);
+    const hay = existsSync(p('ads.txt'));
+    if (esperado === null && hay) error('Existe ads.txt pero herramientas/adsense.json no tiene editor: ejecuta npm run paginas (lo borra).');
+    else if (esperado !== null && !hay) error('Falta ads.txt: hay editor en herramientas/adsense.json; ejecuta npm run paginas.');
+    else if (esperado !== null && normalizarLf(leer('ads.txt')) !== esperado) error('ads.txt no coincide con el editor de herramientas/adsense.json: ejecuta npm run paginas.');
+  }
+
   // en/credits/ (lang en) y es/creditos/ (lang es): páginas de contenido que escribe creditos.mjs [10.10]
   for (const idioma of IDIOMAS) {
     const nombre = ARCHIVOS_CREDITOS[idioma];
@@ -362,6 +381,9 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     if (!c.includes('<meta http-equiv="Content-Security-Policy" content="' + CSP + '">')) error(nombre + ': la CSP no es la de la spec.');
     if (!c.includes('data-pagina="creditos"')) error(nombre + ': falta data-pagina="creditos".');
     if (/<script/i.test(c)) error(nombre + ': contiene <script>.');
+    const metas = c.split('<meta name="google-adsense-account"').length - 1;
+    if (editor !== null && metas !== 1) error(nombre + ': debe llevar una metaetiqueta google-adsense-account (hay editor): ejecuta npm run creditos.');
+    if (editor === null && metas > 0) error(nombre + ': lleva la metaetiqueta google-adsense-account pero no hay editor: ejecuta npm run creditos.');
     if (/\sstyle\s*=/i.test(c)) error(nombre + ': contiene atributo style.');
     for (const id of vistos.keys()) if (c.includes(id)) error(nombre + ': contiene el id de imagen ' + id + '.');
     if (!c.endsWith('\n') || c.endsWith('\n\n') || c.includes('\r')) error(nombre + ': debe usar LF y terminar con un único salto de línea.');
@@ -375,14 +397,34 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     if (anunciosActivos === null) error('js/main.js debe declarar una sola vez const ANUNCIOS_ACTIVOS = false; (10.13).');
     else if (anunciosActivos) error('ANUNCIOS_ACTIVOS vale true en js/main.js: activar anuncios exige una versión nueva de la spec (10.13).');
   }
-  if (anunciosActivos === false && (existsSync(p('es', 'aviso-legal')) || existsSync(p('en', 'legal-notice')))) {
-    error('Existe la página del aviso legal (es/aviso-legal/ o en/legal-notice/) con ANUNCIOS_ACTIVOS = false: no se publica hasta que haya anuncios (10.14).');
+  // Aviso legal: preparado frente a publicado [13.7.3]
+  {
+    const fuentes = {};
+    for (const idioma of IDIOMAS) {
+      const f = 'herramientas/contenido/' + idioma + '/aviso_legal.html';
+      if (!existsSync(p(f))) error('Falta ' + f + '.');
+      else fuentes[idioma] = { aviso_legal: normalizarLf(leer(f)) };
+    }
+    const huecos = IDIOMAS.map((idioma) => [idioma, huecosSinRellenar(fuentes[idioma]?.aviso_legal)]);
+    if (anunciosActivos === true) {
+      for (const [idioma, h] of huecos) {
+        if (h.length > 0) error('No se pueden activar los anuncios sin aviso legal: quedan huecos ' + h.join(', ') + ' en herramientas/contenido/' + idioma + '/aviso_legal.html.');
+      }
+    } else if (anunciosActivos === false) {
+      if (existsSync(p('es', 'aviso-legal')) || existsSync(p('en', 'legal-notice'))) {
+        error('El aviso legal solo se publica con ANUNCIOS_ACTIVOS = true y sin huecos (13.7.3).');
+      }
+      if (IDIOMAS.every((i) => fuentes[i]) && huecos.every(([, h]) => h.length === 0)) {
+        aviso('El aviso legal ya no tiene huecos pero no se publica hasta activar los anuncios; esos datos ya están en el repositorio público si los has subido.');
+      }
+    }
   }
 
   for (const e of comprobarListaBlanca()) error(e);
   for (const f of recorrer('js').filter((x) => /\.m?js$/.test(x))) {
     const codigo = leer(f);
     for (const s of SUBCADENAS_GUIAS) if (codigo.includes(s)) error(f + ': contiene la dirección de una guía (' + s + '); el juego no puede enlazarlas.');
+    for (const s of SUBCADENAS_GOOGLE) if (codigo.toLowerCase().includes(s)) error(f + ': contiene "' + s + '" (prohibido mientras ANUNCIOS_ACTIVOS = false, 13.2.1).');
   }
   const PLANTILLA_JUEGO = 'herramientas/plantillas/juego.html';
   if (existsSync(p(PLANTILLA_JUEGO))) {
@@ -602,7 +644,7 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
       for (const f of enCasos) if (!porId.has(f.replace(/\.webp$/, ''))) aviso(`casos/${f} no está en el banco.`);
       for (const idioma of IDIOMAS) {
         const nombre = ARCHIVOS_CREDITOS[idioma];
-        if (existsSync(p(nombre)) && leer(nombre) !== creditosParaBanco(banco, idioma)) {
+        if (existsSync(p(nombre)) && leer(nombre) !== creditosParaBanco(banco, idioma, undefined, ajustesCreditos)) {
           error(`${nombre} no coincide con lo que generaría creditos.mjs con el banco actual (ejecuta npm run creditos).`);
         }
       }

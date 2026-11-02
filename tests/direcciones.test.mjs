@@ -120,6 +120,26 @@ test('301. el texto compartido usa la URL del idioma, sin ?lang= ni ?prueba=', (
   assert.equal(u('http://localhost:3000', '/sub/es/'), 'http://localhost:3000/sub/es/');
 });
 
+test('402. enlace de consentimiento: oculto, último de la fila, sin acción; main.js y el CSS no lo tocan (13.8)', () => {
+  const main = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(main, /portada-consentimiento|data-consentimiento/);
+  for (const idioma of ['en', 'es']) {
+    const html = readFileSync(new URL(`../${idioma}/index.html`, import.meta.url), 'utf8');
+    assert.equal((html.match(/id="portada-consentimiento"/g) ?? []).length, 1, idioma);
+    const nav = /<nav id="portada-enlaces"[\s\S]*?<\/nav>/.exec(html)[0];
+    const ultimo = [...nav.matchAll(/<(?:a|button)\b[^>]*>/g)].at(-1)[0];
+    assert.match(ultimo, /^<button type="button" id="portada-consentimiento"/, idioma);
+    assert.match(ultimo, /\shidden[\s>]/, idioma);
+    assert.doesNotMatch(ultimo, /data-accion/, idioma);
+  }
+  for (const f of readdirSync(new URL('../css/', import.meta.url))) {
+    const css = readFileSync(new URL(`../css/${f}`, import.meta.url), 'utf8');
+    for (const regla of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (/portada-consentimiento|\.pie-boton/.test(regla[1])) assert.doesNotMatch(regla[2], /display\s*:/, `${f}: ${regla[1].trim()}`);
+    }
+  }
+});
+
 test('main.js y raiz.js: contrato de la fase 5 (10.4.4, 10.13, 10.1.1)', () => {
   const main = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
   assert.equal((main.match(/const ANUNCIOS_ACTIVOS = false;/g) ?? []).length, 1);

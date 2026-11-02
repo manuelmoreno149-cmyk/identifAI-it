@@ -91,6 +91,7 @@ function entradas({ lanzamiento = LANZAMIENTO, nDias = 7, soloImagenes = [], sol
   const dias = Array.from({ length: nDias }, (_, k) => k + 1);
   return {
     ...ENTRADAS_REPO,
+    adsense: { editor: null },
     calendario: { version: 5, lanzamiento, dias: dias.filter((n) => !soloFacts.includes(n)).map((n) => diaImagenes(n, genPorDia[n])) },
     meses: [{ version: 2, mes: '2026-12', dias: dias.filter((n) => !soloImagenes.includes(n)).map((n) => diaFacts(n)) }]
   };
@@ -603,6 +604,7 @@ function raizPrueba(e) {
   const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'paginas-'));
   for (const d of ['herramientas/plantillas', 'herramientas/contenido', 'css', 'js', 'img']) fs.cpSync(path.join(REPO, d), path.join(raiz, d), { recursive: true });
   fs.mkdirSync(path.join(raiz, 'data/facts'), { recursive: true });
+  fs.writeFileSync(path.join(raiz, 'herramientas/adsense.json'), JSON.stringify({ version: 1, editor: null }));
   fs.writeFileSync(path.join(raiz, 'data/calendario.json'), JSON.stringify(e.calendario));
   for (const m of e.meses) fs.writeFileSync(path.join(raiz, `data/facts/${m.mes}.json`), JSON.stringify(m));
   fs.mkdirSync(path.join(raiz, 'casos'));

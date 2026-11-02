@@ -60,7 +60,7 @@ const CLAVES = {
   pie: [
     'etiqueta', 'sobre', 'como_jugar', 'metodo', 'guia_imagenes', 'guia_desinformacion', 'archivo', 'preguntas',
     'creditos', 'privacidad', 'cookies', 'contacto', 'corto_sobre', 'corto_como_jugar', 'corto_archivo',
-    'corto_privacidad', 'corto_guia_imagenes', 'corto_creditos'
+    'corto_privacidad', 'corto_guia_imagenes', 'corto_creditos', 'aviso_legal', 'consentimiento'
   ],
   raiz: ['lema', 'jugar'],
   paginas: ['saltar', 'jugar'],
@@ -458,4 +458,14 @@ test('366. casos anteriores: plantillas exactas y estado_jugado exacto', () => {
   assert.equal(TEXTOS.en.compartir.plantilla_afirmaciones_archivo, 'identifAI-it Fact or Fake #{caso} (archive)\n{aciertos}/5 {cuadros}\n{url}');
   assert.equal(TEXTOS.es.compartir.plantilla_archivo, 'identifAI-it Imágenes #{caso} (archivo)\nModo: {modo}\n{aciertos}/5 {cuadros}\n{url}');
   assert.equal(TEXTOS.es.compartir.plantilla_afirmaciones_archivo, 'identifAI-it ¿Dato o Bulo? #{caso} (archivo)\n{aciertos}/5 {cuadros}\n{url}');
+});
+
+test('401 pie.aviso_legal y pie.consentimiento: textos de 13.11, hasta 40 caracteres, en los dos idiomas', () => {
+  assert.equal(TEXTOS.en.pie.aviso_legal, 'Legal notice');
+  assert.equal(TEXTOS.es.pie.aviso_legal, 'Aviso legal');
+  assert.equal(TEXTOS.en.pie.consentimiento, 'Manage consent');
+  assert.equal(TEXTOS.es.pie.consentimiento, 'Gestionar consentimiento');
+  for (const idioma of ['en', 'es']) {
+    for (const k of ['aviso_legal', 'consentimiento']) assert.ok(TEXTOS[idioma].pie[k].length <= 40, `${idioma}.pie.${k}`);
+  }
 });
