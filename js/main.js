@@ -32,13 +32,17 @@ import {
   fechaPrevisualizada,
   pruebaActiva,
   diasDePrueba,
-  diaDePrueba
+  diaDePrueba,
+  casoPedido,
+  listaDeCasos,
+  urlConCaso
 } from './diario.js';
 import {
   MODOS,
   RETOS,
   estadoInicial,
   transicion,
+  estadoEnLista,
   contarAciertos,
   estadoDeCodigo,
   votoDicho,
@@ -64,7 +68,14 @@ import {
   registrarPrueba,
   registrarFin,
   cerrarAbandonada,
-  calcularRacha
+  calcularRacha,
+  leerArchivo,
+  leerArchivoConRespaldo,
+  actualizarArchivo,
+  terminarSinRacha,
+  cerrarAbandonadaArchivo,
+  partidaDeCaso,
+  CLAVE_ARCHIVO
 } from './almacen.js';
 import {
   crearTemporizador,
@@ -72,7 +83,7 @@ import {
   nivelTemporizador,
   segundosRestantes
 } from './temporizador.js';
-import { rellenar, cuadros, textoCompartir, urlDelJuego, compartir } from './compartir.js';
+import { rellenar, cuadros, textoCompartir, urlDelJuego, urlDeCaso, compartir } from './compartir.js';
 
 const PRUEBAS_ABIERTAS = false; // Modo prueba [D-71]: poner false antes de la fecha de lanzamiento.
 const ANUNCIOS_ACTIVOS = false; // Anuncios [D-182, 10.13]: hoy solo hay un hueco vacío (hidden); validar falla si vale true. Con false main.js no toca los huecos de anuncio.
@@ -117,6 +128,12 @@ let botonDeFicha = null; // botón que abrió el diálogo, para devolverle el fo
 let ausencia = null; // Fact or Fake [D-115]: {perf, fecha, indice} desde que se oculta la pestaña
 let diasPrueba = null; // días del desplegable del modo prueba
 let diaPrueba = null; // día abierto en el modo prueba
+let datosArchivo = null; // identifaiit.archivo.v1: partidas de casos anteriores [12.7]
+let nHoy = null; // número del caso de hoy (null sin lanzamiento)
+let nPedido = null; // caso anterior abierto (null = hoy) [12.3]
+let mesCargado = null; // archivo mensual de Fact or Fake cargado (para la lista)
+let cargaId = 0; // descarta cargas antiguas si se pide otro caso mientras se carga
+let historialListo = false;
 
 // Para el foco al cambiar de pantalla, fase o prueba.
 let ultima = { pantalla: null, fase: null, indice: -1 };
@@ -152,6 +169,37 @@ function sesionAleatoria() {
   return [...bytes].map((b) => letras[b % letras.length]).join('');
 }
 
+// Aplica un cambio al almacén de los casos anteriores (nunca toca identifaiit.v3).
+function aplicarArchivo(cambio) {
+  const r = actualizarArchivo(cambio, datosArchivo, almacenLocal, almacenSesion);
+  datosArchivo = r.datos;
+  marcarAlmacen(r.guardado);
+}
+
+// Guarda en el almacén que toca: el del archivo en modo archivo, identifaiit.v3 si no.
+function aplicarSegun(archivo, cambio) {
+  if (archivo) aplicarArchivo(cambio);
+  else aplicar(cambio);
+}
+
+// Partida guardada de un caso, según el modo (en modo archivo cuenta también la jugada en su día).
+function partidaGuardada(archivo, reto, fecha) {
+  if (archivo) return partidaDeCaso(datos, datosArchivo, reto, fecha)?.partida ?? null;
+  return partidaDe(datos, reto, fecha);
+}
+
+// Partida para mostrar: una de identifaiit.v3 de un día pasado sin cerrar cuenta como jugada, con sus pendientes en fallo.
+function partidaVista(reto, fecha) {
+  if (!estado.archivo) return partidaDe(datos, reto, fecha);
+  const pc = partidaDeCaso(datos, datosArchivo, reto, fecha);
+  if (!pc) return null;
+  const p = pc.partida;
+  if (pc.origen === 'dia' && p.estado === 'en_curso') {
+    return { ...p, estado: 'terminada', resultados: p.resultados.replaceAll('-', 'F') };
+  }
+  return p;
+}
+
 function marcarAlmacen(ok) {
   disponible = ok;
   $('aviso-almacen').hidden = ok;
@@ -184,6 +232,8 @@ function despachar(evento) {
   if (fichaAbierta() && !(nuevo.pantalla === previo.pantalla && nuevo.fase === previo.fase)) {
     cerrarFicha(false);
   }
+  // La lista de casos solo existe sobre la portada: cualquier otro contexto la cierra antes de pintar.
+  if (casosAbiertos() && nuevo.pantalla !== 'portada') cerrarCasos(false);
   render(nuevo);
   despuesDeRender(previo, nuevo, evento);
   // Una ausencia solo puede estar abierta durante una pregunta.
@@ -206,7 +256,7 @@ function antesDeRender(previo, nuevo, evento) {
   }
   if (previo.fase !== 'veredicto' && nuevo.fase === 'veredicto') {
     const codigo = nuevo.resultados[nuevo.indice];
-    aplicar((d) => registrarPrueba(d, nuevo.reto, nuevo.fecha, nuevo.indice, codigo, sesion));
+    aplicarSegun(nuevo.archivo, (d) => registrarPrueba(d, nuevo.reto, nuevo.fecha, nuevo.indice, codigo, sesion));
     textoVeredicto =
       nuevo.motivo === 'oculta'
         ? elegirVariante(t().afirmaciones.oculta)
@@ -214,7 +264,8 @@ function antesDeRender(previo, nuevo, evento) {
   }
   if (previo.pantalla === 'caso' && nuevo.pantalla === 'resultado') {
     // La partida cuenta para el día en que empezó, aunque acabe pasada la medianoche.
-    aplicar((d) => registrarFin(d, nuevo.reto, nuevo.fecha, nuevo.fecha, sesion));
+    if (nuevo.archivo) aplicarArchivo((d) => terminarSinRacha(d, nuevo.reto, nuevo.fecha, sesion));
+    else aplicar((d) => registrarFin(d, nuevo.reto, nuevo.fecha, nuevo.fecha, sesion));
     terminadaAqui = true;
   }
 }
@@ -252,20 +303,24 @@ function despuesDeRender(previo, nuevo) {
 // Juego normal y previsualización: calendario y mes de la fecha efectiva, en paralelo.
 // Modo prueba: calendario y después todos los meses, en serie [D-117].
 async function cargarDia() {
+  const mio = ++cargaId;
   try {
     const lectura = leerConRespaldo(almacenLocal, almacenSesion);
     if (lectura.disponible || lectura.respaldo) datos = lectura.datos;
     marcarAlmacen(lectura.disponible);
+    const lecturaArchivo = leerArchivoConRespaldo(almacenLocal, almacenSesion);
+    datosArchivo = lecturaArchivo.disponible || lecturaArchivo.respaldo ? lecturaArchivo.datos : (datosArchivo ?? lecturaArchivo.datos);
 
     let casoImagenes = null;
     let casoAfirmaciones = null;
     let dia = null;
+    let n = null; // caso anterior que se juega (null = hoy)
     if (modoPrueba) {
       calendario = await cargarCalendario(deRaiz('data/calendario.json'));
       const meses = await cargarAfirmacionesPrueba(calendario.lanzamiento, undefined, RAIZ);
       const dias = diasDePrueba(calendario, meses);
-      const nHoy = numeroDelDia(fechaMadrid(new Date()), calendario.lanzamiento);
-      const elegido = diaDePrueba(location.search, dias, nHoy);
+      const nHoyPrueba = numeroDelDia(fechaMadrid(new Date()), calendario.lanzamiento);
+      const elegido = diaDePrueba(location.search, dias, nHoyPrueba);
       fechaPrueba = elegido ? fechaDelDia(calendario.lanzamiento ?? FECHA_BASE_PRUEBA, elegido.n) : null;
       dia = hoy();
       if (elegido) {
@@ -273,37 +328,120 @@ async function cargarDia() {
         const mes = afirmacionesDelMes(meses, mesDeNumero(calendario.lanzamiento, elegido.n));
         casoAfirmaciones = afirmacionesDeNumero(mes, calendario.lanzamiento, elegido.n);
       }
+      nHoy = null;
+      mesCargado = null;
       prepararModoPrueba(dias, elegido);
     } else {
       dia = hoy();
-      const [cal, mes] = await Promise.all([cargarCalendario(deRaiz('data/calendario.json')), cargarAfirmaciones(dia, undefined, RAIZ)]);
+      // Hoy: calendario y mes en paralelo. Caso anterior: primero el calendario, después el mes de ese caso [12.2.2].
+      const peticionCal = cargarCalendario(deRaiz('data/calendario.json'));
+      const peticionMes = nPedido === null ? cargarAfirmaciones(dia, undefined, RAIZ) : null;
+      let cal;
+      let mes = null;
+      if (peticionMes) [cal, mes] = await Promise.all([peticionCal, peticionMes]);
+      else cal = await peticionCal;
+      if (mio !== cargaId) return;
       calendario = cal;
-      casoImagenes = casoDelDia(calendario, dia);
-      casoAfirmaciones = afirmacionesDelDia(mes, calendario.lanzamiento, dia);
+      nHoy = numeroDelDia(dia, cal.lanzamiento);
+      // Solo se puede abrir un día ya terminado (n < nHoy); si no vale, se juega hoy [12.3].
+      n = nPedido !== null && nHoy !== null && nPedido < nHoy ? nPedido : null;
+      if (n !== null) {
+        mes = await cargarAfirmaciones(fechaDelDia(cal.lanzamiento, n), undefined, RAIZ);
+        if (mio !== cargaId) return;
+        casoImagenes = casoDeNumero(cal, n);
+        casoAfirmaciones = afirmacionesDeNumero(mes, cal.lanzamiento, n);
+        if (!casoImagenes && !casoAfirmaciones) {
+          n = null;
+          casoImagenes = null;
+          casoAfirmaciones = null;
+          mes = null;
+        }
+      }
+      if (n === null) {
+        if (!mes) mes = await cargarAfirmaciones(dia, undefined, RAIZ);
+        if (mio !== cargaId) return;
+        casoImagenes = casoDelDia(cal, dia);
+        casoAfirmaciones = afirmacionesDelDia(mes, cal.lanzamiento, dia);
+      }
+      mesCargado = mes;
+      nPedido = n;
+      prepararHistorial();
     }
     fechaCarga = dia;
 
+    const archivo = n !== null;
     const casos = { imagenes: casoImagenes, afirmaciones: casoAfirmaciones };
     const retos = {};
     for (const reto of RETOS) {
       const caso = casos[reto];
       if (caso) {
         // Partida abandonada: las pruebas pendientes cuentan como fallo [D-79].
-        const pendiente = partidaDe(datos, reto, caso.fecha);
-        if (pendiente && pendiente.estado === 'en_curso') {
-          aplicar((d) => cerrarAbandonada(d, reto, caso.fecha, caso.fecha));
+        if (archivo) {
+          const pc = partidaDeCaso(datos, datosArchivo, reto, caso.fecha);
+          // Una partida de identifaiit.v3 de un día pasado nunca se toca desde el modo archivo.
+          if (pc?.origen === 'archivo' && pc.partida.estado === 'en_curso') {
+            aplicarArchivo((d) => cerrarAbandonadaArchivo(d, reto, caso.fecha));
+          }
+        } else {
+          const pendiente = partidaDe(datos, reto, caso.fecha);
+          if (pendiente && pendiente.estado === 'en_curso') {
+            aplicar((d) => cerrarAbandonada(d, reto, caso.fecha, caso.fecha));
+          }
         }
       }
       retos[reto] = {
         caso,
-        jugado: caso ? partidaDe(datos, reto, caso.fecha)?.estado === 'terminada' : false
+        jugado: !caso
+          ? false
+          : archivo
+            ? partidaDeCaso(datos, datosArchivo, reto, caso.fecha) !== null
+            : partidaDe(datos, reto, caso.fecha)?.estado === 'terminada'
       };
     }
-    despachar({ tipo: 'CARGADO', retos, reto: estado.reto });
+    despachar({ tipo: 'CARGADO', retos, reto: estado.reto, archivo });
   } catch (e) {
+    if (mio !== cargaId) return;
     console.error(e);
     calendario = null;
     despachar({ tipo: 'ERROR_CALENDARIO' });
+  }
+}
+
+// ---- Historial y dirección de los casos anteriores [12.9, D-232] ----
+// Dirección del juego en el idioma activo, con ?caso=n (o sin él con null).
+function direccion(n) {
+  const base = urlDeIdioma(location.href, estado.idioma) ?? location.href;
+  return urlConCaso(base, n) ?? base;
+}
+
+function historia(accion, n) {
+  try {
+    history[accion]({ caso: n }, '', direccion(n));
+  } catch {
+    // sin historial: no pasa nada
+  }
+}
+
+// Una vez, tras la primera carga: deja el historial como [hoy, caso] si se entra con ?caso=N válido,
+// y quita ?caso= de la dirección si no vale (también en cargas posteriores).
+function prepararHistorial() {
+  const traeCaso = new URLSearchParams(location.search).has('caso');
+  if (!historialListo) {
+    historialListo = true;
+    if (nPedido !== null) {
+      historia('replaceState', null);
+      historia('pushState', nPedido);
+    } else if (traeCaso) {
+      historia('replaceState', null);
+    } else {
+      try {
+        history.replaceState({ caso: null }, '', location.href);
+      } catch {
+        // sin historial
+      }
+    }
+  } else if (nPedido === null && traeCaso) {
+    historia('replaceState', null);
   }
 }
 
@@ -399,8 +537,8 @@ function finCuenta() {
   // El intento se consume aquí, releyendo el almacén: si otra pestaña ya había
   // empezado la partida, registrarInicio no cambia nada y la sesión no coincide.
   const miSesion = sesionAleatoria();
-  aplicar((d) => registrarInicio(d, 'imagenes', { fecha, n: caso.n, modo: estado.modo, sesion: miSesion }));
-  if (partidaDe(datos, 'imagenes', fecha)?.sesion !== miSesion) {
+  aplicarSegun(estado.archivo, (d) => registrarInicio(d, 'imagenes', { fecha, n: caso.n, modo: estado.modo, sesion: miSesion }));
+  if (partidaGuardada(estado.archivo, 'imagenes', fecha)?.sesion !== miSesion) {
     despachar({ tipo: 'OTRA_PESTANA', reto: 'imagenes' });
     return;
   }
@@ -418,8 +556,8 @@ function empezar() {
     // Fact or Fake: el intento se gasta ya, antes de pintar la primera afirmación [D-100].
     const fecha = caso.fecha;
     const miSesion = sesionAleatoria();
-    aplicar((d) => registrarInicio(d, 'afirmaciones', { fecha, n: caso.n, modo: null, sesion: miSesion }));
-    if (partidaDe(datos, 'afirmaciones', fecha)?.sesion !== miSesion) {
+    aplicarSegun(estado.archivo, (d) => registrarInicio(d, 'afirmaciones', { fecha, n: caso.n, modo: null, sesion: miSesion }));
+    if (partidaGuardada(estado.archivo, 'afirmaciones', fecha)?.sesion !== miSesion) {
       despachar({ tipo: 'OTRA_PESTANA', reto: 'afirmaciones' });
       return;
     }
@@ -554,8 +692,8 @@ function ponerPasos(reto) {
 // Estado de un reto en la portada [D-98].
 function estadoDeReto(e, reto) {
   const { caso, jugado } = e.retos[reto];
-  if (!caso) return t().portada.estado_sin_caso;
-  const partida = partidaDe(datos, reto, caso.fecha);
+  if (!caso) return e.archivo ? t().portada.estado_sin_caso_archivo : t().portada.estado_sin_caso;
+  const partida = partidaVista(reto, caso.fecha);
   if (partida?.estado === 'terminada') {
     return rellenar(t().portada.estado_jugado, { aciertos: contarAciertos(partida.resultados) });
   }
@@ -568,11 +706,24 @@ function temaActual(e) {
   return e.tema?.[e.idioma] ?? '';
 }
 
+// Aviso de caso del archivo y "volver a hoy" [12.5.1]; solo en modo archivo.
+function pintarAvisoArchivo(e) {
+  const aviso = $('portada-archivo');
+  if (!aviso) return;
+  const fecha = e.archivo && calendario ? fechaDelDia(calendario.lanzamiento, e.n) : null;
+  aviso.hidden = !(e.archivo && fecha);
+  $('portada-archivo-texto').textContent = fecha
+    ? rellenar(t().casos.aviso, { fecha: formatearFecha(fecha, e.idioma) })
+    : '';
+}
+
 function renderPortada(e) {
   const caso = poner('portada-caso', e.n ? rellenar(t().portada.etiqueta_caso, { n: e.n }) : '');
   if (caso) caso.hidden = !e.n;
   const tema = poner('portada-tema', temaActual(e));
   if (tema) tema.hidden = modoPrueba || !e.n;
+  $('portada-dia-boton').hidden = modoPrueba;
+  pintarAvisoArchivo(e);
   for (const reto of RETOS) {
     poner(`reto-${reto}-estado`, estadoDeReto(e, reto));
     const tarjeta = app.querySelector(`#pantalla-portada [data-reto-boton="${reto}"]`);
@@ -583,7 +734,8 @@ function renderPortada(e) {
 
 function renderInstrucciones(e) {
   const imagenes = e.reto === 'imagenes';
-  poner('instrucciones-membrete', rellenar(t().instrucciones.membrete, { n: e.n ?? '', tema: temaActual(e) }));
+  const membrete = e.archivo ? t().instrucciones.membrete_archivo : t().instrucciones.membrete;
+  poner('instrucciones-membrete', rellenar(membrete, { n: e.n ?? '', tema: temaActual(e) }));
   ponerPasos(e.reto);
   const modos = $('instrucciones-modos');
   if (modos) modos.hidden = !imagenes;
@@ -657,7 +809,9 @@ function renderCaso(e) {
   $('caso-modo').textContent = afirmaciones
     ? ''
     : rellenar(t().partida.modo_etiqueta, { modo: nombreModo(e.modo) });
-  $('caso-tema').textContent = temaActual(e) ? rellenar(t().partida.caso_del_dia, { tema: temaActual(e) }) : '';
+  $('caso-tema').textContent = temaActual(e)
+    ? rellenar(e.archivo ? t().partida.caso_archivo : t().partida.caso_del_dia, { tema: temaActual(e) })
+    : '';
   $('caso-etiqueta').textContent = rellenar(grupo.etiqueta_prueba, { i: e.indice + 1 });
   $('caso-marcador').textContent = rellenar(t().partida.marcador, {
     aciertos: contarAciertos(e.resultados)
@@ -809,7 +963,7 @@ function renderResultado(e) {
   const afirmaciones = e.reto === 'afirmaciones';
   $('resultado-reto').textContent = etiquetaResultado([
     nombreReto(e.reto),
-    rellenar(t().portada.etiqueta_caso, { n: e.n }),
+    rellenar(e.archivo ? t().casos.etiqueta_archivo : t().portada.etiqueta_caso, { n: e.n }),
     temaActual(e),
     afirmaciones ? '' : nombreModo(e.modo)
   ]);
@@ -817,7 +971,11 @@ function renderResultado(e) {
   $('resultado-mensaje').textContent = mensajeFinal(aciertos, mensajesDelReto(e.reto, t().final));
   $('resultado-racha').textContent = String(retoDatos.racha);
   $('resultado-mejor-racha').textContent = String(retoDatos.mejorRacha);
-  $('resultado-proximo').hidden = false;
+  // Modo archivo: sin racha, sin cuenta atrás y sin aviso de nuevo caso [12.5.4].
+  $('resultado-racha').closest('.cifra').hidden = e.archivo;
+  $('resultado-mejor-racha').closest('.cifra').hidden = e.archivo;
+  $('resultado-archivo').hidden = !e.archivo;
+  $('resultado-proximo').hidden = e.archivo;
   $('resultado-nuevo-caso').hidden = true;
   crearMiniaturas(e);
 }
@@ -825,14 +983,19 @@ function renderResultado(e) {
 function renderYaJugado() {
   const reto = estado.reto;
   const fecha = estado.retos[reto].caso?.fecha ?? fechaCarga;
-  const partida = partidaDe(datos, reto, fecha);
+  const partida = partidaVista(reto, fecha);
   if (!partida) return;
+  const archivo = estado.archivo;
   const enCurso = partida.estado !== 'terminada';
-  $('ya-jugado-reto').textContent = rellenar(t().final.reto, { reto: nombreReto(reto), n: partida.n });
-  $('ya-jugado-texto').textContent = enCurso ? t().avisos.otra_pestana : t().ya_jugado.texto;
+  $('ya-jugado-reto').textContent = archivo
+    ? etiquetaResultado([nombreReto(reto), rellenar(t().casos.etiqueta_archivo, { n: partida.n })])
+    : rellenar(t().final.reto, { reto: nombreReto(reto), n: partida.n });
+  $('ya-jugado-texto').textContent = enCurso ? t().avisos.otra_pestana : archivo ? t().ya_jugado.texto_archivo : t().ya_jugado.texto;
   for (const id of ['ya-jugado-aciertos', 'ya-jugado-modo', 'ya-jugado-cuadros', 'ya-jugado-racha']) {
-    $(id).hidden = enCurso;
+    $(id).hidden = enCurso || (archivo && id === 'ya-jugado-racha');
   }
+  $('ya-jugado-archivo').hidden = !archivo || enCurso;
+  $('ya-jugado-cuenta-atras').hidden = archivo;
   for (const b of $('pantalla-ya-jugado').querySelectorAll('[data-accion="compartir"]')) b.hidden = enCurso;
   if (enCurso) return;
   const aciertos = contarAciertos(partida.resultados);
@@ -842,9 +1005,11 @@ function renderYaJugado() {
   modo.hidden = reto === 'afirmaciones';
   modo.textContent = reto === 'afirmaciones' ? '' : rellenar(t().ya_jugado.modo, { modo: nombreModo(partida.modo) });
   renderCuadros($('ya-jugado-cuadros'), partida.resultados, aciertos);
-  $('ya-jugado-racha').textContent = rellenar(t().final.racha, {
-    racha: calcularRacha(datos.retos[reto].partidas, fecha)
-  });
+  if (!archivo) {
+    $('ya-jugado-racha').textContent = rellenar(t().final.racha, {
+      racha: calcularRacha(datos.retos[reto].partidas, fecha)
+    });
+  }
 }
 
 function render(e) {
@@ -853,6 +1018,7 @@ function render(e) {
   app.dataset.pantalla = e.pantalla;
   app.dataset.reto = e.reto;
   app.dataset.modo = e.modo;
+  app.dataset.archivo = e.archivo ? 'si' : 'no';
   actualizarSelectorIdioma(e.idioma);
 
   if (e.pantalla !== 'caso') limpiarCaso();
@@ -979,6 +1145,8 @@ const esConCuentaAtras = (pantalla) => pantalla === 'ya-jugado' || pantalla === 
 
 function iniciarBucleMedianoche() {
   detenerBucleMedianoche();
+  // Modo archivo: sin cuenta atrás [D-233]; el vigía se ocupa de la medianoche en ya-jugado.
+  if (estado.archivo) return;
   const enResultado = estado.pantalla === 'resultado';
   const tic = () => {
     const ahora = new Date();
@@ -1009,7 +1177,7 @@ function revisarDia() {
     const p = estado.pantalla;
     if (['portada', 'instrucciones', 'ya-jugado', 'sin-casos'].includes(p)) {
       despachar({ tipo: 'MEDIANOCHE' });
-    } else if (p === 'resultado') {
+    } else if (p === 'resultado' && !estado.archivo) {
       $('resultado-proximo').hidden = true;
       $('resultado-nuevo-caso').hidden = false;
     }
@@ -1035,8 +1203,10 @@ function detenerBucleMedianoche() {
 function partidaActual() {
   const reto = estado.reto;
   const fecha = estado.pantalla === 'resultado' ? estado.fecha : (estado.retos[reto].caso?.fecha ?? fechaCarga);
-  const partida = partidaDe(datos, reto, fecha);
-  return partida ? { ...partida, reto, fechaISO: fecha } : null;
+  const partida = partidaVista(reto, fecha);
+  if (!partida) return null;
+  const origen = estado.archivo ? (partidaDeCaso(datos, datosArchivo, reto, fecha)?.origen ?? 'archivo') : 'dia';
+  return { ...partida, reto, fechaISO: fecha, origen };
 }
 
 function ocultarCompartirManual() {
@@ -1048,13 +1218,24 @@ async function accionCompartir() {
   const partida = partidaActual();
   if (!partida || partida.estado !== 'terminada') return;
   const afirmaciones = partida.reto === 'afirmaciones';
+  // Caso anterior jugado desde el archivo: plantilla "(archive)", sin racha y con ?caso=N [12.8].
+  const deArchivo = partida.origen === 'archivo';
+  const g = t().compartir;
+  const plantilla = deArchivo
+    ? afirmaciones
+      ? g.plantilla_afirmaciones_archivo
+      : g.plantilla_archivo
+    : afirmaciones
+      ? g.plantilla_afirmaciones
+      : g.plantilla;
   const mensaje = textoCompartir({
-    plantilla: afirmaciones ? t().compartir.plantilla_afirmaciones : t().compartir.plantilla,
+    plantilla,
     n: partida.n,
     nombreModo: afirmaciones ? undefined : nombreModo(partida.modo),
     resultados: partida.resultados,
-    racha: calcularRacha(datos.retos[partida.reto].partidas, partida.fechaISO),
-    url: urlDelJuego() // desde /es/ o /en/ da la dirección del idioma, sin ?lang= ni ?prueba= [DP-81]
+    racha: deArchivo ? 0 : calcularRacha(datos.retos[partida.reto].partidas, partida.fechaISO),
+    // desde /es/ o /en/ da la dirección del idioma, sin ?lang= ni ?prueba= [DP-81]
+    url: deArchivo ? urlDeCaso(urlDelJuego(), partida.n) : urlDelJuego()
   });
   const resultado = await compartir(mensaje);
   if (resultado === 'copiado') {
@@ -1092,6 +1273,22 @@ app.addEventListener('click', (e) => {
   }
   if (accion === 'idioma') {
     despachar({ tipo: 'CAMBIAR_IDIOMA', idioma: boton.dataset.idioma });
+    return;
+  }
+  if (accion === 'abrir-casos') {
+    abrirCasos();
+    return;
+  }
+  if (accion === 'cerrar-casos') {
+    cerrarCasos(true);
+    return;
+  }
+  if (accion === 'elegir-caso') {
+    elegirCaso(Number(boton.dataset.caso));
+    return;
+  }
+  if (accion === 'volver-hoy') {
+    elegirCaso(nHoy);
     return;
   }
   if (accion === 'empezar') {
@@ -1136,7 +1333,7 @@ app.addEventListener('change', (e) => {
 document.addEventListener('keydown', (e) => {
   // Con Ctrl, Alt o Meta no se trata ninguna tecla del juego (Ctrl+F y Ctrl+K son del navegador).
   if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
-  if (fichaAbierta()) return; // con el diálogo abierto no hay atajos (Escape lo cierra de forma nativa)
+  if (fichaAbierta() || casosAbiertos()) return; // con un diálogo abierto no hay atajos (Escape lo cierra de forma nativa)
   if (estado.pantalla === 'caso' && estado.fase === 'pregunta') {
     const voto = votoDeTecla(estado.reto, e.key, estado.idioma);
     if (voto !== null) despachar({ tipo: 'VOTO', voto });
@@ -1153,6 +1350,8 @@ function sincronizar() {
   const lectura = leer(almacenLocal);
   if (!lectura.disponible) return;
   datos = lectura.datos;
+  const lecturaArchivo = leerArchivo(almacenLocal);
+  if (lecturaArchivo.disponible) datosArchivo = lecturaArchivo.datos;
   const p = estado.pantalla;
   if (p === 'ya-jugado') {
     renderYaJugado();
@@ -1162,7 +1361,7 @@ function sincronizar() {
   for (const reto of RETOS) {
     const actual = estado.retos[reto];
     if (!actual.caso) continue;
-    const registro = partidaDe(datos, reto, actual.caso.fecha);
+    const registro = partidaGuardada(estado.archivo, reto, actual.caso.fecha);
     if (!registro) continue;
     if (p === 'caso' && reto === estado.reto) {
       // Mi partida: solo cambia si otra pestaña la ha tomado o cerrado.
@@ -1213,10 +1412,181 @@ document.addEventListener('visibilitychange', () => {
 
 if (!enMemoria) {
   window.addEventListener('storage', (e) => {
-    if (e.key !== null && e.key !== CLAVE) return;
+    if (e.key !== null && e.key !== CLAVE && e.key !== CLAVE_ARCHIVO) return;
     sincronizar();
   });
 }
+
+// ---- Lista de casos: dialog#casos [12.5.2] ----
+let focoAlCerrarCasos = true;
+
+function casosAbiertos() {
+  return $('casos').open;
+}
+
+function textoEstadoLista(situacion, aciertos) {
+  const c = t().casos;
+  if (situacion === 'jugado') return rellenar(c.estado_jugado, { aciertos });
+  if (situacion === 'curso') return c.estado_en_curso;
+  if (situacion === 'sin-caso') return c.estado_sin_caso;
+  return c.estado_sin_jugar;
+}
+
+// Estado de un reto en una fila: lo guardado manda; sin partida, depende de si ese día tiene caso.
+function situacionDeFila(fila, reto) {
+  const disponible = reto === 'imagenes' ? fila.imagenes : fila.afirmaciones;
+  const dia = partidaDe(datos, reto, fila.fecha);
+  const archivo = partidaDe(datosArchivo, reto, fila.fecha);
+  const lista = estadoEnLista(dia, archivo);
+  let situacion = lista.situacion;
+  // Hoy en curso en identifaiit.v3 sigue en curso (solo los días pasados cuentan como jugados).
+  if (fila.hoy && dia?.estado === 'en_curso') situacion = 'curso';
+  if (situacion === 'pendiente' && disponible === false) situacion = 'sin-caso';
+  return { situacion, aciertos: lista.aciertos };
+}
+
+function crearFila(fila) {
+  const li = document.createElement('li');
+  const boton = document.createElement('button');
+  boton.type = 'button';
+  boton.className = 'caso-fila';
+  boton.dataset.accion = 'elegir-caso';
+  boton.dataset.caso = String(fila.n);
+  if (fila.n === (nPedido ?? nHoy)) boton.setAttribute('aria-current', 'true');
+  const cabecera = crearSpan('caso-fila-cabecera', undefined, false);
+  cabecera.append(crearSpan('caso-fila-numero', rellenar(t().portada.etiqueta_caso, { n: fila.n }), false));
+  if (fila.hoy) cabecera.append(crearSpan('caso-fila-hoy', t().casos.hoy, false));
+  cabecera.append(crearSpan('caso-fila-fecha', formatearFecha(fila.fecha, estado.idioma), false));
+  const tema = crearSpan('caso-fila-tema', fila.tema?.[estado.idioma] ?? '', false);
+  if (!fila.tema) tema.hidden = true;
+  const estados = crearSpan('caso-fila-estados', undefined, false);
+  for (const reto of RETOS) {
+    const { situacion, aciertos } = situacionDeFila(fila, reto);
+    const span = crearSpan(
+      'caso-fila-estado',
+      rellenar(t().casos.estado_reto, { reto: nombreReto(reto), estado: textoEstadoLista(situacion, aciertos) }),
+      false
+    );
+    span.dataset.retoFila = reto;
+    span.dataset.situacion = situacion;
+    estados.append(span);
+  }
+  boton.append(cabecera, tema, estados);
+  li.append(boton);
+  return li;
+}
+
+// Lista pequeña bajo el botón (ancho >= 600 y alto >= 500) u hoja inferior [12.5.3].
+function posicionarCasos() {
+  const dialogo = $('casos');
+  if (window.innerWidth >= 600 && window.innerHeight >= 500) {
+    const rect = $('portada-dia-boton').getBoundingClientRect();
+    const ancho = Math.min(448, window.innerWidth - 32);
+    const izquierda = Math.max(8, Math.min(rect.left, window.innerWidth - ancho - 16));
+    dialogo.style.setProperty('--casos-arriba', `${Math.round(rect.bottom + 4)}px`);
+    dialogo.style.setProperty('--casos-izquierda', `${Math.round(izquierda)}px`);
+  } else {
+    dialogo.style.removeProperty('--casos-arriba');
+    dialogo.style.removeProperty('--casos-izquierda');
+  }
+}
+
+function abrirCasos() {
+  if (estado.pantalla !== 'portada' || modoPrueba || casosAbiertos() || !calendario) return;
+  const filas = listaDeCasos({ calendario, afirmaciones: mesCargado, nHoy });
+  $('casos-lista').replaceChildren(...filas.map(crearFila));
+  $('casos-vacia').hidden = filas.length > 1;
+  posicionarCasos();
+  $('casos').showModal();
+  $('portada-dia-boton').setAttribute('aria-expanded', 'true');
+  ponerFoco($('casos-lista').querySelector('[aria-current]') ?? $('casos-lista').querySelector('.caso-fila'));
+}
+
+// conFoco: devolver el foco a la etiqueta; false cuando cambia el contexto (lo pone la pantalla nueva).
+function cerrarCasos(conFoco = true) {
+  focoAlCerrarCasos = conFoco;
+  if (casosAbiertos()) $('casos').close();
+}
+
+$('casos').addEventListener('close', () => {
+  $('portada-dia-boton').setAttribute('aria-expanded', 'false');
+  $('casos-lista').replaceChildren();
+  const conFoco = focoAlCerrarCasos;
+  focoAlCerrarCasos = true;
+  if (conFoco && estado.pantalla === 'portada') ponerFoco($('portada-dia-boton'));
+});
+
+// El diálogo no tiene relleno: solo el fondo da este target.
+$('casos').addEventListener('click', (ev) => {
+  if (ev.target === $('casos')) cerrarCasos(true);
+});
+
+$('casos').addEventListener('keydown', (ev) => {
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(ev.key)) return;
+  const filas = [...$('casos-lista').querySelectorAll('.caso-fila')];
+  if (filas.length === 0) return;
+  const i = filas.indexOf(document.activeElement);
+  let destino;
+  if (ev.key === 'Home') destino = 0;
+  else if (ev.key === 'End') destino = filas.length - 1;
+  else if (ev.key === 'ArrowDown') destino = i < 0 ? 0 : Math.min(filas.length - 1, i + 1);
+  else destino = i < 0 ? 0 : Math.max(0, i - 1);
+  ev.preventDefault();
+  ponerFoco(filas[destino]);
+});
+
+window.addEventListener('resize', () => {
+  if (casosAbiertos()) posicionarCasos();
+});
+
+// Elegir un caso de la lista o volver a hoy (n === nHoy) [12.4, 12.9].
+function elegirCaso(n) {
+  if (estado.pantalla !== 'portada' || !Number.isInteger(n) || n < 1) return;
+  const destino = nHoy !== null && n >= nHoy ? null : n;
+  if (destino === nPedido) {
+    cerrarCasos(true); // ya es el caso cargado
+    return;
+  }
+  cerrarCasos(false);
+  if (destino === null) historia('replaceState', null);
+  else historia(nPedido === null ? 'pushState' : 'replaceState', destino);
+  nPedido = destino;
+  despachar({ tipo: 'ELEGIR_CASO', n: destino });
+}
+
+// Atrás y Adelante [12.9]: vuelve a hoy o al caso de la entrada, sin recargar la página.
+window.addEventListener('popstate', (ev) => {
+  if (modoPrueba) return;
+  const p = estado.pantalla;
+  const enPartida = ['cuenta-atras', 'caso', 'cargando'].includes(p) || (p === 'error' && estado.error === 'imagenes');
+  if (enPartida) {
+    // La partida en curso no se abandona: se restaura la dirección del caso cargado.
+    historia('pushState', nPedido);
+    return;
+  }
+  const delEstado = ev.state?.caso;
+  const valido = (n) => Number.isInteger(n) && n >= 1 && nHoy !== null && n < nHoy;
+  const destino = valido(delEstado) ? delEstado : casoPedido(location.search, nHoy);
+  // Deja la dirección en el idioma activo y sin ?caso= erróneo.
+  const url = direccion(destino);
+  if (url !== location.href) {
+    try {
+      history.replaceState({ caso: destino }, '', url);
+    } catch {
+      // sin historial
+    }
+  }
+  if (destino === nPedido) return;
+  cerrarCasos(false);
+  nPedido = destino;
+  if (p === 'portada') despachar({ tipo: 'ELEGIR_CASO', n: destino });
+  else if (p === 'resultado' || p === 'instrucciones' || p === 'ya-jugado') {
+    despachar({ tipo: 'VOLVER_PORTADA' });
+    despachar({ tipo: 'ELEGIR_CASO', n: destino });
+  } else if (p === 'error') despachar({ tipo: 'REINTENTAR' });
+  else if (p === 'iniciando') cargarDia();
+  else despachar({ tipo: 'MEDIANOCHE' });
+});
 
 // ---- Idioma [D-154, 10.4.3] ----
 // La dirección manda: el selector cambia /en/ <-> /es/ sin recargar ni añadir entrada al historial.
@@ -1289,6 +1659,7 @@ function arrancar() {
   const lectura = leerConRespaldo(almacenLocal, almacenSesion);
   datos = lectura.datos;
   marcarAlmacen(lectura.disponible);
+  datosArchivo = leerArchivoConRespaldo(almacenLocal, almacenSesion).datos;
   // Manda la dirección (<html lang> lo pone el generador) [10.3, 10.4.4]. Visitar una dirección no cambia la preferencia.
   const idiomaPagina = idiomaValido(document.documentElement.lang) ? document.documentElement.lang : 'en';
   const lang = decidirLangEnPagina({ idiomaPagina, search: location.search, href: location.href });
@@ -1305,6 +1676,9 @@ function arrancar() {
     }
   }
   const idioma = idiomaPagina;
+  // ?caso=N provisional: cargarDia lo valida contra el día de hoy [12.6.5]. En modo prueba se ignora.
+  const pedido = new URLSearchParams(location.search).get('caso');
+  nPedido = !modoPrueba && pedido !== null && /^[1-9]\d{0,5}$/.test(pedido) ? Number(pedido) : null;
   // estadoInicial valida modo, reto e idioma y usa los de por defecto si no valen.
   estado = estadoInicial({ modo: datos.ajustes.modo, reto: datos.ajustes.reto, idioma });
   // Los textos se pintan antes de mostrar ninguna pantalla: nunca se ven los del otro idioma.

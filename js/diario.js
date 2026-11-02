@@ -651,3 +651,57 @@ export async function precargar(ids, crearImagen = () => new Image(), raiz = nul
   await Promise.all(imagenes.map((img) => img.decode()));
   return imagenes;
 }
+
+// ---- Casos anteriores [12.6.1] ----
+// Número de caso pedido con ?caso=N: solo si es un entero canónico y anterior a hoy; si no, null.
+export function casoPedido(search, nHoy) {
+  try {
+    if (!Number.isInteger(nHoy) || nHoy < 2) return null;
+    const valor = new URLSearchParams(search).get('caso');
+    if (typeof valor !== 'string' || !/^[1-9]\d{0,5}$/.test(valor)) return null;
+    const n = Number(valor);
+    return n < nHoy ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+// Filas de la lista de casos, de nHoy a 1. Solo temas en claro: no descifra nada ni incluye claves, fichas o textos.
+export function listaDeCasos({ calendario, afirmaciones, nHoy } = {}) {
+  const lanzamiento = calendario?.lanzamiento;
+  if (!Number.isInteger(nHoy) || nHoy < 1 || lanzamiento === null || lanzamiento === undefined) return [];
+  if (fechaDelDia(lanzamiento, 1) === null) return [];
+  const diasCal = Array.isArray(calendario.dias) ? calendario.dias : [];
+  const diasMes = Array.isArray(afirmaciones?.dias) ? afirmaciones.dias : [];
+  const filas = [];
+  for (let n = nHoy; n >= 1; n--) {
+    const dCal = diasCal.find((d) => d?.n === n);
+    const dMes = diasMes.find((d) => d?.n === n);
+    const tema = dCal?.tema ?? dMes?.tema ?? null;
+    let hayAfirmaciones = null;
+    if (afirmaciones && typeof afirmaciones.mes === 'string') {
+      hayAfirmaciones = afirmaciones.mes === mesDeNumero(lanzamiento, n) ? Boolean(dMes) : null;
+    }
+    filas.push({
+      n,
+      fecha: fechaDelDia(lanzamiento, n),
+      hoy: n === nHoy,
+      tema: tema ? { en: tema.en, es: tema.es } : null,
+      imagenes: Boolean(dCal),
+      afirmaciones: hayAfirmaciones
+    });
+  }
+  return filas;
+}
+
+// La misma URL con caso=n (o sin caso si n es null). Conserva los demás parámetros y el hash. Nunca lanza.
+export function urlConCaso(href, n) {
+  try {
+    const url = new URL(href);
+    if (n === null) url.searchParams.delete('caso');
+    else url.searchParams.set('caso', String(n));
+    return url.href;
+  } catch {
+    return null;
+  }
+}

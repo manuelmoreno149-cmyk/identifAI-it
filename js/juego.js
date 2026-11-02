@@ -143,6 +143,7 @@ export function estadoInicial({ modo, reto, idioma } = {}) {
       imagenes: { caso: null, jugado: false },
       afirmaciones: { caso: null, jugado: false }
     },
+    archivo: false,
     fecha: null,
     n: null,
     tema: null,
@@ -221,7 +222,7 @@ export function transicion(estado, evento) {
     case 'CARGADO': {
       if (pantalla !== 'iniciando') return estado;
       const retos = normalizarRetos(evento.retos);
-      const base = { ...estado, ...LIMPIO, retos, error: null };
+      const base = { ...estado, ...LIMPIO, retos, error: null, archivo: evento.archivo === true };
       if (!retos.imagenes.caso && !retos.afirmaciones.caso) {
         return { ...base, ...copiarCaso(retos, estado.reto), pantalla: 'sin-casos' };
       }
@@ -346,10 +347,27 @@ export function transicion(estado, evento) {
       }
       return retos === estado.retos ? estado : { ...estado, retos };
     }
+    case 'ELEGIR_CASO':
+      // Solo en portada, con n entero >= 1 o null (hoy). main.js recarga el caso [12.4].
+      if (pantalla !== 'portada') return estado;
+      if (evento.n !== null && !(Number.isInteger(evento.n) && evento.n >= 1)) return estado;
+      return { ...estado, ...LIMPIO, pantalla: 'iniciando', indice: 0, resultados: '-----', fecha: null };
     case 'MEDIANOCHE':
       if (!['portada', 'instrucciones', 'ya-jugado', 'sin-casos'].includes(pantalla)) return estado;
       return { ...estado, ...LIMPIO, pantalla: 'iniciando', indice: 0, resultados: '-----', fecha: null };
     default:
       return estado;
   }
+}
+
+// Situación de un reto en la lista de casos [12.6.2]. partidaDia: de identifaiit.v3; partidaArchivo: del archivo.
+export function estadoEnLista(partidaDia, partidaArchivo) {
+  const valida = (p) => p !== null && typeof p === 'object' && typeof p.resultados === 'string';
+  const aciertosDe = (p) => contarAciertos(p.resultados);
+  if (valida(partidaDia)) return { situacion: 'jugado', aciertos: aciertosDe(partidaDia) };
+  if (valida(partidaArchivo)) {
+    if (partidaArchivo.estado === 'terminada') return { situacion: 'jugado', aciertos: aciertosDe(partidaArchivo) };
+    if (partidaArchivo.estado === 'en_curso') return { situacion: 'curso', aciertos: null };
+  }
+  return { situacion: 'pendiente', aciertos: null };
 }

@@ -6,18 +6,19 @@ import { IDIOMAS } from '../js/diario.js';
 const CLAVES = {
   portada: [
     'titulo', 'lema', 'idioma', 'abrir', 'pie', 'sello_ilustracion', 'etiqueta_caso', 'elige_reto',
-    'reto_imagenes', 'reto_afirmaciones', 'estado_jugado', 'estado_en_curso', 'estado_sin_caso',
+    'reto_imagenes', 'reto_afirmaciones', 'estado_jugado', 'estado_en_curso', 'estado_sin_caso', 'estado_sin_caso_archivo',
     'modo_investigador', 'modo_normal', 'modo_perro', 'desc_investigador', 'desc_normal', 'desc_perro',
     'expediente_imagenes', 'expediente_afirmaciones', 'desc_reto_imagenes', 'desc_reto_afirmaciones'
   ],
   instrucciones: [
     'volver', 'membrete', 'frase_imagenes', 'frase_afirmaciones', 'pasos_imagenes', 'pasos_afirmaciones', 'firma',
-    'metodo', 'reglas', 'ejemplo_etiqueta', 'ejemplo', 'boton_empezar', 'aviso_titulo', 'pestana_imagenes', 'pestana_afirmaciones'
+    'metodo', 'reglas', 'ejemplo_etiqueta', 'ejemplo', 'boton_empezar', 'aviso_titulo', 'pestana_imagenes', 'pestana_afirmaciones',
+    'membrete_archivo'
   ],
   cargando: ['texto'],
   cuenta_atras: ['aviso'],
   partida: [
-    'caso_del_dia', 'marca', 'etiqueta_prueba', 'marcador', 'alt_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica',
+    'caso_del_dia', 'caso_archivo', 'marca', 'etiqueta_prueba', 'marcador', 'alt_prueba', 'boton_autentica', 'boton_generada', 'sello_autentica',
     'sello_generada', 'quedan', 'boton_siguiente', 'boton_ver_resultado', 'sobre_texto', 'sobre_anuncio',
     'modo_etiqueta', 'voto_autentica', 'voto_generada'
   ],
@@ -40,14 +41,18 @@ const CLAVES = {
   ],
   resultado: [
     'sello_cerrado', 'nota_imagenes', 'nota_afirmaciones', 'etiqueta_racha', 'etiqueta_mejor_racha',
-    'siguiente_caso', 'nuevo_caso', 'boton_nuevo_caso', 'dijiste'
+    'siguiente_caso', 'nuevo_caso', 'boton_nuevo_caso', 'dijiste', 'nota_archivo'
   ],
-  ya_jugado: ['titulo', 'texto', 'proximo', 'modo'],
+  ya_jugado: ['titulo', 'texto', 'proximo', 'modo', 'texto_archivo'],
+  casos: [
+    'elegir', 'titulo', 'cerrar', 'hoy', 'estado_reto', 'estado_jugado', 'estado_sin_jugar', 'estado_en_curso',
+    'estado_sin_caso', 'aviso', 'volver_hoy', 'vacia', 'etiqueta_archivo'
+  ],
   sin_casos: ['texto', 'sin_lanzamiento'],
   errores: ['calendario', 'imagenes', 'boton_reintentar'],
   avisos: ['sin_guardar', 'otra_pestana', 'previsualizacion', 'prueba'],
   prueba: ['etiqueta', 'opcion'],
-  compartir: ['boton', 'copiado', 'manual', 'plantilla', 'plantilla_afirmaciones'],
+  compartir: ['boton', 'copiado', 'manual', 'plantilla', 'plantilla_afirmaciones', 'plantilla_archivo', 'plantilla_afirmaciones_archivo'],
   creditos: [
     'titulo_pagina', 'titulo', 'intro', 'tipografias', 'imagenes', 'imagenes_intro', 'sin_imagenes',
     'afirmaciones', 'afirmaciones_texto', 'ver_licencia', 'volver', 'otro_idioma'
@@ -253,7 +258,7 @@ test('38. valores exactos en español', () => {
 test('38. el inglés y el español no se mezclan en lo que ve el jugador', () => {
   // Las etiquetas de cada idioma son distintas (salvo nombres que coinciden en los dos: Normal, REAL, el título).
   const iguales = new Set(['portada.titulo', 'portada.modo_normal', 'partida.boton_autentica', 'partida.sello_autentica',
-    'partida.voto_autentica', 'final.aciertos', 'partida.voto_autentica', 'pie.cookies', 'seo.titulo_raiz', 'seo.descripcion_raiz']);
+    'partida.voto_autentica', 'final.aciertos', 'partida.voto_autentica', 'pie.cookies', 'seo.titulo_raiz', 'seo.descripcion_raiz', 'casos.estado_reto', 'casos.estado_jugado']);
   for (const [ruta, valor] of cadenas(TEXTOS.en)) {
     const otra = cadenas(TEXTOS.es).find(([r]) => r === ruta)[1];
     if (valor === otra) assert.ok(iguales.has(ruta) || /^[^a-z]*$/.test(valor), `${ruta} idéntica en en y es: ${valor}`);
@@ -444,4 +449,13 @@ test('prueba.*: marcadores, longitud y palabras prohibidas (los dos idiomas)', a
       assert.equal(contienePalabraProhibida(t[k]), null, `${idioma}.${k}`);
     }
   }
+});
+
+test('366. casos anteriores: plantillas exactas y estado_jugado exacto', () => {
+  assert.equal(TEXTOS.en.casos.estado_jugado, '✓ {aciertos}/5');
+  assert.equal(TEXTOS.es.casos.estado_jugado, '✓ {aciertos}/5');
+  assert.equal(TEXTOS.en.compartir.plantilla_archivo, 'identifAI-it Images #{caso} (archive)\nMode: {modo}\n{aciertos}/5 {cuadros}\n{url}');
+  assert.equal(TEXTOS.en.compartir.plantilla_afirmaciones_archivo, 'identifAI-it Fact or Fake #{caso} (archive)\n{aciertos}/5 {cuadros}\n{url}');
+  assert.equal(TEXTOS.es.compartir.plantilla_archivo, 'identifAI-it Imágenes #{caso} (archivo)\nModo: {modo}\n{aciertos}/5 {cuadros}\n{url}');
+  assert.equal(TEXTOS.es.compartir.plantilla_afirmaciones_archivo, 'identifAI-it ¿Dato o Bulo? #{caso} (archivo)\n{aciertos}/5 {cuadros}\n{url}');
 });

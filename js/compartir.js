@@ -25,6 +25,11 @@ export function urlDelJuego(ubicacion = location) {
   return ubicacion.origin + ubicacion.pathname.replace(/index\.html$/, '');
 }
 
+// Dirección de un caso anterior para compartir [12.6.4].
+export function urlDeCaso(base, n) {
+  return Number.isInteger(n) && n >= 1 ? `${base}?caso=${n}` : base;
+}
+
 export async function compartir(texto, nav = globalThis.navigator) {
   try {
     if (nav && typeof nav.share === 'function') {
