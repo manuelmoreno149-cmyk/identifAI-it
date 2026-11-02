@@ -94,13 +94,14 @@ async function proyecto(fn, o = {}) {
     escribe('.nojekyll', '');
     escribe('.gitignore', 'entrada/\nherramientas/banco.json\nherramientas/banco.anterior.json\nherramientas/lote.json\n');
     for (const d of ['plantillas', 'contenido']) fs.cpSync(path.join(REPO, 'herramientas', d), ruta('herramientas', d), { recursive: true });
+    escribe('herramientas/adsense.json', json({ version: 1, editor: o.editor ?? null }));
     for (const f of ['variables', 'base', 'componentes', 'paginas']) escribe(`css/${f}.css`, '');
     escribe('img/ui/icono.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
     for (const f of ['en', 'es']) escribe(`img/og/portada-${f}.png`, '');
     escribe('js/raiz.js', '');
     escribe('fonts/OFL-oswald.txt', 'licencia');
     escribe('fonts/LICENSE-special-elite.txt', 'licencia');
-    for (const idioma of IDIOMAS) escribe(ARCHIVOS_CREDITOS[idioma], creditosParaBanco(o.banco ?? { version: 3, imagenes: [] }, idioma));
+    for (const idioma of IDIOMAS) escribe(ARCHIVOS_CREDITOS[idioma], creditosParaBanco(o.banco ?? { version: 3, imagenes: [] }, idioma, undefined, { editor: o.editor ?? null, anunciosActivos: false, publicable: false }));
     if (o.banco) escribe('herramientas/banco.json', json(o.banco));
     // Páginas generadas como las dejaría npm run paginas; con datos rotos no se pueden generar y el test lo provoca a propósito.
     try {
@@ -770,7 +771,7 @@ test('324 el archivo no puede tener días de hoy ni del futuro; y no falla porqu
   }, { lanzamiento: '2026-10-26' });
 });
 
-test('ANUNCIOS_ACTIVOS: ausente, repetida o true es error; el aviso legal no puede existir con false', async () => {
+test('ANUNCIOS_ACTIVOS: ausente, repetida o true es error', async () => {
   const base = '// js\nconst PRUEBAS_ABIERTAS = false;\n';
   for (const main of [base, `${base}const ANUNCIOS_ACTIVOS = false;\nconst ANUNCIOS_ACTIVOS = false;\n`]) {
     await proyecto(async (p) => {
@@ -780,12 +781,141 @@ test('ANUNCIOS_ACTIVOS: ausente, repetida o true es error; el aviso legal no pue
   await proyecto(async (p) => {
     assert.ok(hay((await p.ejecutar()).errores, /ANUNCIOS_ACTIVOS vale true/));
   }, { main: `${base}const ANUNCIOS_ACTIVOS = true;\n` });
+});
+
+// ---------- AdSense (13, criterios 397 a 400) ----------
+
+const EDITOR = 'ca-pub-1234567890123456';
+const SIN_HUECOS = (t) => t.replace(/\[[A-ZÁÉÍÓÚÜÑ][^\]\n]*\]/g, 'X');
+
+test('397 adsense.json y ads.txt: el proyecto mínimo con null pasa; cada incoherencia es un error', async () => {
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+    assert.equal(r.codigo, 0);
+    assert.ok(!fs.existsSync(p.ruta('ads.txt')));
+    assert.ok(!hay(r.avisos, /aviso legal ya no tiene huecos/));
+  });
+  await proyecto(async (p) => {
+    fs.rmSync(p.ruta('herramientas/adsense.json'));
+    assert.ok(hay((await p.ejecutar()).errores, /Falta herramientas\/adsense\.json\./));
+  });
+  await proyecto(async (p) => {
+    p.escribe('herramientas/adsense.json', '{"version":1,"editor":"pub-1"}');
+    assert.ok(hay((await p.ejecutar()).errores, /adsense\.json: editor debe ser null o ca-pub-/));
+  });
+  // Sin editor y con ads.txt.
+  await proyecto(async (p) => {
+    p.escribe('ads.txt', 'google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n');
+    assert.ok(hay((await p.ejecutar()).errores, /Existe ads\.txt pero herramientas\/adsense\.json no tiene editor/));
+  });
+  // Con editor: todo coherente pasa; ads.txt ausente o distinto, créditos sin metaetiqueta, o con ella sin editor, fallan.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+    assert.equal(fs.readFileSync(p.ruta('ads.txt'), 'utf8'), 'google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n');
+    assert.ok(fs.readFileSync(p.ruta('en/credits/index.html'), 'utf8').includes(`<meta name="google-adsense-account" content="${EDITOR}">`));
+  }, { editor: EDITOR });
+  await proyecto(async (p) => {
+    fs.rmSync(p.ruta('ads.txt'));
+    assert.ok(hay((await p.ejecutar()).errores, /Falta ads\.txt: hay editor/));
+  }, { editor: EDITOR });
+  await proyecto(async (p) => {
+    p.escribe('ads.txt', 'google.com, pub-9999999999999999, DIRECT, f08c47fec0942fa0\n');
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /ads\.txt no coincide con el editor/));
+    assert.ok(hay(r.errores, /Páginas desactualizadas: .*ads\.txt/));
+  }, { editor: EDITOR });
+  await proyecto(async (p) => {
+    const meta = `<meta name="google-adsense-account" content="${EDITOR}">\n`;
+    p.escribe('es/creditos/index.html', fs.readFileSync(p.ruta('es/creditos/index.html'), 'utf8').replace(meta, ''));
+    assert.ok(hay((await p.ejecutar()).errores, /es\/creditos\/index\.html: debe llevar una metaetiqueta google-adsense-account/));
+  }, { editor: EDITOR });
+  await proyecto(async (p) => {
+    p.escribe('en/credits/index.html', fs.readFileSync(p.ruta('en/credits/index.html'), 'utf8').replace('<link rel="canonical"', `<meta name="google-adsense-account" content="${EDITOR}">\n<link rel="canonical"`));
+    assert.ok(hay((await p.ejecutar()).errores, /en\/credits\/index\.html: lleva la metaetiqueta google-adsense-account pero no hay editor/));
+  });
+  // Faltan las fuentes del aviso legal.
+  for (const idioma of ['en', 'es']) {
+    await proyecto(async (p) => {
+      fs.rmSync(p.ruta(`herramientas/contenido/${idioma}/aviso_legal.html`));
+      assert.ok(hay((await p.ejecutar()).errores, new RegExp(`Falta herramientas/contenido/${idioma}/aviso_legal\\.html\\.`)));
+    });
+  }
+});
+
+test('398 aviso legal: preparado, con anuncios y huecos, y página que no corresponde', async () => {
   for (const dir of ['es/aviso-legal', 'en/legal-notice']) {
     await proyecto(async (p) => {
       p.escribe(`${dir}/index.html`, 'x');
-      assert.ok(hay((await p.ejecutar()).errores, /Existe la página del aviso legal/));
+      assert.ok(hay((await p.ejecutar()).errores, /^El aviso legal solo se publica con ANUNCIOS_ACTIVOS = true y sin huecos \(13\.7\.3\)\.$/));
     });
   }
+  // Sin huecos y con ANUNCIOS_ACTIVOS = false: solo un aviso.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+    assert.ok(hay(r.avisos, /^El aviso legal ya no tiene huecos pero no se publica hasta activar los anuncios; esos datos ya están en el repositorio público/));
+  }, {
+    extra: ({ escribe, ruta }) => {
+      for (const idioma of ['en', 'es']) {
+        const f = `herramientas/contenido/${idioma}/aviso_legal.html`;
+        escribe(f, SIN_HUECOS(fs.readFileSync(ruta(f), 'utf8')));
+      }
+    }
+  });
+  // ANUNCIOS_ACTIVOS = true sigue siendo error; con huecos, además, el de los huecos de cada idioma.
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(hay(r.errores, /ANUNCIOS_ACTIVOS vale true/));
+    assert.ok(hay(r.errores, /^No se pueden activar los anuncios sin aviso legal: quedan huecos \[FECHA\], \[NOMBRE Y APELLIDOS\], \[NIF\], \[DOMICILIO\] en herramientas\/contenido\/es\/aviso_legal\.html\.$/));
+    assert.ok(hay(r.errores, /quedan huecos .* en herramientas\/contenido\/en\/aviso_legal\.html\./));
+  }, { main: `${MAIN('false').replace('ANUNCIOS_ACTIVOS = false', 'ANUNCIOS_ACTIVOS = true')}` });
+});
+
+test('399 un hueco sin rellenar en una página publicada es error; en la fuente del aviso legal, no', async () => {
+  for (const [rel, de] of [['es/privacidad/index.html', '<h1>'], ['404.html', '<main id="contenido">'], ['es/creditos/index.html', '<h1>']]) {
+    await proyecto(async (p) => {
+      p.escribe(rel, fs.readFileSync(p.ruta(rel), 'utf8').replace(de, `${de}[NIF]`));
+      assert.ok(hay((await p.ejecutar()).errores, new RegExp(`${escapar(rel)}: hueco sin rellenar \\[NIF\\]\\.`)), rel);
+    });
+  }
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.ok(fs.readFileSync(p.ruta('herramientas/contenido/es/aviso_legal.html'), 'utf8').includes('[NIF]'));
+    assert.ok(!hay(r.errores, /hueco sin rellenar/));
+    assert.deepEqual(r.errores, []);
+  });
+});
+
+test('400 las subcadenas de Google son un error en lo publicado y en js/', async () => {
+  for (const s of ['adsbygoogle', 'googlesyndication', 'googletagservices', 'doubleclick', 'fundingchoices']) {
+    await proyecto(async (p) => {
+      p.escribe('js/otro.js', `export const X = '${s.toUpperCase()}';\n`);
+      assert.ok(hay((await p.ejecutar()).errores, new RegExp(`js/otro\\.js: contiene "${s}"`)), s);
+    });
+  }
+  await proyecto(async (p) => {
+    p.escribe('es/privacidad/index.html', fs.readFileSync(p.ruta('es/privacidad/index.html'), 'utf8').replace('<h1>', '<h1>adsbygoogle'));
+    assert.ok(hay((await p.ejecutar()).errores, /es\/privacidad\/index\.html: contiene "adsbygoogle"/));
+  });
+  await proyecto(async (p) => {
+    p.escribe('robots.txt', 'User-agent: *\n# doubleclick\n');
+    assert.ok(hay((await p.ejecutar()).errores, /robots\.txt: contiene "doubleclick"/));
+  });
+  await proyecto(async (p) => {
+    p.escribe('sitemap.xml', '<!-- fundingchoices -->\n');
+    assert.ok(hay((await p.ejecutar()).errores, /sitemap\.xml: contiene "fundingchoices"/));
+  });
+  // La CSP distinta de la spec sigue siendo un error.
+  await proyecto(async (p) => {
+    p.escribe('es/privacidad/index.html', fs.readFileSync(p.ruta('es/privacidad/index.html'), 'utf8').replace("default-src 'self'", "default-src 'self' https://x.test"));
+    assert.ok(hay((await p.ejecutar()).errores, /es\/privacidad\/index\.html: la CSP no es la de la spec\./));
+  });
+  await proyecto(async (p) => {
+    const r = await p.ejecutar();
+    assert.deepEqual(r.errores, []);
+  });
 });
 
 test('332 validar: lista blanca de direcciones, rutas prohibidas y direcciones de las guías fuera del juego', async () => {

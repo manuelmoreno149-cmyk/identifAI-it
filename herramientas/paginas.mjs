@@ -17,7 +17,7 @@ import {
   desofuscarAfirmacion,
   desofuscarAclaracion
 } from '../js/diario.js';
-import { contienePalabraProhibida } from './temas.mjs';
+import { contienePalabraProhibida, analizarAnunciosActivos } from './temas.mjs';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -76,6 +76,83 @@ const LOCALE_OG = Object.freeze({ en: 'en_US', es: 'es_ES' });
 const SUFIJO_TITULO = ' · identifAI-it';
 export const ARCHIVOS_CREDITOS_REDIRECCION = Object.freeze({ en: 'creditos.html', es: 'creditos.es.html' });
 export const ARCHIVOS_CREDITOS_PAGINA = Object.freeze({ en: 'en/credits/index.html', es: 'es/creditos/index.html' });
+
+// ---------- AdSense: configuración, huecos y aviso legal [spec 13] ----------
+
+export const RE_EDITOR = /^ca-pub-\d{16}$/;
+export const RE_HUECO = /(?<!\[)\[[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ0-9 ,.;:'’()\/_-]*\](?!\])/gu;
+// Subcadenas que nada publicado ni js/ puede contener mientras ANUNCIOS_ACTIVOS = false [13.2.1].
+export const SUBCADENAS_GOOGLE = Object.freeze(['adsbygoogle', 'googlesyndication', 'googletagservices', 'doubleclick', 'fundingchoices']);
+export const AJUSTES_NULOS = Object.freeze({ editor: null, anunciosActivos: false, publicable: false });
+export const RE_ADS_TXT = /^google\.com, pub-\d{16}, DIRECT, f08c47fec0942fa0\n$/;
+
+// {editor, errores}. Nunca lanza.
+export function analizarAdsense(texto) {
+  try {
+    const o = JSON.parse(texto);
+    if (o === null || typeof o !== 'object' || Array.isArray(o)) return { editor: null, errores: ['herramientas/adsense.json debe ser un objeto JSON.'] };
+    const errores = [];
+    if (o.version !== 1) errores.push('herramientas/adsense.json: version debe ser 1.');
+    if (!Object.hasOwn(o, 'editor')) errores.push('herramientas/adsense.json: falta editor.');
+    else if (o.editor !== null && !(typeof o.editor === 'string' && RE_EDITOR.test(o.editor))) {
+      errores.push('herramientas/adsense.json: editor debe ser null o ca-pub- seguido de 16 dígitos.');
+    }
+    for (const c of Object.keys(o)) if (c !== 'version' && c !== 'editor') errores.push(`herramientas/adsense.json: sobra el campo ${c}.`);
+    return { editor: errores.length === 0 ? o.editor : null, errores };
+  } catch (e) {
+    return { editor: null, errores: [`herramientas/adsense.json no es JSON válido (${e.message}).`] };
+  }
+}
+
+export function leerAdsense(raiz = RAIZ) {
+  const f = path.join(raiz, 'herramientas', 'adsense.json');
+  if (!fs.existsSync(f)) return { editor: null, errores: ['Falta herramientas/adsense.json.'] };
+  return analizarAdsense(fs.readFileSync(f, 'utf8'));
+}
+
+export function metaAdsense(editor) {
+  return typeof editor === 'string' && RE_EDITOR.test(editor) ? `<meta name="google-adsense-account" content="${editor}">` : '';
+}
+
+export function contenidoAdsTxt(editor) {
+  return typeof editor === 'string' && RE_EDITOR.test(editor) ? `google.com, ${editor.slice(3)}, DIRECT, f08c47fec0942fa0\n` : null;
+}
+
+// Huecos "[NIF]" sin rellenar, en orden y sin repetir. Nunca lanza.
+export function huecosSinRellenar(texto) {
+  if (typeof texto !== 'string') return [];
+  return [...new Set([...texto.matchAll(RE_HUECO)].map((m) => m[0]))];
+}
+
+// true solo con ANUNCIOS_ACTIVOS === true y el aviso legal de los dos idiomas sin huecos [13.7.3].
+export function avisoLegalPublicable({ anunciosActivos, contenido } = {}) {
+  if (anunciosActivos !== true) return false;
+  return IDIOMAS.every((i) => typeof contenido?.[i]?.aviso_legal === 'string' && huecosSinRellenar(contenido[i].aviso_legal).length === 0);
+}
+
+export function paginasPublicadas(publicable) {
+  return publicable ? [...PAGINAS, 'aviso_legal'] : PAGINAS;
+}
+
+// {editor, anunciosActivos, publicable} a partir de las entradas (o de lo que inyecten los tests).
+export function ajustesDe({ adsense, anunciosActivos, contenido } = {}) {
+  const editor = typeof adsense?.editor === 'string' && RE_EDITOR.test(adsense.editor) ? adsense.editor : null;
+  const activos = anunciosActivos === true;
+  return { editor, anunciosActivos: activos, publicable: avisoLegalPublicable({ anunciosActivos: activos, contenido }) };
+}
+
+// Ajustes de AdSense de un proyecto sin leer el calendario (los usa creditos.mjs): {editor, anunciosActivos, publicable, errores}.
+export function leerAjustes(raiz = RAIZ) {
+  const adsense = leerAdsense(raiz);
+  const contenido = {};
+  for (const idioma of IDIOMAS) {
+    const fa = path.join(raiz, 'herramientas', 'contenido', idioma, 'aviso_legal.html');
+    contenido[idioma] = fs.existsSync(fa) ? { aviso_legal: lf(fs.readFileSync(fa, 'utf8')) } : {};
+  }
+  const fMain = path.join(raiz, 'js', 'main.js');
+  const anunciosActivos = fs.existsSync(fMain) ? analizarAnunciosActivos(fs.readFileSync(fMain, 'utf8')) === true : false;
+  return { ...ajustesDe({ adsense, anunciosActivos, contenido }), errores: adsense.errores };
+}
 
 // Recursos que las páginas enlazan y que aún no existen (comprobarSitio no los da por error y validar solo avisa).
 // Vacía desde la fase 5: js/raiz.js ya existe.
@@ -220,7 +297,7 @@ function jsonLdWebSite(inLanguage) {
   return { '@context': 'https://schema.org', '@type': 'WebSite', name: 'identifAI-it', url: DOMINIO, inLanguage };
 }
 
-export function cabecera({ idioma, titulo, descripcion, ruta: rutaCanonica, alternativas, xDefault, noindex = false, og = 'website', pref, css, jsonld = null }) {
+export function cabecera({ idioma, titulo, descripcion, ruta: rutaCanonica, alternativas, xDefault, noindex = false, og = 'website', pref, css, jsonld = null, editor = null }) {
   const e = escaparHtml;
   const otro = idioma === 'en' ? 'es' : 'en';
   const url = (r) => `${DOMINIO}${r}`;
@@ -232,6 +309,7 @@ export function cabecera({ idioma, titulo, descripcion, ruta: rutaCanonica, alte
     `<meta name="description" content="${e(descripcion)}">`
   ];
   if (noindex) lineas.push('<meta name="robots" content="noindex">');
+  if (metaAdsense(editor)) lineas.push(metaAdsense(editor));
   lineas.push(
     `<link rel="canonical" href="${url(rutaCanonica)}">`,
     `<link rel="alternate" hreflang="en" href="${url(alternativas.en)}">`,
@@ -417,12 +495,16 @@ function carpetaDeRuta(r) {
   return r;
 }
 
-function enlacesPie(idioma, carpeta, actual) {
-  return PAGINAS.map((clave) => {
+function enlacesPie(idioma, carpeta, actual, ajustes = AJUSTES_NULOS) {
+  const lis = paginasPublicadas(ajustes.publicable).map((clave) => {
     const href = relativa(carpeta, ruta(idioma, clave));
     const cur = clave === actual ? ' aria-current="page"' : '';
     return `      <li><a href="${href}"${cur}>${escaparHtml(TEXTOS[idioma].pie[clave])}</a></li>`;
-  }).join('\n');
+  });
+  if (ajustes.anunciosActivos) {
+    lis.push(`      <li><a href="${relativa(carpeta, ruta(idioma, 'cookies'))}" data-consentimiento="">${escaparHtml(TEXTOS[idioma].pie.consentimiento)}</a></li>`);
+  }
+  return lis.join('\n');
 }
 
 /**
@@ -441,8 +523,11 @@ export function generarPagina({
   dataPagina = 'contenido',
   noindex = false,
   jsonld = null,
-  conSufijo = true
+  conSufijo = true,
+  editor,
+  ajustes
 }) {
+  ajustes = ajustes ?? { ...AJUSTES_NULOS, editor: editor ?? null };
   const otro = idioma === 'en' ? 'es' : 'en';
   const rutaPropia = ruta(idioma, clave, n);
   const carpeta = carpetaDeRuta(rutaPropia);
@@ -460,7 +545,8 @@ export function generarPagina({
     og: jsonld?.['@type'] === 'Article' ? 'article' : 'website',
     pref,
     css: ['variables', 'base', 'paginas'],
-    jsonld
+    jsonld,
+    editor: ajustes.editor
   });
   const html = llenar(plantillas.pagina, {
     idioma,
@@ -471,7 +557,7 @@ export function generarPagina({
       pagina: dataPagina,
       contenedor,
       cuerpo,
-      pie: enlacesPie(idioma, carpeta, clave),
+      pie: enlacesPie(idioma, carpeta, clave, ajustes),
       enlace_otro: relativa(carpeta, ruta(otro, clave, n)),
       otro_idioma: otro,
       otro_nombre: NOMBRE_IDIOMA[otro],
@@ -496,7 +582,7 @@ function analizarOFalla(texto, rutaArchivo) {
 }
 
 // Página de contenido (claves de CLAVES_CONTENIDO salvo el índice del archivo).
-export function generarPaginaContenido({ idioma, clave, texto, plantillas, ejemplos = '' }) {
+export function generarPaginaContenido({ idioma, clave, texto, plantillas, ejemplos = '', ajustes = AJUSTES_NULOS }) {
   const a = analizarOFalla(texto, `herramientas/contenido/${idioma}/${clave}.html`);
   const carpeta = ruta(idioma, clave);
   const articulo = a.meta.tipo === 'articulo';
@@ -524,11 +610,12 @@ export function generarPaginaContenido({ idioma, clave, texto, plantillas, ejemp
     cuerpo,
     plantillas,
     contenedor: articulo ? 'article' : 'div',
-    jsonld
+    jsonld,
+    ajustes
   });
 }
 
-export function generarJuego({ idioma, plantillas }) {
+export function generarJuego({ idioma, plantillas, ajustes = AJUSTES_NULOS }) {
   const T = TEXTOS[idioma];
   const otro = idioma === 'en' ? 'es' : 'en';
   const carpeta = ruta(idioma, 'juego');
@@ -541,7 +628,8 @@ export function generarJuego({ idioma, plantillas }) {
     xDefault: '',
     pref: prefijo(1),
     css: ['variables', 'base', 'componentes'],
-    jsonld: jsonLdWebSite(idioma)
+    jsonld: jsonLdWebSite(idioma),
+    editor: ajustes.editor
   });
   const html = llenar(plantillas.juego, {
     idioma,
@@ -565,7 +653,20 @@ export function generarJuego({ idioma, plantillas }) {
   return conSaltoFinal(ponerAriaLabels(html, idioma));
 }
 
-export function generarRaiz({ plantillas }) {
+// Pie de la raíz [13.7.4]: las seis líneas de siempre y, solo si toca, aviso legal y consentimiento.
+export function pieRaiz(ajustes = AJUSTES_NULOS) {
+  const li = (idioma, clave, extra = '') =>
+    `      <li><a href="${relativa('', ruta(idioma, clave === 'consentimiento' ? 'cookies' : clave))}" hreflang="${idioma}" lang="${idioma}"${extra}>${escaparHtml(TEXTOS[idioma].pie[clave])}</a></li>`;
+  const lineas = [];
+  for (const idioma of IDIOMAS) {
+    for (const clave of ['privacidad', 'cookies', 'contacto']) lineas.push(li(idioma, clave));
+    if (ajustes.publicable) lineas.push(li(idioma, 'aviso_legal'));
+    if (ajustes.anunciosActivos) lineas.push(li(idioma, 'consentimiento', ' data-consentimiento=""'));
+  }
+  return lineas.join('\n');
+}
+
+export function generarRaiz({ plantillas, ajustes = AJUSTES_NULOS }) {
   const T = TEXTOS.en;
   const cab = cabecera({
     idioma: 'en',
@@ -576,18 +677,23 @@ export function generarRaiz({ plantillas }) {
     xDefault: '',
     pref: '',
     css: ['variables', 'base', 'paginas'],
-    jsonld: jsonLdWebSite(['en', 'es'])
+    jsonld: jsonLdWebSite(['en', 'es']),
+    editor: ajustes.editor
   });
-  return conSaltoFinal(llenar(plantillas.raiz, { idioma: 'en', carpeta: '', valores: { cabecera: cab } }));
+  return conSaltoFinal(llenar(plantillas.raiz, { idioma: 'en', carpeta: '', valores: { cabecera: cab, pie_raiz: pieRaiz(ajustes) } }));
 }
 
-export function generarNoEncontrada({ plantillas }) {
-  return conSaltoFinal(llenar(plantillas['404'], { idioma: 'en', carpeta: '', valores: { dominio: DOMINIO, csp: CSP } }));
+export function generarNoEncontrada({ plantillas, editor = null }) {
+  let html = llenar(plantillas['404'], { idioma: 'en', carpeta: '', valores: { dominio: DOMINIO, csp: CSP } });
+  const meta = metaAdsense(editor);
+  if (meta) html = html.replace('<meta name="robots" content="noindex">', () => `<meta name="robots" content="noindex">\n${meta}`);
+  return conSaltoFinal(html);
 }
 
 // Redirección de créditos.html / creditos.es.html a sus nuevas direcciones [10.10].
-export function generarRedireccion(idioma) {
+export function generarRedireccion(idioma, editor = null) {
   const e = escaparHtml;
+  const meta = metaAdsense(editor);
   const destino = ruta(idioma, 'creditos');
   const nombre = TEXTOS[idioma].pie.creditos;
   return `<!doctype html>
@@ -598,7 +704,7 @@ export function generarRedireccion(idioma) {
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <meta http-equiv="refresh" content="0; url=${destino}">
 <title>${e(nombre)}${SUFIJO_TITULO}</title>
-<link rel="canonical" href="${DOMINIO}${destino}">
+${meta ? `${meta}\n` : ''}<link rel="canonical" href="${DOMINIO}${destino}">
 </head>
 <body data-pagina="redireccion">
 <p><a href="${destino}">${e(nombre)}</a></p>
@@ -669,7 +775,7 @@ function seccionAfirmaciones(datos, idioma) {
   return `<section>\n<h2>${e(T.portada.reto_afirmaciones)}</h2>\n<ol class="archivo-pruebas">\n${items}\n</ol>\n</section>`;
 }
 
-export function generarArchivoDia({ idioma, datos, anterior = null, siguiente = null, plantillas }) {
+export function generarArchivoDia({ idioma, datos, anterior = null, siguiente = null, plantillas, ajustes = AJUSTES_NULOS }) {
   const T = TEXTOS[idioma];
   const e = escaparHtml;
   const n = datos.n;
@@ -701,11 +807,12 @@ export function generarArchivoDia({ idioma, datos, anterior = null, siguiente = 
     descripcion: rellenar(T.seo.descripcion_dia, { n, tema }),
     cuerpo,
     plantillas,
-    dataPagina: 'archivo'
+    dataPagina: 'archivo',
+    ajustes
   });
 }
 
-export function generarIndiceArchivo({ idioma, dias, texto, plantillas }) {
+export function generarIndiceArchivo({ idioma, dias, texto, plantillas, ajustes = AJUSTES_NULOS }) {
   const T = TEXTOS[idioma];
   const e = escaparHtml;
   const a = analizarOFalla(texto, `herramientas/contenido/${idioma}/archivo.html`);
@@ -754,7 +861,8 @@ export function generarIndiceArchivo({ idioma, dias, texto, plantillas }) {
     cuerpo,
     plantillas,
     dataPagina: 'archivo',
-    noindex: dias.length === 0
+    noindex: dias.length === 0,
+    ajustes
   });
 }
 
@@ -782,6 +890,8 @@ export function generarEjemplos({ idioma, ejemplos, carpeta }) {
 export function generarSitio({ entradas, ahoraMs, limiteN = Infinity, desofuscadores = DESOFUSCADORES }) {
   if (!Number.isFinite(ahoraMs)) throw new TypeError('generarSitio necesita ahoraMs.');
   const { plantillas, contenido, calendario, meses } = entradas;
+  const ajustes = ajustesDe(entradas);
+  const { editor } = ajustes;
   const archivados = diasArchivables({ calendario, meses, ahoraMs }).filter((d) => d.n <= limiteN);
   const cache = new Map();
   const datos = (n) => {
@@ -801,38 +911,44 @@ export function generarSitio({ entradas, ahoraMs, limiteN = Infinity, desofuscad
   }
 
   const mapa = new Map();
-  mapa.set('index.html', generarRaiz({ plantillas }));
-  mapa.set('404.html', generarNoEncontrada({ plantillas }));
-  for (const idioma of IDIOMAS) mapa.set(ARCHIVOS_CREDITOS_REDIRECCION[idioma], generarRedireccion(idioma));
+  mapa.set('index.html', generarRaiz({ plantillas, ajustes }));
+  mapa.set('404.html', generarNoEncontrada({ plantillas, editor }));
+  for (const idioma of IDIOMAS) mapa.set(ARCHIVOS_CREDITOS_REDIRECCION[idioma], generarRedireccion(idioma, editor));
   for (const idioma of IDIOMAS) {
-    mapa.set(`${ruta(idioma, 'juego')}index.html`, generarJuego({ idioma, plantillas }));
-    for (const clave of CLAVES_CONTENIDO) {
+    mapa.set(`${ruta(idioma, 'juego')}index.html`, generarJuego({ idioma, plantillas, ajustes }));
+    // Preparado: el aviso legal se analiza (sus errores son errores) pero no se genera [13.7.3].
+    if (!ajustes.publicable && typeof contenido[idioma]?.aviso_legal === 'string') {
+      analizarOFalla(contenido[idioma].aviso_legal, `herramientas/contenido/${idioma}/aviso_legal.html`);
+    }
+    for (const clave of [...CLAVES_CONTENIDO, ...(ajustes.publicable ? ['aviso_legal'] : [])]) {
       const texto = contenido[idioma]?.[clave];
       if (typeof texto !== 'string') throw new Error(`Falta herramientas/contenido/${idioma}/${clave}.html`);
       const destino = `${ruta(idioma, clave)}index.html`;
       if (clave === 'archivo') {
         const dias = archivados.map((d) => ({ n: d.n, fecha: d.fecha, tema: datos(d.n).tema }));
-        mapa.set(destino, generarIndiceArchivo({ idioma, dias, texto, plantillas }));
+        mapa.set(destino, generarIndiceArchivo({ idioma, dias, texto, plantillas, ajustes }));
       } else if (clave === 'guia_imagenes') {
         const carpeta = ruta(idioma, clave);
-        mapa.set(destino, generarPaginaContenido({ idioma, clave, texto, plantillas, ejemplos: generarEjemplos({ idioma, ejemplos: vacio ? [] : ejemplos, carpeta }) }));
+        mapa.set(destino, generarPaginaContenido({ idioma, clave, texto, plantillas, ejemplos: generarEjemplos({ idioma, ejemplos: vacio ? [] : ejemplos, carpeta }), ajustes }));
       } else {
-        mapa.set(destino, generarPaginaContenido({ idioma, clave, texto, plantillas }));
+        mapa.set(destino, generarPaginaContenido({ idioma, clave, texto, plantillas, ajustes }));
       }
     }
     ns.forEach((n, k) => {
       mapa.set(
         `${ruta(idioma, 'archivo_dia', n)}index.html`,
-        generarArchivoDia({ idioma, datos: datos(n), anterior: ns[k - 1] ?? null, siguiente: ns[k + 1] ?? null, plantillas })
+        generarArchivoDia({ idioma, datos: datos(n), anterior: ns[k - 1] ?? null, siguiente: ns[k + 1] ?? null, plantillas, ajustes })
       );
     });
   }
   mapa.set('robots.txt', ROBOTS);
+  const adsTxt = contenidoAdsTxt(editor);
+  if (adsTxt !== null) mapa.set('ads.txt', adsTxt);
 
   const urls = [''];
   for (const idioma of IDIOMAS) {
     urls.push(ruta(idioma, 'juego'));
-    for (const clave of PAGINAS) if (!(clave === 'archivo' && vacio)) urls.push(ruta(idioma, clave));
+    for (const clave of paginasPublicadas(ajustes.publicable)) if (!(clave === 'archivo' && vacio)) urls.push(ruta(idioma, clave));
   }
   for (const n of ns) for (const idioma of IDIOMAS) urls.push(ruta(idioma, 'archivo_dia', n));
   mapa.set('sitemap.xml', generarSitemap(urls));
@@ -954,6 +1070,15 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
 
   for (const [rutaPagina, texto] of mapa) {
     if (palabraProhibidaEnRuta(rutaPagina)) err(rutaPagina, `la ruta lleva una palabra prohibida (${contienePalabraProhibida(rutaPagina)}).`);
+    if (typeof texto === 'string') {
+      const minusculas = texto.toLowerCase();
+      for (const s of SUBCADENAS_GOOGLE) if (minusculas.includes(s)) err(rutaPagina, `contiene "${s}" (prohibido mientras ANUNCIOS_ACTIVOS = false).`);
+      if (rutaPagina.endsWith('.html')) for (const h of huecosSinRellenar(texto)) err(rutaPagina, `hueco sin rellenar ${h}.`);
+    }
+    if (rutaPagina === 'ads.txt') {
+      if (!RE_ADS_TXT.test(texto)) err(rutaPagina, 'no es el ads.txt de la spec (una línea: google.com, pub-<16 dígitos>, DIRECT, f08c47fec0942fa0).');
+      continue;
+    }
     if (rutaPagina === 'robots.txt') {
       if (texto !== ROBOTS) err(rutaPagina, 'no es el robots.txt de la spec.');
       continue;
@@ -1098,7 +1223,13 @@ export function leerEntradas(raiz = RAIZ) {
       const f = path.join(raiz, 'herramientas', 'contenido', idioma, `${clave}.html`);
       if (fs.existsSync(f)) contenido[idioma][clave] = lf(fs.readFileSync(f, 'utf8'));
     }
+    // El aviso legal se lee siempre, aunque no se publique [13.7.3].
+    const fa = path.join(raiz, 'herramientas', 'contenido', idioma, 'aviso_legal.html');
+    if (fs.existsSync(fa)) contenido[idioma].aviso_legal = lf(fs.readFileSync(fa, 'utf8'));
   }
+  const adsense = leerAdsense(raiz);
+  const fMain = path.join(raiz, 'js', 'main.js');
+  const anunciosActivos = fs.existsSync(fMain) ? analizarAnunciosActivos(fs.readFileSync(fMain, 'utf8')) === true : false;
   const calendario = JSON.parse(fs.readFileSync(path.join(raiz, 'data', 'calendario.json'), 'utf8'));
   const dirFacts = path.join(raiz, 'data', 'facts');
   const meses = fs.existsSync(dirFacts)
@@ -1108,7 +1239,7 @@ export function leerEntradas(raiz = RAIZ) {
         .sort()
         .map((f) => JSON.parse(fs.readFileSync(path.join(dirFacts, f), 'utf8')))
     : [];
-  return { plantillas: leerPlantillas(raiz), contenido, calendario, meses };
+  return { plantillas: leerPlantillas(raiz), contenido, calendario, meses, adsense, anunciosActivos };
 }
 
 // Mayor número de caso con página en disco (0 si no hay).
@@ -1165,6 +1296,17 @@ export function escribirSitio(mapa, raiz = RAIZ, { simular = false } = {}) {
     }
   }
   const borradas = [];
+  // Las únicas rutas que se borran fuera de los días del archivo: ads.txt y el aviso legal si no tocan [13.5, 13.7.3].
+  if (!mapa.has('ads.txt') && fs.existsSync(path.join(raiz, 'ads.txt'))) {
+    borradas.push('ads.txt');
+    if (!simular) fs.rmSync(path.join(raiz, 'ads.txt'), { force: true });
+  }
+  for (const idioma of IDIOMAS) {
+    const dirAviso = ruta(idioma, 'aviso_legal');
+    if (mapa.has(`${dirAviso}index.html`) || !fs.existsSync(path.join(raiz, ...dirAviso.split('/').filter(Boolean)))) continue;
+    borradas.push(dirAviso);
+    if (!simular) fs.rmSync(path.join(raiz, ...dirAviso.split('/').filter(Boolean)), { recursive: true, force: true });
+  }
   for (const [idioma, carpeta, patron] of DIRS_DIAS) {
     const dir = path.join(raiz, idioma, carpeta);
     if (!fs.existsSync(dir)) continue;
@@ -1221,7 +1363,12 @@ export function ejecutar(argv, { raiz = RAIZ, ahoraMs = Date.now(), log = consol
   let entradas;
   try {
     entradas = leerEntradas(raiz);
-    mapa = generarSitio({ entradas, ahoraMs: args.ahora ?? ahoraMs });
+    if (entradas.adsense.errores.length > 0) {
+      entradas.adsense.errores.forEach((e) => error(`ERROR: ${e}`));
+      error('No se escribe nada.');
+      return 1;
+    }
+    mapa =generarSitio({ entradas, ahoraMs: args.ahora ?? ahoraMs });
   } catch (e) {
     error(`No se pueden generar las páginas: ${e.message}`);
     return 1;
@@ -1247,7 +1394,7 @@ export function ejecutar(argv, { raiz = RAIZ, ahoraMs = Date.now(), log = consol
   }
   log(
     `${r.escritas.length} páginas ${args.simular ? 'cambiarían' : 'escritas'}, ${r.sinCambios.length} sin cambios, ${archivados.length} días archivados (hasta el caso n.º ${ultimo}).` +
-      (r.borradas.length ? ` ${r.borradas.length} días borrados del archivo.` : '')
+      (r.borradas.length ? ` ${r.borradas.length} elementos borrados (días del archivo, ads.txt o aviso legal).` : '')
   );
   for (const a of avisosMeta(mapa)) log(`AVISO: ${a}`);
   return 0;

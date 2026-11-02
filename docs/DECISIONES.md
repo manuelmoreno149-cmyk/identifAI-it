@@ -586,3 +586,23 @@ Para cambiar una decisión:
 - D-234 · **Foco del desplegable**: no se añade bucle de Tab. Se acepta el comportamiento nativo de `showModal()` (algún Tab pasa por la interfaz del navegador y vuelve al diálogo); el criterio 370 se relaja en consecuencia (usuario).
 - D-235 · **Filas de la lista**: fecha y estado a 16 px (1rem); "Volver a hoy" va junto al texto del aviso a partir de 600 px.
 - D-236 · **`?fecha=` y `?caso=` en producción**: `fechaPrevisualizada` solo acepta localhost, 127.0.0.1 y [::1] (test 104); en identifaiit.com se ignora. `?caso=N` solo admite 1 ≤ N < nHoy (hora de Madrid), sin `?fecha=` en producción; hoy, futuro o inválido abren hoy. Confirmado, sin cambios de código.
+
+### 2026-11-02 · Preparación de Google AdSense (anexo 13; sin subir versión)
+
+- D-237 · **Anexo 13 sin subir versión** (`docs/especificacion/13-adsense.md`): solo preparación; no cambia el juego (D-44). `ANUNCIOS_ACTIVOS` sigue en `false` y `validar` sigue fallando con `true`. Activar los anuncios será una versión nueva (D-195). Contradice `CLAUDE.md` en la línea de anuncios y en la estructura: requisito P11 (13.16), pendiente de que lo apruebe el usuario.
+- D-238 · **Consentimiento solo con la CMP de Google** (mensaje de "Privacidad y mensajes" de AdSense), sin banner propio (usuario). En las fases 1 y 2 no se carga nada de Google.
+- D-239 · **Aviso legal preparado, no publicado** (usuario): texto en `herramientas/contenido/{en,es}/aviso_legal.html` con huecos, que el usuario rellena él mismo solo ahí, nunca en `docs/`. Se genera, se enlaza y entra en el sitemap solo si `ANUNCIOS_ACTIVOS === true` y no quedan huecos (`avisoLegalPublicable`). Sustituye la regla de 10.6.5/10.14 por la tabla de 13.7.3; sección 8 redactada con AdSense.
+- D-240 · **Huecos**: `RE_HUECO` (corchete simple con texto en mayúsculas). `validar` falla si aparece uno en cualquier página publicada, pero no en las fuentes.
+- D-241 · **Código de editor y `ads.txt`**: un solo lugar, `herramientas/adsense.json` (`version: 1`, `editor: null` o `ca-pub-` y 16 dígitos). Con `null`, salida idéntica a la de hoy y sin `ads.txt`. Con código: `<meta name="google-adsense-account">` en el `<head>` de todas las páginas generadas y `ads.txt`. El script `adsbygoogle` NO se emite (el usuario pidió "script de verificación"; la spec usa la metaetiqueta, método de verificación válido de AdSense que no carga nada; ver DP-120). Prohibidas en lo publicado y en `js/` las subcadenas `adsbygoogle`, `googlesyndication`, `googletagservices`, `doubleclick` y `fundingchoices`.
+- D-242 · **Privacidad y cookies con AdSense en futuro** (texto de 13.6): hoy no hay anuncios ni nada de Google; "tenemos previsto", personalizados solo con consentimiento, enlace a policies.google.com/technologies/partner-sites y cómo cambiar el consentimiento.
+- D-243 · **Comprobación del mensaje superpuesto**: Playwright con cinco mensajes simulados a 360x640, 640x360 y 1280x720; no se puede verificar el mensaje real de Google hasta la activación.
+- D-244 · **`docs/aviso-legal.md`** se reduce a un puntero y la lista de comprobación; el texto vive en `herramientas/contenido/`.
+- D-245 · **Enlace de consentimiento inactivo**: `button#portada-consentimiento` oculto; textos `pie.aviso_legal` y `pie.consentimiento`.
+
+### Decisiones pendientes nuevas (AdSense)
+
+- DP-120 · **Verificación**: por defecto metaetiqueta `google-adsense-account` + `ads.txt`, sin script. Alternativas: solo `ads.txt`; script solo en la raíz con CSP ampliada; script en todas las páginas (no recomendada). URL correcta del script: `pagead2.googlesyndication.com`.
+- DP-121 · **Código de editor** en `herramientas/adsense.json` (por defecto) o constante en `paginas.mjs`.
+- DP-122 · **Aviso legal en la portada del juego**: no entra en la fila del pie (R8); se llega desde la raíz y las páginas de contenido.
+- DP-123 · **Reabrir el consentimiento**: enlace propio (por defecto) frente al botón flotante de Google.
+- DP-124 · **Huecos del aviso legal**: rellenar en el mismo commit que active los anuncios (`herramientas/contenido/` es público y queda en el historial).

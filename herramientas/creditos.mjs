@@ -2,7 +2,15 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { ARCHIVOS_CREDITOS_PAGINA, escaparHtml as escaparHtmlPagina, generarPagina, leerPlantillas, prefijo } from './paginas.mjs';
+import {
+  AJUSTES_NULOS,
+  ARCHIVOS_CREDITOS_PAGINA,
+  escaparHtml as escaparHtmlPagina,
+  generarPagina,
+  leerAjustes,
+  leerPlantillas,
+  prefijo
+} from './paginas.mjs';
 import { TEXTOS } from '../js/textos.js';
 import { IDIOMAS } from '../js/diario.js';
 
@@ -30,7 +38,7 @@ export function parejasCreditos(banco) {
   );
 }
 
-export function generarCreditosHtml({ parejas, idioma = 'en', textos = TEXTOS[idioma], tipografias = TIPOGRAFIAS, plantillas = leerPlantillas() }) {
+export function generarCreditosHtml({ parejas, idioma = 'en', textos = TEXTOS[idioma], tipografias = TIPOGRAFIAS, plantillas = leerPlantillas(), editor = null, ajustes }) {
   if (!IDIOMAS.includes(idioma)) throw new TypeError(`Idioma no válido: ${String(idioma)}`);
   const c = textos.creditos;
   const e = escaparHtml;
@@ -67,21 +75,29 @@ ${imagenes}
     descripcion: `${c.intro} ${c.imagenes_intro}`,
     cuerpo,
     plantillas,
-    dataPagina: 'creditos'
+    dataPagina: 'creditos',
+    ajustes: ajustes ?? { ...AJUSTES_NULOS, editor }
   });
 }
 
-export function creditosParaBanco(banco, idioma = 'en', plantillas = leerPlantillas()) {
-  return generarCreditosHtml({ idioma, parejas: parejasCreditos(banco), plantillas });
+// `ajustes` ({editor, anunciosActivos, publicable}, de ajustesDe) o, más simple, solo `editor`.
+export function creditosParaBanco(banco, idioma = 'en', plantillas = leerPlantillas(), ajustes = AJUSTES_NULOS) {
+  return generarCreditosHtml({ idioma, parejas: parejasCreditos(banco), plantillas, ajustes });
+}
+
+// Editor de AdSense, ANUNCIOS_ACTIVOS y aviso legal de la raíz (spec 13): la cabecera y el pie de los créditos dependen de ellos.
+export function ajustesDeRaiz(raiz = RAIZ) {
+  const { editor, anunciosActivos, publicable } = leerAjustes(raiz);
+  return { editor, anunciosActivos, publicable };
 }
 
 // Escribe las dos páginas (creditos.html y creditos.es.html). `raiz` permite probarlo en una carpeta temporal.
-export function escribirCreditos({ banco, raiz = RAIZ }) {
+export function escribirCreditos({ banco, raiz = RAIZ, ajustes = ajustesDeRaiz(raiz) }) {
   const plantillas = leerPlantillas();
   for (const idioma of IDIOMAS) {
     const destino = resolve(raiz, ...ARCHIVOS_CREDITOS[idioma].split('/'));
     mkdirSync(dirname(destino), { recursive: true });
-    writeFileSync(destino, creditosParaBanco(banco, idioma, plantillas), { encoding: 'utf8' });
+    writeFileSync(destino, creditosParaBanco(banco, idioma, plantillas, ajustes), { encoding: 'utf8' });
   }
 }
 
@@ -93,6 +109,11 @@ function hayImagenes() {
 }
 
 function principal() {
+  const errAdsense = leerAjustes(RAIZ).errores;
+  if (errAdsense.length > 0) {
+    errAdsense.forEach((e) => console.error(e));
+    process.exit(1);
+  }
   const rutaBanco = resolve(RAIZ, 'herramientas', 'banco.json');
   if (!existsSync(rutaBanco)) {
     if (hayImagenes()) {

@@ -603,6 +603,7 @@ function raizPrueba(e) {
   const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'paginas-'));
   for (const d of ['herramientas/plantillas', 'herramientas/contenido', 'css', 'js', 'img']) fs.cpSync(path.join(REPO, d), path.join(raiz, d), { recursive: true });
   fs.mkdirSync(path.join(raiz, 'data/facts'), { recursive: true });
+  fs.writeFileSync(path.join(raiz, 'herramientas/adsense.json'), JSON.stringify({ version: 1, editor: null }));
   fs.writeFileSync(path.join(raiz, 'data/calendario.json'), JSON.stringify(e.calendario));
   for (const m of e.meses) fs.writeFileSync(path.join(raiz, `data/facts/${m.mes}.json`), JSON.stringify(m));
   fs.mkdirSync(path.join(raiz, 'casos'));
