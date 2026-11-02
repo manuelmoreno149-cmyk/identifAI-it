@@ -91,6 +91,7 @@ function entradas({ lanzamiento = LANZAMIENTO, nDias = 7, soloImagenes = [], sol
   const dias = Array.from({ length: nDias }, (_, k) => k + 1);
   return {
     ...ENTRADAS_REPO,
+    adsense: { editor: null },
     calendario: { version: 5, lanzamiento, dias: dias.filter((n) => !soloFacts.includes(n)).map((n) => diaImagenes(n, genPorDia[n])) },
     meses: [{ version: 2, mes: '2026-12', dias: dias.filter((n) => !soloImagenes.includes(n)).map((n) => diaFacts(n)) }]
   };

@@ -33,7 +33,7 @@ const REPO = path.resolve(import.meta.dirname, '..');
 const EDITOR = 'ca-pub-1234567890123456';
 const AHORA = Date.parse('2026-11-09T12:00:00Z');
 const ENTRADAS = leerEntradas(REPO);
-const sitio = (extra = {}) => generarSitio({ entradas: { ...ENTRADAS, ...extra }, ahoraMs: AHORA });
+const sitio = (extra = {}) => generarSitio({ entradas: { ...ENTRADAS, adsense: { editor: null }, ...extra }, ahoraMs: AHORA });
 const paginasHtml = (mapa) => [...mapa].filter(([r]) => r.endsWith('.html'));
 const sinHuecos = (t) => t.replace(/\[[A-ZÁÉÍÓÚÜÑ][^\]\n]*\]/g, 'X');
 const CONTENIDO_SIN_HUECOS = {
@@ -78,8 +78,10 @@ test('387 analizarAdsense: válidos e inválidos, nunca lanza', () => {
     assert.ok(r.errores.length > 0, String(malo));
   }
   assert.ok(RE_EDITOR.test(EDITOR));
-  // El archivo del repositorio vale null (el usuario pone su código al publicar).
-  assert.deepEqual(leerAdsense(REPO), { editor: null, errores: [] });
+  // El archivo del repositorio es válido: null o un código de editor con el formato correcto.
+  const real = leerAdsense(REPO);
+  assert.deepEqual(real.errores, []);
+  assert.ok(real.editor === null || RE_EDITOR.test(real.editor));
   const vacio = fs.mkdtempSync(path.join(os.tmpdir(), 'adsense-'));
   try {
     assert.deepEqual(leerAdsense(vacio), { editor: null, errores: ['Falta herramientas/adsense.json.'] });
