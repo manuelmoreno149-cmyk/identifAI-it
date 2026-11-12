@@ -523,8 +523,8 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
         .toString()
         .split(/\r?\n/)
         .map((x) => x.trim())
-        .filter((x) => x && !x.startsWith('fonts/') && x !== 'robots.txt');
-      if (txt.length > 0) error(`Hay ${txt.length} archivo(s) .txt rastreados por git fuera de fonts/ y robots.txt (podrían ser prompts, afirmaciones o notas).`);
+        .filter((x) => x && !x.startsWith('fonts/') && x !== 'robots.txt' && x !== 'ads.txt');
+      if (txt.length > 0) error(`Hay ${txt.length} archivo(s) .txt rastreados por git fuera de fonts/, robots.txt y ads.txt (podrían ser prompts, afirmaciones o notas).`);
     } catch {
       aviso('No se pudo consultar git; se omiten las comprobaciones de archivos rastreados.');
     }

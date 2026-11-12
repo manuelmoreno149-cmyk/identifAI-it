@@ -551,6 +551,21 @@ test('git: banco.json rastreado, entrada/ rastreada o .txt rastreado son errores
   });
 });
 
+test('git: ads.txt rastreado no es error, pero otro .txt sí', async () => {
+  await proyecto(async (p) => {
+    const git = (...a) => execFileSync('git', a, { cwd: p.raiz, stdio: 'pipe' });
+    git('init', '-q');
+    p.escribe('ads.txt', 'google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0\n');
+    git('add', '-f', 'ads.txt');
+    const solo = await p.ejecutar({ git: true });
+    assert.ok(!hay(solo.errores, /archivo\(s\) \.txt rastreados por git/));
+    p.escribe('notas.txt', 'x');
+    git('add', '-f', 'notas.txt');
+    const con = await p.ejecutar({ git: true });
+    assert.ok(hay(con.errores, /1 archivo\(s\) \.txt rastreados por git/));
+  });
+});
+
 test('.gitignore sin los archivos privados es error', async () => {
   await proyecto(async (p) => {
     p.escribe('.gitignore', 'entrada/\n');
