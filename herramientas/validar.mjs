@@ -50,6 +50,8 @@ import {
   CSP,
   RECURSOS_PENDIENTES,
   SUBCADENAS_GOOGLE,
+  RE_SCRIPT_ADSENSE,
+  scriptAdsense,
   SUBCADENAS_GUIAS,
   leerAjustes,
   contenidoAdsTxt,
@@ -380,10 +382,13 @@ export async function validar({ raiz = RAIZ_REAL, estricto = false, hoyISO = fec
     if (!/<meta name="viewport"/.test(c)) error(nombre + ': falta el viewport.');
     if (!c.includes('<meta http-equiv="Content-Security-Policy" content="' + CSP + '">')) error(nombre + ': la CSP no es la de la spec.');
     if (!c.includes('data-pagina="creditos"')) error(nombre + ': falta data-pagina="creditos".');
-    if (/<script/i.test(c)) error(nombre + ': contiene <script>.');
+    if (/<script/i.test(c.replace(RE_SCRIPT_ADSENSE, ''))) error(nombre + ': contiene <script>.');
     const metas = c.split('<meta name="google-adsense-account"').length - 1;
     if (editor !== null && metas !== 1) error(nombre + ': debe llevar una metaetiqueta google-adsense-account (hay editor): ejecuta npm run creditos.');
     if (editor === null && metas > 0) error(nombre + ': lleva la metaetiqueta google-adsense-account pero no hay editor: ejecuta npm run creditos.');
+    const scripts = c.match(RE_SCRIPT_ADSENSE)?.length ?? 0;
+    if (editor !== null && !c.includes(scriptAdsense(editor))) error(nombre + ': debe llevar el script de AdSense (hay editor): ejecuta npm run creditos.');
+    if (editor === null && scripts > 0) error(nombre + ': lleva el script de AdSense pero no hay editor: ejecuta npm run creditos.');
     if (/\sstyle\s*=/i.test(c)) error(nombre + ': contiene atributo style.');
     for (const id of vistos.keys()) if (c.includes(id)) error(nombre + ': contiene el id de imagen ' + id + '.');
     if (!c.endsWith('\n') || c.endsWith('\n\n') || c.includes('\r')) error(nombre + ': debe usar LF y terminar con un único salto de línea.');

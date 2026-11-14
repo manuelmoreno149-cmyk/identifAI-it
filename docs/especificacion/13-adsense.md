@@ -6,6 +6,8 @@ Parte de la especificación **3.2** (índice en `docs/ESPECIFICACION.md`) [D-237
 
 **Manda sobre** (donde difieran): 10.2 (estructura: `ads.txt`, `herramientas/adsense.json`, `aviso_legal.html`), 10.5.3 (pie completo), 10.6.1 a 10.6.5 (lectura, exportaciones y `validar`), 10.7.1 (cabecera), 10.7.4 (sitemap), 10.12 puntos 9, 10 y 12 (privacidad, cookies, aviso legal), 10.13, 10.14 y 10.18 (cabecera de `404.html`). Lo que no se cita sigue igual; en particular, 0.1 "Ninguna petición a dominios externos" **sigue vigente** y la CSP de 2.4 **no cambia**.
 
+> **Nota (2026-11-14, D-248)**: la regla de «nada de Google» (13.2.1) y el análisis de 13.4.2 quedan superados para el script de AdSense, que ahora sí se emite en todas las páginas con la CSP ampliada de D-248. Lo demás de este anexo sigue vigente.
+
 Requisito previo **P11** (usuario): aplicar en `CLAUDE.md` el texto de 13.16 antes de delegar las tareas 151 a 155. `CLAUDE.md` dice hoy "Anuncios: todavía no. Solo un hueco vacío…" y sitúa el borrador del aviso legal en `docs/aviso-legal.md`, y prevalece sobre la spec.
 
 ---

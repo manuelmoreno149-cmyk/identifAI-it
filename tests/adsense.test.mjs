@@ -15,6 +15,8 @@ import {
   analizarAdsense,
   leerAdsense,
   metaAdsense,
+  scriptAdsense,
+  RE_SCRIPT_ADSENSE,
   contenidoAdsTxt,
   huecosSinRellenar,
   avisoLegalPublicable,
@@ -94,6 +96,12 @@ test('metaAdsense y contenidoAdsTxt', () => {
   assert.equal(metaAdsense(null), '');
   assert.equal(metaAdsense('basura'), '');
   assert.equal(metaAdsense(EDITOR), `<meta name="google-adsense-account" content="${EDITOR}">`);
+  assert.equal(scriptAdsense(null), '');
+  assert.equal(scriptAdsense('basura'), '');
+  assert.equal(
+    scriptAdsense('ca-pub-2898222854856077'),
+    '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2898222854856077" crossorigin="anonymous"></script>'
+  );
   assert.equal(contenidoAdsTxt(null), null);
   assert.equal(contenidoAdsTxt(EDITOR), 'google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n');
 });
@@ -101,7 +109,8 @@ test('metaAdsense y contenidoAdsTxt', () => {
 test('388 sin editor no se emite nada de AdSense y el aviso legal no se genera', () => {
   const mapa = sitio();
   assert.ok(!mapa.has('ads.txt'));
-  const todo = [...mapa.values()].join('\n').toLowerCase();
+  // La CSP admite el script de AdSense aunque no haya editor (D-248).
+  const todo = [...mapa.values()].map((h) => String(h).split(CSP).join('')).join('\n').toLowerCase();
   for (const s of ['google-adsense-account', ...SUBCADENAS_GOOGLE, 'aviso-legal', 'legal-notice', 'data-consentimiento']) assert.ok(!todo.includes(s), s);
   assert.ok(![...mapa.keys()].some((r) => /aviso-legal|legal-notice/.test(r)));
   // Solo el botón oculto del juego lleva el texto de pie.consentimiento.
@@ -116,6 +125,7 @@ test('389 con editor: una metaetiqueta en el head de cada página, en su sitio, 
   const base = sitio();
   const mapa = sitio({ adsense: { editor: EDITOR } });
   const meta = metaAdsense(EDITOR);
+  const script = scriptAdsense(EDITOR);
   assert.equal(mapa.get('ads.txt'), 'google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n');
   assert.equal(mapa.get('robots.txt'), base.get('robots.txt'));
   assert.equal(mapa.get('sitemap.xml'), base.get('sitemap.xml'));
@@ -125,16 +135,35 @@ test('389 con editor: una metaetiqueta en el head de cada página, en su sitio, 
     assert.equal(h.split(meta).length - 1, 1, r);
     const head = h.slice(h.indexOf('<head>'), h.indexOf('</head>'));
     assert.ok(head.includes(meta), r);
-    assert.ok(!/<script[^>]*\ssrc="https?:/i.test(h), r);
-    for (const s of SUBCADENAS_GOOGLE) assert.ok(!h.toLowerCase().includes(s), `${r} ${s}`);
+    // Un solo script de AdSense, tal como lo da Google, en el <head>, y ningún otro script externo.
+    assert.equal(h.split(script).length - 1, 1, r);
+    assert.ok(head.includes(script), r);
+    assert.equal((h.match(RE_SCRIPT_ADSENSE) ?? []).length, 1, r);
+    assert.ok(!/<script[^>]*\ssrc="https?:/i.test(h.replace(script, '')), r);
+    for (const s of SUBCADENAS_GOOGLE) assert.ok(!h.replace(script, '').split(CSP).join('').toLowerCase().includes(s), `${r} ${s}`);
     assert.equal(/<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(h)?.[1], CSP, r);
-    // Quitada la línea, la página es la de siempre.
-    assert.equal(h.replace(`${meta}\n`, ''), base.get(r), r);
-    if (r === '404.html') assert.ok(h.includes(`<meta name="robots" content="noindex">\n${meta}\n`), r);
-    else if (/^creditos(\.es)?\.html$/.test(r)) assert.ok(h.includes(`</title>\n${meta}\n<link rel="canonical"`), r);
-    else assert.ok(/<meta name="description" content="[^\n]*">\n(<meta name="robots" content="noindex">\n)?<meta name="google-adsense-account" content="ca-pub-1234567890123456">\n<link rel="canonical"/.test(h), r);
+    // Quitadas las dos líneas, la página es la de siempre.
+    assert.equal(h.replace(`${meta}\n${script}\n`, ''), base.get(r), r);
+    if (r === '404.html') assert.ok(h.includes(`<meta name="robots" content="noindex">\n${meta}\n${script}\n`), r);
+    else if (/^creditos(\.es)?\.html$/.test(r)) assert.ok(h.includes(`</title>\n${meta}\n${script}\n<link rel="canonical"`), r);
+    else assert.ok(h.includes(`\n${meta}\n${script}\n<link rel="canonical"`), r);
   }
   assert.deepEqual(comprobarSitio(mapa, existentesBase(), {}), []);
+});
+
+test('D-248 solo vale el script de AdSense exacto: otro script externo o un bloque de anuncio es un error', () => {
+  const mapa = sitio({ adsense: { editor: EDITOR } });
+  const pagina = 'es/privacidad/index.html';
+  const html = mapa.get(pagina);
+  const con = (extra) => new Map(mapa).set(pagina, html.replace('<h1>', () => `${extra}<h1>`));
+  for (const extra of [
+    '<script async src="https://example.com/x.js"></script>',
+    '<script async src="https://pagead2.googlesyndication.com/pagead/js/other.js"></script>',
+    '<ins class="adsbygoogle"></ins>',
+    '<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'
+  ]) {
+    assert.ok(comprobarSitio(con(extra), existentesBase(), {}).length > 0, extra);
+  }
 });
 
 test('390 ida y vuelta null -> editor -> null; escribirSitio borra ads.txt y solo lo permitido', () => {
@@ -172,9 +201,10 @@ test('391 créditos: metaetiqueta solo con editor, en su posición, sin script',
     const con = generarCreditosHtml({ parejas, idioma, editor: EDITOR });
     assert.ok(!sin.includes('google-adsense-account'));
     assert.equal(con.split(metaAdsense(EDITOR)).length - 1, 1);
-    assert.ok(/<meta name="description" content="[^\n]*">\n<meta name="google-adsense-account" content="ca-pub-1234567890123456">\n<link rel="canonical"/.test(con));
-    assert.equal(con.replace(`${metaAdsense(EDITOR)}\n`, ''), sin);
-    assert.ok(!/<script/i.test(sin) && !/<script/i.test(con));
+    assert.ok(con.includes(`\n${metaAdsense(EDITOR)}\n${scriptAdsense(EDITOR)}\n<link rel="canonical"`));
+    assert.equal(con.replace(`${metaAdsense(EDITOR)}\n${scriptAdsense(EDITOR)}\n`, ''), sin);
+    assert.ok(!/<script/i.test(sin));
+    assert.equal((con.match(/<script/gi) ?? []).length, 1);
   }
 });
 

@@ -108,7 +108,7 @@ test('288 dos páginas: lang, textos de su idioma, enlace a la otra y mismas fue
     }
   }
   // Los textos españoles no cuelan palabras que delaten la respuesta en la página (salvo el nombre del reto, que es un título).
-  assert.equal(contienePalabraProhibida(es.replace(/<footer[\s\S]*<\/footer>/, '').replace(TES.creditos.afirmaciones, '').replace(TES.creditos.afirmaciones_texto, '').replace(/<[^>]*>/g, ' ')), null);
+  assert.equal(contienePalabraProhibida(es.replace(/<footer[\s\S]*<\/footer>/, '').replace(/<nav class="pagina-menu"[\s\S]*?<\/nav>/, '').replace(TES.creditos.afirmaciones, '').replace(TES.creditos.afirmaciones_texto, '').replace(/<[^>]*>/g, ' ')), null);
 });
 
 test('288 escribirCreditos escribe las dos páginas en en/credits/ y es/creditos/ de la raíz indicada', () => {

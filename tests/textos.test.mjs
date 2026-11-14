@@ -60,17 +60,18 @@ const CLAVES = {
   pie: [
     'etiqueta', 'sobre', 'como_jugar', 'metodo', 'guia_imagenes', 'guia_desinformacion', 'archivo', 'preguntas',
     'creditos', 'privacidad', 'cookies', 'contacto', 'corto_sobre', 'corto_como_jugar', 'corto_archivo',
-    'corto_privacidad', 'corto_guia_imagenes', 'corto_creditos', 'aviso_legal', 'consentimiento'
+    'corto_privacidad', 'corto_guia_imagenes', 'corto_creditos', 'corto_guia_desinformacion', 'corto_contacto', 'aviso_legal', 'consentimiento'
   ],
   raiz: ['lema', 'jugar'],
-  paginas: ['saltar', 'jugar'],
+  paginas: ['saltar', 'menu', 'jugar'],
   seo: [
     'titulo_raiz', 'descripcion_raiz', 'titulo_juego', 'descripcion_juego', 'titulo_archivo', 'descripcion_archivo',
     'titulo_dia', 'descripcion_dia', 'og_alt'
   ],
   archivo: [
     'titulo_dia', 'alt_prueba', 'vacio', 'sin_reto', 'anterior', 'siguiente', 'indice', 'jugar_hoy',
-    'ejemplos_titulo', 'ver_dia', 'meses', 'fecha', 'mes'
+    'ejemplos_titulo', 'ver_dia', 'meses', 'fecha', 'mes', 'intro_titulo', 'intro_1', 'resumen_ia', 'resumen_falsas', 'intro_2',
+    'destacado', 'intro_guias', 'guia_imagenes_enlace', 'guia_bulos_enlace', 'jugar_enlace', 'titulo_imagen', 'titulo_afirmacion'
   ],
   anuncios: ['etiqueta'],
   no_encontrada: ['titulo', 'texto', 'enlace'],
@@ -115,6 +116,14 @@ function rellenoDe(idioma) {
     tema: 'x'.repeat(30),
     fecha: idioma === 'es' ? '30 nov 2026' : 'Nov 30, 2026',
     d: '30',
+    k: '2',
+    ab: idioma === 'es' ? '«' : '“',
+    cierre: idioma === 'es' ? '»' : '”',
+    afirmacion: 'x'.repeat(80),
+    verdad: 'x'.repeat(120),
+    guia_imagenes: 'x'.repeat(30),
+    guia_bulos: 'x'.repeat(30),
+    jugar: 'x'.repeat(25),
     mes: idioma === 'es' ? 'septiembre' : 'September',
     a: '2026',
     modo: masLargo(['modo_investigador', 'modo_normal', 'modo_perro'].map((k) => T.portada[k])),
@@ -290,6 +299,7 @@ test('39. límites de longitud de 3.1, medidos con el texto rellenado, en cada i
       const largo = [...valor].length;
       if (ruta.startsWith('instrucciones.pasos_')) assert.ok(largo <= 80, `${idioma}.${ruta} mide ${largo}`);
       else if (ruta === 'creditos.afirmaciones_texto' || ruta === 'noscript.aviso') assert.ok(largo <= 120, `${idioma}.${ruta} mide ${largo}`);
+      else if (/^archivo\.(intro_1|intro_2|destacado|intro_guias)$/.test(ruta)) assert.ok(largo <= 420, `${idioma}.${ruta} mide ${largo}`);
       else if (/^seo\.titulo_/.test(ruta)) assert.ok(largo <= 60, `${idioma}.${ruta} mide ${largo}`);
       else if (/^seo\.descripcion_/.test(ruta)) assert.ok(largo >= 70 && largo <= 155, `${idioma}.${ruta} mide ${largo}`);
       else if (ruta === 'instrucciones.ejemplo') assert.ok(largo <= 80, `${idioma}.${ruta} mide ${largo}`);
@@ -414,7 +424,7 @@ test('final.mensajes_afirmaciones no habla de IA, imágenes ni fotos, y difiere 
 test('"IA" solo aparece como palabra suelta en los sitios permitidos del español', () => {
   const permitidas = [
     /^partida\./, /^portada\.sello_ilustracion$/, /^revelacion\.resumen_generada$/, /^confesion\./,
-    /^final\.mensajes\[/, /^portada\.desc_reto_imagenes$/, /^instrucciones\.(frase|pasos)_imagenes/, /^pie\.(guia|corto_guia)_imagenes$/, /^portada\.lema$/, /^raiz\.lema$/, /^seo\./
+    /^final\.mensajes\[/, /^portada\.desc_reto_imagenes$/, /^instrucciones\.(frase|pasos)_imagenes/, /^pie\.(guia|corto_guia)_imagenes$/, /^portada\.lema$/, /^raiz\.lema$/, /^seo\./, /^archivo\./
   ];
   for (const [ruta, valor] of cadenas(TEXTOS.es)) {
     if (/\bIA\b/.test(valor)) assert.ok(permitidas.some((re) => re.test(ruta)), `${ruta}: ${valor}`);

@@ -25,7 +25,8 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const DOMINIO = 'https://identifaiit.com/';
 export const CORREO = 'contacto@301juegodiario.es';
-export const CSP = "default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'";
+// script-src admite solo el script de AdSense (D-248); lo demás sigue cerrado a 'self'.
+export const CSP = "default-src 'self'; script-src 'self' https://pagead2.googlesyndication.com; base-uri 'none'; object-src 'none'; form-action 'none'";
 
 function congelar(o) {
   for (const v of Object.values(o)) if (v && typeof v === 'object') congelar(v);
@@ -112,6 +113,15 @@ export function leerAdsense(raiz = RAIZ) {
 
 export function metaAdsense(editor) {
   return typeof editor === 'string' && RE_EDITOR.test(editor) ? `<meta name="google-adsense-account" content="${editor}">` : '';
+}
+
+// Script oficial de AdSense, tal como lo da Google (D-248). Solo en <head>, sin bloques de anuncio.
+export const RE_SCRIPT_ADSENSE = /<script async src="https:\/\/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?client=ca-pub-\d{16}" crossorigin="anonymous"><\/script>/g;
+export const RE_SRC_ADSENSE = /^https:\/\/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?client=ca-pub-\d{16}$/;
+export function scriptAdsense(editor) {
+  return typeof editor === 'string' && RE_EDITOR.test(editor)
+    ? `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${editor}" crossorigin="anonymous"></script>`
+    : '';
 }
 
 export function contenidoAdsTxt(editor) {
@@ -309,7 +319,7 @@ export function cabecera({ idioma, titulo, descripcion, ruta: rutaCanonica, alte
     `<meta name="description" content="${e(descripcion)}">`
   ];
   if (noindex) lineas.push('<meta name="robots" content="noindex">');
-  if (metaAdsense(editor)) lineas.push(metaAdsense(editor));
+  if (metaAdsense(editor)) lineas.push(metaAdsense(editor), scriptAdsense(editor));
   lineas.push(
     `<link rel="canonical" href="${url(rutaCanonica)}">`,
     `<link rel="alternate" hreflang="en" href="${url(alternativas.en)}">`,
@@ -495,6 +505,16 @@ function carpetaDeRuta(r) {
   return r;
 }
 
+// Menú de la cabecera de las páginas de contenido: lo esencial a un toque (portada, reglas, guías, archivo, contacto).
+const CLAVES_MENU = Object.freeze([['sobre', 'corto_sobre'], ['como_jugar', 'corto_como_jugar'], ['guia_imagenes', 'corto_guia_imagenes'], ['guia_desinformacion', 'corto_guia_desinformacion'], ['archivo', 'corto_archivo'], ['contacto', 'corto_contacto']]);
+
+function enlacesMenu(idioma, carpeta, actual) {
+  return CLAVES_MENU.map(([clave, texto]) => {
+    const cur = clave === actual ? ' aria-current="page"' : '';
+    return `  <a href="${relativa(carpeta, ruta(idioma, clave))}"${cur}>${escaparHtml(TEXTOS[idioma].pie[texto])}</a>`;
+  }).join('\n');
+}
+
 function enlacesPie(idioma, carpeta, actual, ajustes = AJUSTES_NULOS) {
   const lis = paginasPublicadas(ajustes.publicable).map((clave) => {
     const href = relativa(carpeta, ruta(idioma, clave));
@@ -558,6 +578,7 @@ export function generarPagina({
       contenedor,
       cuerpo,
       pie: enlacesPie(idioma, carpeta, clave, ajustes),
+      menu: enlacesMenu(idioma, carpeta, clave),
       enlace_otro: relativa(carpeta, ruta(otro, clave, n)),
       otro_idioma: otro,
       otro_nombre: NOMBRE_IDIOMA[otro],
@@ -686,7 +707,7 @@ export function generarRaiz({ plantillas, ajustes = AJUSTES_NULOS }) {
 export function generarNoEncontrada({ plantillas, editor = null }) {
   let html = llenar(plantillas['404'], { idioma: 'en', carpeta: '', valores: { dominio: DOMINIO, csp: CSP } });
   const meta = metaAdsense(editor);
-  if (meta) html = html.replace('<meta name="robots" content="noindex">', () => `<meta name="robots" content="noindex">\n${meta}`);
+  if (meta) html = html.replace('<meta name="robots" content="noindex">', () => `<meta name="robots" content="noindex">\n${meta}\n${scriptAdsense(editor)}`);
   return conSaltoFinal(html);
 }
 
@@ -694,6 +715,7 @@ export function generarNoEncontrada({ plantillas, editor = null }) {
 export function generarRedireccion(idioma, editor = null) {
   const e = escaparHtml;
   const meta = metaAdsense(editor);
+  const script = scriptAdsense(editor);
   const destino = ruta(idioma, 'creditos');
   const nombre = TEXTOS[idioma].pie.creditos;
   return `<!doctype html>
@@ -704,7 +726,7 @@ export function generarRedireccion(idioma, editor = null) {
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <meta http-equiv="refresh" content="0; url=${destino}">
 <title>${e(nombre)}${SUFIJO_TITULO}</title>
-${meta ? `${meta}\n` : ''}<link rel="canonical" href="${DOMINIO}${destino}">
+${meta ? `${meta}\n${script}\n` : ''}<link rel="canonical" href="${DOMINIO}${destino}">
 </head>
 <body data-pagina="redireccion">
 <p><a href="${destino}">${e(nombre)}</a></p>
@@ -752,7 +774,7 @@ function seccionImagenes(datos, idioma) {
     return `<section>\n<h2>${e(T.portada.reto_imagenes)}</h2>\n<p>${e(rellenar(T.archivo.sin_reto, { reto: T.portada.reto_imagenes }))}</p>\n</section>`;
   }
   const items = datos.imagenes
-    .map((p, i) => `<li class="archivo-prueba">\n${figuraPrueba({ idioma, n: datos.n, i, prueba: p, prof: 3, perezosa: i > 0 })}\n</li>`)
+    .map((p, i) => `<li class="archivo-prueba">\n<h3 class="archivo-prueba-titulo">${e(rellenar(T.archivo.titulo_imagen, { i: i + 1 }))}</h3>\n${figuraPrueba({ idioma, n: datos.n, i, prueba: p, prof: 3, perezosa: i > 0 })}\n</li>`)
     .join('\n');
   return `<section>\n<h2>${e(T.portada.reto_imagenes)}</h2>\n<ol class="archivo-pruebas">\n${items}\n</ol>\n</section>`;
 }
@@ -765,14 +787,38 @@ function seccionAfirmaciones(datos, idioma) {
   }
   const [ab, cierre] = COMILLAS[idioma];
   const items = datos.afirmaciones
-    .map((a) => {
+    .map((a, i) => {
       const sello = a.verdad === 'generada' ? T.afirmaciones.sello_generada : T.afirmaciones.sello_autentica;
       const ac = a.aclaracion[idioma];
       const detalles = ac.detalles.length > 0 ? `\n<ul class="archivo-detalles">\n${ac.detalles.map((d) => `<li>${e(d)}</li>`).join('\n')}\n</ul>` : '';
-      return `<li class="archivo-prueba">\n<p class="archivo-afirmacion"><strong class="archivo-sello">${e(sello)}</strong> ${ab}${e(a.texto[idioma])}${cierre}</p>\n<p class="archivo-aclaracion">${e(ac.aclaracion)}</p>${detalles}\n</li>`;
+      return `<li class="archivo-prueba">\n<h3 class="archivo-prueba-titulo">${e(rellenar(T.archivo.titulo_afirmacion, { i: i + 1 }))}</h3>\n<p class="archivo-afirmacion"><strong class="archivo-sello">${e(sello)}</strong> ${ab}${e(a.texto[idioma])}${cierre}</p>\n<p class="archivo-aclaracion">${e(ac.aclaracion)}</p>${detalles}\n</li>`;
     })
     .join('\n');
   return `<section>\n<h2>${e(T.portada.reto_afirmaciones)}</h2>\n<ol class="archivo-pruebas">\n${items}\n</ol>\n</section>`;
+}
+
+// Introducción propia de cada día: tema, fecha, cuántas fueron IA y falsas, un bulo puesto en su sitio y enlaces a las guías.
+function introduccionDia({ datos, idioma, carpeta }) {
+  const T = TEXTOS[idioma].archivo;
+  const e = escaparHtml;
+  const enlace = (clave, texto) => `<a href="${relativa(carpeta, ruta(idioma, clave))}">${e(texto)}</a>`;
+  const partes = [`<p>${e(rellenar(T.intro_1, { n: datos.n, fecha: fechaVisible(datos.fecha, idioma), tema: datos.tema[idioma] }))}</p>`];
+  const resumen = [];
+  if (datos.imagenes) resumen.push(rellenar(T.resumen_ia, { k: datos.imagenes.filter((p) => p.verdad === 'generada').length }));
+  if (datos.afirmaciones) resumen.push(rellenar(T.resumen_falsas, { k: datos.afirmaciones.filter((a) => a.verdad === 'generada').length }));
+  if (resumen.length > 0) partes.push(`<ul class="archivo-resumen">\n${resumen.map((r) => `<li>${e(r)}</li>`).join('\n')}\n</ul>`);
+  partes.push(`<p>${e(T.intro_2)}</p>`);
+  const falsa = datos.afirmaciones?.find((a) => a.verdad === 'generada');
+  if (falsa) {
+    const [ab, cierre] = COMILLAS[idioma];
+    partes.push(`<p>${e(rellenar(T.destacado, { ab, afirmacion: falsa.texto[idioma], cierre, verdad: falsa.aclaracion[idioma].aclaracion }))}</p>`);
+  }
+  const guias = e(T.intro_guias)
+    .replace('{guia_imagenes}', () => enlace('guia_imagenes', T.guia_imagenes_enlace))
+    .replace('{guia_bulos}', () => enlace('guia_desinformacion', T.guia_bulos_enlace))
+    .replace('{jugar}', () => enlace('juego', T.jugar_enlace));
+  partes.push(`<p>${guias}</p>`);
+  return `<section class="archivo-intro">\n<h2>${e(T.intro_titulo)}</h2>\n${partes.join('\n')}\n</section>`;
 }
 
 export function generarArchivoDia({ idioma, datos, anterior = null, siguiente = null, plantillas, ajustes = AJUSTES_NULOS }) {
@@ -786,6 +832,8 @@ export function generarArchivoDia({ idioma, datos, anterior = null, siguiente = 
   if (anterior !== null) nav.push(`  <a href="${enlace('archivo_dia', anterior)}">${e(T.archivo.anterior)}</a>`);
   if (siguiente !== null) nav.push(`  <a href="${enlace('archivo_dia', siguiente)}">${e(T.archivo.siguiente)}</a>`);
   nav.push(`  <a href="${enlace('archivo')}">${e(T.archivo.indice)}</a>`);
+  nav.push(`  <a href="${enlace('guia_imagenes')}">${e(T.pie.guia_imagenes)}</a>`);
+  nav.push(`  <a href="${enlace('guia_desinformacion')}">${e(T.pie.guia_desinformacion)}</a>`);
   nav.push(`  <a href="${enlace('juego')}">${e(T.archivo.jugar_hoy)}</a>`);
   const h1 = rellenar(T.archivo.titulo_dia, { n, tema });
   const cuerpo = llenar(plantillas['archivo-dia'], {
@@ -795,7 +843,7 @@ export function generarArchivoDia({ idioma, datos, anterior = null, siguiente = 
       fecha_iso: datos.fecha,
       fecha: e(fechaVisible(datos.fecha, idioma)),
       h1: e(h1),
-      secciones: `${seccionImagenes(datos, idioma)}\n${seccionAfirmaciones(datos, idioma)}`,
+      secciones: `${introduccionDia({ datos, idioma, carpeta })}\n${seccionImagenes(datos, idioma)}\n${seccionAfirmaciones(datos, idioma)}`,
       navegacion: nav.join('\n')
     }
   });
@@ -1071,7 +1119,8 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
   for (const [rutaPagina, texto] of mapa) {
     if (palabraProhibidaEnRuta(rutaPagina)) err(rutaPagina, `la ruta lleva una palabra prohibida (${contienePalabraProhibida(rutaPagina)}).`);
     if (typeof texto === 'string') {
-      const minusculas = texto.toLowerCase();
+      // El script de AdSense y la CSP que lo admite son lo único permitido de Google en lo publicado (D-248).
+      const minusculas = texto.replace(RE_SCRIPT_ADSENSE, '').split(CSP).join('').toLowerCase();
       for (const s of SUBCADENAS_GOOGLE) if (minusculas.includes(s)) err(rutaPagina, `contiene "${s}" (prohibido mientras ANUNCIOS_ACTIVOS = false).`);
       if (rutaPagina.endsWith('.html')) for (const h of huecosSinRellenar(texto)) err(rutaPagina, `hueco sin rellenar ${h}.`);
     }
@@ -1119,9 +1168,11 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
     errores.push(...comprobarAtributos(rutaPagina, html, { juego }));
     for (const t of etiquetasDe(html)) {
       if (es404 && ['canonical', 'alternate'].includes(t.get('rel')) && t.nombre === 'link') err(rutaPagina, 'la 404 no lleva canonical ni hreflang.');
+      const esAdsense = t.nombre === 'script' && RE_SRC_ADSENSE.test(t.get('src') ?? '') && t.get('async') !== undefined && t.get('crossorigin') === 'anonymous';
       for (const nombre of ['href', 'src']) {
         const valor = t.get(nombre);
         if (valor === undefined) continue;
+        if (esAdsense) continue;
         const v = desescaparHtml(valor);
         if (es404) {
           if (!v.startsWith(DOMINIO)) err(rutaPagina, `${nombre}="${valor}" debe empezar por ${DOMINIO} (la 404 usa URL absolutas).`);
@@ -1178,7 +1229,7 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
 
     if (es404) {
       if (!/<meta name="robots" content="noindex">/.test(html)) err(rutaPagina, 'la 404 debe llevar noindex.');
-      if (/<script/i.test(html)) err(rutaPagina, 'la 404 no puede llevar <script>.');
+      if (/<script/i.test(html.replace(RE_SCRIPT_ADSENSE, ''))) err(rutaPagina, 'la 404 no puede llevar <script> (salvo el de AdSense).');
       if (/<meta name="description"|property="og:|rel="canonical"|hreflang="(en|es|x-default)" href/.test(html)) {
         err(rutaPagina, 'la 404 no lleva description, Open Graph, canonical ni hreflang de cabecera.');
       }

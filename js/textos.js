@@ -291,7 +291,9 @@ export const TEXTOS = {
       corto_archivo: 'Archive',
       corto_privacidad: 'Privacy',
       corto_guia_imagenes: 'Spot AI',
-      corto_creditos: 'Credits'
+      corto_creditos: 'Credits',
+      corto_guia_desinformacion: 'Spot fakes',
+      corto_contacto: 'Contact'
     },
 
     raiz: {
@@ -301,6 +303,7 @@ export const TEXTOS = {
 
     paginas: {
       saltar: 'Skip to content',
+      menu: 'Main menu',
       jugar: 'Play the game'
     },
 
@@ -319,6 +322,18 @@ export const TEXTOS = {
     archivo: {
       titulo_dia: 'Case #{n} · {tema}',
       alt_prueba: 'Exhibit {i}, case #{n}',
+      intro_titulo: 'About this case',
+      intro_1: 'Case #{n} is closed. It was the daily case for {fecha} and its theme was {tema}. The detectives of that day had two challenges: five images to judge as real photographs or AI-made pictures, and five one-sentence claims to judge as facts or fakes.',
+      resumen_ia: 'AI-generated images: {k} of 5',
+      resumen_falsas: 'Fake claims: {k} of 5',
+      intro_2: 'Below you will find every answer. Each AI-generated image comes with the prompt that produced it, and each claim with the truth behind it and the details worth remembering, so you can check what you missed.',
+      destacado: 'One of the fakes: {ab}{afirmacion}{cierre} The truth: {verdad}',
+      intro_guias: 'Want to sharpen your eye? Read our {guia_imagenes} or our {guia_bulos}, then {jugar}.',
+      guia_imagenes_enlace: 'guide to spotting AI images',
+      guia_bulos_enlace: 'guide to spotting fake news',
+      jugar_enlace: "play today's case",
+      titulo_imagen: 'Image {i}',
+      titulo_afirmacion: 'Claim {i}',
       vacio: 'No closed cases yet. Come back when the first one wraps up.',
       sin_reto: 'No {reto} case for this day.',
       anterior: 'Previous case',
@@ -633,7 +648,9 @@ export const TEXTOS = {
       corto_archivo: 'Archivo',
       corto_privacidad: 'Privacidad',
       corto_guia_imagenes: 'Detectar IA',
-      corto_creditos: 'Créditos'
+      corto_creditos: 'Créditos',
+      corto_guia_desinformacion: 'Detectar bulos',
+      corto_contacto: 'Contacto'
     },
 
     raiz: {
@@ -643,6 +660,7 @@ export const TEXTOS = {
 
     paginas: {
       saltar: 'Saltar al contenido',
+      menu: 'Menú principal',
       jugar: 'Ir al juego'
     },
 
@@ -661,6 +679,18 @@ export const TEXTOS = {
     archivo: {
       titulo_dia: 'Caso n.º {n} · {tema}',
       alt_prueba: 'Prueba {i} del caso n.º {n}',
+      intro_titulo: 'Sobre este caso',
+      intro_1: 'El caso n.º {n} está cerrado. Fue el caso diario del {fecha} y su tema fue {tema}. Los detectives de aquel día tuvieron dos retos: cinco imágenes que clasificar en fotografías reales y generadas por IA, y cinco afirmaciones de una frase que clasificar en datos y bulos.',
+      resumen_ia: 'Imágenes generadas por IA: {k} de 5',
+      resumen_falsas: 'Bulos: {k} de 5',
+      intro_2: 'Aquí tienes todas las respuestas. Cada imagen generada por IA trae el prompt que la creó, y cada afirmación, la verdad que hay detrás y los detalles que merece la pena recordar, para que compruebes qué se te escapó.',
+      destacado: 'Uno de los bulos: {ab}{afirmacion}{cierre} La verdad: {verdad}',
+      intro_guias: '¿Quieres afinar la vista? Lee nuestra {guia_imagenes} o nuestra {guia_bulos} y luego {jugar}.',
+      guia_imagenes_enlace: 'guía para detectar imágenes de IA',
+      guia_bulos_enlace: 'guía para detectar un bulo',
+      jugar_enlace: 'juega el caso de hoy',
+      titulo_imagen: 'Imagen {i}',
+      titulo_afirmacion: 'Afirmación {i}',
       vacio: 'Todavía no hay casos cerrados. Vuelve cuando termine el primero.',
       sin_reto: 'Este día no tiene caso de {reto}.',
       anterior: 'Caso anterior',
