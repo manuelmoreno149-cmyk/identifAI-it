@@ -720,7 +720,7 @@ test('escribirSitio trata CRLF y LF como iguales', () => {
 
 test('352 la Action del archivo cumple la spec (revisión del archivo)', () => {
   const y = fs.readFileSync(path.join(REPO, '.github/workflows/archivo.yml'), 'utf8');
-  assert.deepEqual(y.match(/cron: '[^']*'/g), ["cron: '10 22 * * *'", "cron: '10 23 * * *'"]);
+  assert.deepEqual(y.match(/cron: '[^']*'/g), ["cron: '10 22 * * *'", "cron: '10 23 * * *'", "cron: '40 0 * * *'", "cron: '40 2 * * *'", "cron: '40 6 * * *'", "cron: '40 12 * * *'"]);
   assert.ok(!y.includes('15 12'));
   assert.match(y, /^on:\n  schedule:\n[\s\S]*\n  workflow_dispatch:\n/m);
   assert.match(y, /^permissions: \{\}$/m);
@@ -728,11 +728,7 @@ test('352 la Action del archivo cumple la spec (revisión del archivo)', () => {
   assert.match(y, /if: github\.ref == 'refs\/heads\/main'/);
   assert.match(y, /concurrency:\n  group: archivo\n  cancel-in-progress: false/);
   assert.match(y, /node-version: 20/);
-  assert.ok(y.indexOf('id: hora') > 0 && y.indexOf('id: hora') < y.indexOf('actions/checkout'));
-  assert.ok(y.includes('TZ=Europe/Madrid date +%H') && y.includes('"$GITHUB_EVENT_NAME" = "schedule"') && y.includes('"$hora" != "00"'));
-  const pasos = y.split(/\n {6}- /).slice(1);
-  assert.ok(pasos[0].includes('id: hora'));
-  for (const p of pasos.slice(1)) assert.ok(p.includes("if: steps.hora.outputs.seguir == 'si'"), p.split('\n')[0]);
+  assert.ok(!y.includes('id: hora') && !y.includes('seguir') && !y.includes('TZ=Europe/Madrid'), 'sin comprobación de hora: un retraso de GitHub la saltaría');
   for (const paso of ['npm ci', 'npm run paginas', 'npm run validar', 'git add -- en es sitemap.xml', 'git push']) assert.ok(y.includes(paso), paso);
   assert.ok(y.indexOf('npm run paginas') < y.indexOf('npm run validar') && y.indexOf('npm run validar') < y.indexOf('git push'));
   assert.ok(y.includes('Cambios inesperados fuera de en/, es/ y sitemap.xml') && y.includes('exit 1'));
@@ -741,15 +737,35 @@ test('352 la Action del archivo cumple la spec (revisión del archivo)', () => {
   assert.ok(!/secrets\.|token|npm test|--estricto/i.test(y));
 });
 
-test('353 una ejecución por noche: de 22:10Z y 23:10Z exactamente una cae a las 00 de Madrid', () => {
+test('353 el cron cubre la medianoche de Madrid todo el año y hay reintentos', () => {
+  const y = fs.readFileSync(path.join(REPO, '.github/workflows/archivo.yml'), 'utf8');
+  const horas = [...y.matchAll(/cron: '(\d+) (\d+) /g)].map((c) => [Number(c[1]), Number(c[2])]);
+  assert.ok(horas.length >= 4);
   const fmt = new Intl.DateTimeFormat('en-US', { timeZone: ZONA_JUEGO, hour: '2-digit', hourCycle: 'h23' });
-  const hora = (t) => Number(fmt.format(t));
   for (let t = Date.parse('2026-01-01T00:00:00Z'); t < Date.parse('2028-01-01T00:00:00Z'); t += 86400000) {
     const dia = new Date(t).toISOString().slice(0, 10);
-    const ts = [Date.parse(`${dia}T22:10:00Z`), Date.parse(`${dia}T23:10:00Z`)];
-    const buenas = ts.filter((x) => hora(x) === 0);
-    assert.equal(buenas.length, 1, dia);
-    assert.equal(ultimoDiaArchivable(buenas[0]), dia, dia);
+    const instante = (h, m) => Date.parse(`${dia}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`);
+    // al menos una ejecución cae a las 00:xx de Madrid; ninguna archiva un día antes de tiempo
+    const buenas = horas.map(([m, h]) => instante(h, m)).filter((x) => Number(fmt.format(x)) === 0);
+    assert.ok(buenas.length >= 1, dia);
+    for (const b of buenas) assert.equal(ultimoDiaArchivable(b), dia, dia);
+  }
+});
+
+test('archivo: /en/archive/ y /es/archivo/ publicados no llevan noindex', () => {
+  for (const f of ['en/archive/index.html', 'es/archivo/index.html']) {
+    const h = fs.readFileSync(path.join(REPO, f), 'utf8');
+    assert.ok(!h.includes('noindex'), f);
+  }
+});
+
+test('archivo: sin casos archivados lleva noindex y con casos no, en los dos idiomas', () => {
+  const e = entradas();
+  const vacio = generarSitio({ entradas: e, ahoraMs: ms('2020-01-01T12:00:00Z') });
+  const lleno = generarSitio({ entradas: e, ahoraMs: ms('2026-12-06T12:00:00Z') });
+  for (const f of ['en/archive/index.html', 'es/archivo/index.html']) {
+    assert.ok(html(vacio, f).includes('noindex'), f + ' vacío');
+    assert.ok(!html(lleno, f).includes('noindex'), f + ' lleno');
   }
 });
 

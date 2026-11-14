@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import {
   urlDeIdioma,
   destinoRaiz,
+  esRastreador,
   decidirLangEnPagina,
   debeNoIndexar,
   desdeRaiz,
@@ -156,4 +157,11 @@ test('main.js y raiz.js: contrato de la fase 5 (10.4.4, 10.13, 10.1.1)', () => {
       assert.equal(src.includes(d), false, `${f} contiene ${d}`);
     }
   }
+});
+
+test('esRastreador: Googlebot y similares sí, navegadores no', () => {
+  assert.ok(esRastreador('Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'));
+  assert.ok(esRastreador('Mozilla/5.0 (compatible; bingbot/2.0)'));
+  assert.ok(!esRastreador('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36'));
+  assert.ok(!esRastreador());
 });

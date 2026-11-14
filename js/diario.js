@@ -66,6 +66,11 @@ export function urlDeIdioma(href, idioma) {
   }
 }
 
+// Rastreadores (Googlebot, Bing...): la raíz no los redirige, para que sea una página propia y no un duplicado de /en/.
+export function esRastreador(ua = '') {
+  return /bot|crawl|spider|slurp|mediapartners|lighthouse|facebookexternalhit/i.test(ua);
+}
+
 // Destino relativo de la raíz: carpeta del idioma elegido, con search (también lang) y hash intactos.
 export function destinoRaiz({ search = '', hash = '', guardado, lenguas } = {}) {
   const { idioma } = elegirIdioma({ search, guardado, lenguas });
