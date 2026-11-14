@@ -294,7 +294,7 @@ function jsonLd(obj) {
 const ORGANIZACION = { '@type': 'Organization', name: 'identifAI-it', url: DOMINIO };
 
 function jsonLdWebSite(inLanguage) {
-  return { '@context': 'https://schema.org', '@type': 'WebSite', name: 'identifAI-it', url: DOMINIO, inLanguage };
+  return { '@context': 'https://schema.org', '@type': 'WebSite', name: 'identifAI-it', alternateName: ['identifaiit', 'IdentifAI-it', 'identifai it', 'IdentifAI'], url: DOMINIO, inLanguage };
 }
 
 export function cabecera({ idioma, titulo, descripcion, ruta: rutaCanonica, alternativas, xDefault, noindex = false, og = 'website', pref, css, jsonld = null, editor = null }) {
