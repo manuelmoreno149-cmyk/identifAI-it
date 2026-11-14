@@ -4,7 +4,6 @@ import { readFileSync, readdirSync } from 'node:fs';
 import {
   urlDeIdioma,
   destinoRaiz,
-  esRastreador,
   decidirLangEnPagina,
   debeNoIndexar,
   desdeRaiz,
@@ -39,19 +38,17 @@ test('291. urlDeIdioma', () => {
   }
 });
 
-test('292. destinoRaiz', () => {
-  assert.equal(destinoRaiz({ search: '', hash: '', guardado: null, lenguas: ['es-MX'] }), 'es/');
-  assert.equal(destinoRaiz({ search: '', hash: '', guardado: null, lenguas: ['fr'] }), 'en/');
-  assert.equal(destinoRaiz({ search: '', hash: '', guardado: 'es', lenguas: ['en-US'] }), 'es/');
-  assert.equal(destinoRaiz({ search: '', hash: '', guardado: 'en', lenguas: ['es-ES'] }), 'en/');
-  assert.equal(
-    destinoRaiz({ search: '?prueba=1&lang=en', hash: '', guardado: 'es', lenguas: ['es'] }),
-    'en/?prueba=1&lang=en'
-  );
-  assert.equal(destinoRaiz({ search: '?prueba=1&dia=3', hash: '#x', guardado: null, lenguas: ['es'] }), 'es/?prueba=1&dia=3#x');
-  assert.equal(destinoRaiz({ search: '?lang=fr', hash: '', guardado: null, lenguas: ['es'] }), 'es/?lang=fr');
-  for (const g of [null, 'es', 'en']) assert.ok(!destinoRaiz({ search: '', hash: '', guardado: g, lenguas: [] }).startsWith('/'));
-  assert.equal(destinoRaiz(), 'en/');
+test('292. destinoRaiz: solo redirige con idioma guardado o ?lang= válido; la primera vez no (igual para todos)', () => {
+  assert.equal(destinoRaiz({ search: '', hash: '', guardado: null }), null);
+  assert.equal(destinoRaiz({ search: '?prueba=1', hash: '#x', guardado: null }), null);
+  assert.equal(destinoRaiz({ search: '?lang=fr', hash: '', guardado: null }), null);
+  assert.equal(destinoRaiz({ search: '', hash: '', guardado: 'xx' }), null);
+  assert.equal(destinoRaiz({ search: '', hash: '', guardado: 'es' }), 'es/');
+  assert.equal(destinoRaiz({ search: '', hash: '', guardado: 'en' }), 'en/');
+  assert.equal(destinoRaiz({ search: '?prueba=1&lang=en', hash: '', guardado: 'es' }), 'en/?prueba=1&lang=en');
+  assert.equal(destinoRaiz({ search: '?lang=es', hash: '#x', guardado: null }), 'es/?lang=es#x');
+  assert.equal(destinoRaiz({ search: '?prueba=1', hash: '', guardado: 'es' }), 'es/?prueba=1');
+  assert.equal(destinoRaiz(), null);
 });
 
 test('296. decidirLangEnPagina: manda la dirección', () => {
@@ -150,18 +147,12 @@ test('main.js y raiz.js: contrato de la fase 5 (10.4.4, 10.13, 10.1.1)', () => {
   assert.doesNotMatch(main, /anuncio-portada|anuncio-resultado|\.anuncio\b/);
   const raiz = readFileSync(new URL('../js/raiz.js', import.meta.url), 'utf8');
   assert.match(raiz, /location\.replace\(/);
-  assert.doesNotMatch(raiz, /guardarIdioma|setItem/);
+  assert.match(raiz, /guardarIdioma/); // D-247: elegir idioma en la raíz lo guarda
+  assert.doesNotMatch(raiz, /userAgent|esRastreador|bbots?b/i); // igual para bots y personas
   for (const f of readdirSync(new URL('../js/', import.meta.url))) {
     const src = readFileSync(new URL(`../js/${f}`, import.meta.url), 'utf8');
     for (const d of ['how-to-spot-ai-images', 'how-to-spot-fake-news', 'como-saber-si-una-imagen-es-ia', 'como-detectar-un-bulo']) {
       assert.equal(src.includes(d), false, `${f} contiene ${d}`);
     }
   }
-});
-
-test('esRastreador: Googlebot y similares sí, navegadores no', () => {
-  assert.ok(esRastreador('Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'));
-  assert.ok(esRastreador('Mozilla/5.0 (compatible; bingbot/2.0)'));
-  assert.ok(!esRastreador('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36'));
-  assert.ok(!esRastreador());
 });

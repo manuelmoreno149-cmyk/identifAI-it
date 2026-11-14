@@ -1,24 +1,26 @@
-// Raíz del sitio: elige el idioma y redirige a /en/ o /es/ [10.3]. No guarda nada: lo guarda el juego.
-import { destinoRaiz, esRastreador } from './diario.js';
-import { leerIdioma } from './almacen.js';
+// Raíz del sitio: igual para todos. Redirige solo si ya hay un idioma guardado (o ?lang=); si no, el jugador elige [10.3].
+import { destinoRaiz } from './diario.js';
+import { leerIdioma, guardarIdioma } from './almacen.js';
 
-function guardado() {
+function almacen() {
   try {
-    return leerIdioma(window.localStorage);
+    return window.localStorage;
   } catch {
     return null;
   }
 }
 
-// Los rastreadores se quedan en la raíz (sus enlaces visibles llevan a /en/ y /es/); si se redirigiera, Google la fundiría con /en/.
-if (!esRastreador(navigator.userAgent)) {
-// Destino relativo ('es/?prueba=1#x'); replace evita dejar la raíz en el historial.
-location.replace(
-  destinoRaiz({
-    search: location.search,
-    hash: location.hash,
-    guardado: guardado(),
-    lenguas: navigator.languages ?? [navigator.language]
-  })
-);
+const destino = destinoRaiz({
+  search: location.search,
+  hash: location.hash,
+  guardado: almacen() ? leerIdioma(almacen()) : null
+});
+// replace evita dejar la raíz en el historial.
+if (destino !== null) location.replace(destino);
+
+// Elegir idioma con un botón lo recuerda para la próxima vez.
+for (const enlace of document.querySelectorAll('a.raiz-jugar[hreflang]')) {
+  enlace.addEventListener('click', () => {
+    if (almacen()) guardarIdioma(almacen(), enlace.getAttribute('hreflang'));
+  });
 }

@@ -66,15 +66,11 @@ export function urlDeIdioma(href, idioma) {
   }
 }
 
-// Rastreadores (Googlebot, Bing...): la raíz no los redirige, para que sea una página propia y no un duplicado de /en/.
-export function esRastreador(ua = '') {
-  return /bot|crawl|spider|slurp|mediapartners|lighthouse|facebookexternalhit/i.test(ua);
-}
-
-// Destino relativo de la raíz: carpeta del idioma elegido, con search (también lang) y hash intactos.
-export function destinoRaiz({ search = '', hash = '', guardado, lenguas } = {}) {
-  const { idioma } = elegirIdioma({ search, guardado, lenguas });
-  return `${idioma}/${search}${hash}`;
+// Destino relativo de la raíz, o null si no hay que redirigir: solo con idioma guardado o ?lang= válido
+// (carpeta del idioma, con search y hash intactos). La primera vez la raíz se queda y el jugador elige.
+export function destinoRaiz({ search = '', hash = '', guardado } = {}) {
+  const { idioma, origen } = elegirIdioma({ search, guardado, lenguas: [] });
+  return origen === 'navegador' ? null : `${idioma}/${search}${hash}`;
 }
 
 // Qué hacer con ?lang= en /en/ o /es/ [10.3, punto 2]: manda la dirección. `guardar` es el idioma a recordar (o null);
