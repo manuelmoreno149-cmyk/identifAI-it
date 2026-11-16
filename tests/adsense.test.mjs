@@ -203,8 +203,9 @@ test('391 créditos: metaetiqueta solo con editor, en su posición, sin script',
     assert.equal(con.split(metaAdsense(EDITOR)).length - 1, 1);
     assert.ok(con.includes(`\n${metaAdsense(EDITOR)}\n${scriptAdsense(EDITOR)}\n<link rel="canonical"`));
     assert.equal(con.replace(`${metaAdsense(EDITOR)}\n${scriptAdsense(EDITOR)}\n`, ''), sin);
-    assert.ok(!/<script/i.test(sin));
-    assert.equal((con.match(/<script/gi) ?? []).length, 1);
+    // Solo el de Cloudflare Web Analytics sin editor; con editor, además el de AdSense.
+    assert.equal((sin.match(/<script/gi) ?? []).length, 1);
+    assert.equal((con.match(/<script/gi) ?? []).length, 2);
   }
 });
 

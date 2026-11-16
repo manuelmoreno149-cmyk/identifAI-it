@@ -25,8 +25,8 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const DOMINIO = 'https://identifaiit.com/';
 export const CORREO = 'contacto@301juegodiario.es';
-// script-src admite solo el script de AdSense (D-248); lo demás sigue cerrado a 'self'.
-export const CSP = "default-src 'self'; script-src 'self' https://pagead2.googlesyndication.com; base-uri 'none'; object-src 'none'; form-action 'none'";
+// script-src admite solo los scripts de AdSense (D-248) y de Cloudflare Web Analytics (D-251); connect-src solo el envío de Cloudflare.
+export const CSP = "default-src 'self'; script-src 'self' https://pagead2.googlesyndication.com https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; base-uri 'none'; object-src 'none'; form-action 'none'";
 
 function congelar(o) {
   for (const v of Object.values(o)) if (v && typeof v === 'object') congelar(v);
@@ -123,6 +123,10 @@ export function scriptAdsense(editor) {
     ? `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${editor}" crossorigin="anonymous"></script>`
     : '';
 }
+
+// Cloudflare Web Analytics (D-251): sin cookies, en <head> de todas las páginas, tal como lo da Cloudflare.
+export const SCRIPT_CLOUDFLARE = `<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ddb95841742f462589f1845666d5e0e9"}'></script><!-- End Cloudflare Web Analytics -->`;
+export const RE_SCRIPT_CLOUDFLARE = /<!-- Cloudflare Web Analytics --><script type='module' src='https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js' data-cf-beacon='\{"token": "[0-9a-f]{32}"\}'><\/script><!-- End Cloudflare Web Analytics -->/g;
 
 export function contenidoAdsTxt(editor) {
   return typeof editor === 'string' && RE_EDITOR.test(editor) ? `google.com, ${editor.slice(3)}, DIRECT, f08c47fec0942fa0\n` : null;
@@ -319,6 +323,7 @@ export function cabecera({ idioma, titulo, descripcion, ruta: rutaCanonica, alte
     `<meta name="description" content="${e(descripcion)}">`
   ];
   if (noindex) lineas.push('<meta name="robots" content="noindex">');
+  lineas.push(SCRIPT_CLOUDFLARE);
   if (metaAdsense(editor)) lineas.push(metaAdsense(editor), scriptAdsense(editor));
   lineas.push(
     `<link rel="canonical" href="${url(rutaCanonica)}">`,
@@ -1120,7 +1125,7 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
     if (palabraProhibidaEnRuta(rutaPagina)) err(rutaPagina, `la ruta lleva una palabra prohibida (${contienePalabraProhibida(rutaPagina)}).`);
     if (typeof texto === 'string') {
       // El script de AdSense y la CSP que lo admite son lo único permitido de Google en lo publicado (D-248).
-      const minusculas = texto.replace(RE_SCRIPT_ADSENSE, '').split(CSP).join('').toLowerCase();
+      const minusculas = texto.replace(RE_SCRIPT_ADSENSE, '').replace(RE_SCRIPT_CLOUDFLARE, '').split(CSP).join('').toLowerCase();
       for (const s of SUBCADENAS_GOOGLE) if (minusculas.includes(s)) err(rutaPagina, `contiene "${s}" (prohibido mientras ANUNCIOS_ACTIVOS = false).`);
       if (rutaPagina.endsWith('.html')) for (const h of huecosSinRellenar(texto)) err(rutaPagina, `hueco sin rellenar ${h}.`);
     }
@@ -1169,10 +1174,11 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
     for (const t of etiquetasDe(html)) {
       if (es404 && ['canonical', 'alternate'].includes(t.get('rel')) && t.nombre === 'link') err(rutaPagina, 'la 404 no lleva canonical ni hreflang.');
       const esAdsense = t.nombre === 'script' && RE_SRC_ADSENSE.test(t.get('src') ?? '') && t.get('async') !== undefined && t.get('crossorigin') === 'anonymous';
+      const esCloudflare = t.nombre === 'script' && t.get('src') === 'https://static.cloudflareinsights.com/beacon.min.js' && t.get('type') === 'module';
       for (const nombre of ['href', 'src']) {
         const valor = t.get(nombre);
         if (valor === undefined) continue;
-        if (esAdsense) continue;
+        if (esAdsense || esCloudflare) continue;
         const v = desescaparHtml(valor);
         if (es404) {
           if (!v.startsWith(DOMINIO)) err(rutaPagina, `${nombre}="${valor}" debe empezar por ${DOMINIO} (la 404 usa URL absolutas).`);
@@ -1229,7 +1235,7 @@ export function comprobarSitio(mapa, existentes = [], { pendientes = [] } = {}) 
 
     if (es404) {
       if (!/<meta name="robots" content="noindex">/.test(html)) err(rutaPagina, 'la 404 debe llevar noindex.');
-      if (/<script/i.test(html.replace(RE_SCRIPT_ADSENSE, ''))) err(rutaPagina, 'la 404 no puede llevar <script> (salvo el de AdSense).');
+      if (/<script/i.test(html.replace(RE_SCRIPT_ADSENSE, '').replace(RE_SCRIPT_CLOUDFLARE, ''))) err(rutaPagina, 'la 404 no puede llevar <script> (salvo el de AdSense y el de Cloudflare).');
       if (/<meta name="description"|property="og:|rel="canonical"|hreflang="(en|es|x-default)" href/.test(html)) {
         err(rutaPagina, 'la 404 no lleva description, Open Graph, canonical ni hreflang de cabecera.');
       }
